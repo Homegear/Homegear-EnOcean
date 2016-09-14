@@ -142,7 +142,7 @@ bool Security::checkCmac(const std::vector<char>& deviceAesKey, const std::vecto
 	try
 	{
 		if((signed)encryptedData.size() < dataSize + cmacSize) return false;
-		for(int32_t currentRollingCode = rollingCode; currentRollingCode < rollingCode + 50; currentRollingCode++)
+		for(int32_t currentRollingCode = rollingCode; currentRollingCode < rollingCode + 128; currentRollingCode++)
 		{
 			std::vector<char> cmacInPacket(&encryptedData.at(dataSize), &encryptedData.at(dataSize) + cmacSize);
 			std::vector<char> calculatedCmac = getCmac(deviceAesKey, encryptedData, dataSize, currentRollingCode, rollingCodeSize, cmacSize);

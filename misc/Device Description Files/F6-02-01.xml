@@ -485,6 +485,7 @@
 				<element>
 					<parameterId>STATE</parameterId>
 					<constValueInteger>1</constValueInteger>
+				</element>
 			</binaryPayload>
 		</packet>
 		<packet id="B0E_2">

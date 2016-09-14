@@ -455,7 +455,7 @@ bool MyPeer::load(BaseLib::Systems::ICentral* central)
 			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("ENCRYPTION");
 			if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
 			{
-				_forceEncryption = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
+				_forceEncryption = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->booleanValue;
 			}
 		}
 
@@ -536,6 +536,7 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 			if(frame->channel > -1) channel = frame->channel;
 			if(channel == -1) continue;
 			currentFrameValues.frameID = frame->id;
+			bool abort = false;
 
 			for(BinaryPayloads::iterator j = frame->binaryPayloads.begin(); j != frame->binaryPayloads.end(); ++j)
 			{
@@ -549,7 +550,12 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 					{
 						int32_t intValue = 0;
 						_bl->hf.memcpyBigEndian(intValue, data);
-						if(intValue != (*j)->constValueInteger) break; else continue;
+						if(intValue != (*j)->constValueInteger)
+						{
+							abort = true;
+							break;
+						}
+						else continue;
 					}
 				}
 				else if((*j)->constValueInteger > -1)
@@ -600,6 +606,7 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 					if(setValues) currentFrameValues.values[(*k)->id].value = data;
 				}
 			}
+			if(abort) continue;
 			if(!currentFrameValues.values.empty()) frameValues.push_back(currentFrameValues);
 		} while(++i != range.second && i != _rpcDevice->packetsByMessageType.end());
 	}

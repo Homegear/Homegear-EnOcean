@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="A5-02-02">
-			<description>Temperature Sensor -30°C to 10°C</description>
-			<typeNumber>0xA50202</typeNumber>
+		<device id="A5-02-30">
+			<description>Temperature Sensor -40°C to 62.3°C</description>
+			<typeNumber>0xA50230</typeNumber>
 		</device>
 	</supportedDevices>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
@@ -25,8 +25,8 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>3.0</index>
-					<size>1.0</size>
+					<index>2.0</index>
+					<size>2.0</size>
 					<parameterId>TEMPERATURE</parameterId>
 				</element>
 				<element>
@@ -100,16 +100,16 @@
 						</round>
 						<decimalOffset>
 							<direction>fromPacket</direction>
-							<subtractFromOffset>10</subtractFromOffset>
+							<subtractFromOffset>62.3</subtractFromOffset>
 						</decimalOffset>
 						<decimalIntegerScale>
-							<factor>6.375</factor>
+							<factor>10</factor>
 						</decimalIntegerScale>
 					</casts>
 				</properties>
 				<logicalDecimal>
-					<minimumValue>-30.0</minimumValue>
-					<maximumValue>10.0</maximumValue>
+					<minimumValue>-40.0</minimumValue>
+					<maximumValue>62.3</maximumValue>
 				</logicalDecimal>
 				<physicalInteger groupId="TEMPERATURE">
 					<operationType>command</operationType>

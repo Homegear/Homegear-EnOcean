@@ -29,6 +29,11 @@
 					<size>1.0</size>
 					<parameterId>TEMPERATURE</parameterId>
 				</element>
+				<element>
+					<index>4.3</index>
+					<size>0.1</size>
+					<constValueInteger>1</constValueInteger>
+				</element>
 			</binaryPayload>
 		</packet>
 	</packets>
