@@ -121,7 +121,521 @@ std::vector<char> MyPacket::getBinary()
     return std::vector<char>();
 }
 
-void MyPacket::setPosition(double index, double size, std::vector<uint8_t>& value)
+std::vector<uint8_t> MyPacket::getPositionV(uint32_t position, uint32_t size)
+{
+	std::vector<uint8_t> result;
+	try
+	{
+		if(size <= 8) result.push_back(getPosition8(position, size));
+		else if(size <= 16)
+		{
+			uint16_t intResult = getPosition16(position, size);
+			result.resize(2);
+			result[0] = intResult >> 8;
+			result[1] = intResult & 0xFF;
+		}
+		else if(size <= 32)
+		{
+			uint32_t intResult = getPosition32(position, size);
+			if(size <= 24)
+			{
+				result.resize(3);
+				result[0] = intResult >> 16;
+				result[1] = (intResult >> 8) & 0xFF;
+				result[2] = intResult & 0xFF;
+			}
+			else
+			{
+				result.resize(4);
+				result[0] = intResult >> 24;
+				result[1] = (intResult >> 16) & 0xFF;
+				result[2] = (intResult >> 8) & 0xFF;
+				result[3] = intResult & 0xFF;
+			}
+		}
+		else
+		{
+			uint64_t intResult = getPosition64(position, size);
+			if(size <= 40)
+			{
+				result.resize(5);
+				result[0] = intResult >> 32;
+				result[1] = (intResult >> 24) & 0xFF;
+				result[2] = (intResult >> 16) & 0xFF;
+				result[3] = (intResult >> 8) & 0xFF;
+				result[4] = intResult & 0xFF;
+			}
+			else if(size <= 48)
+			{
+				result.resize(6);
+				result[0] = intResult >> 40;
+				result[1] = (intResult >> 32) & 0xFF;
+				result[2] = (intResult >> 24) & 0xFF;
+				result[3] = (intResult >> 16) & 0xFF;
+				result[4] = (intResult >> 8) & 0xFF;
+				result[5] = intResult & 0xFF;
+			}
+			else if(size <= 56)
+			{
+				result.resize(7);
+				result[0] = intResult >> 48;
+				result[1] = (intResult >> 40) & 0xFF;
+				result[2] = (intResult >> 32) & 0xFF;
+				result[3] = (intResult >> 24) & 0xFF;
+				result[4] = (intResult >> 16) & 0xFF;
+				result[5] = (intResult >> 8) & 0xFF;
+				result[6] = intResult & 0xFF;
+			}
+			else
+			{
+				result.resize(8);
+				result[0] = intResult >> 56;
+				result[1] = (intResult >> 48) & 0xFF;
+				result[2] = (intResult >> 40) & 0xFF;
+				result[3] = (intResult >> 32) & 0xFF;
+				result[4] = (intResult >> 24) & 0xFF;
+				result[5] = (intResult >> 16) & 0xFF;
+				result[6] = (intResult >> 8) & 0xFF;
+				result[7] = intResult & 0xFF;
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return result;
+}
+
+uint8_t MyPacket::getPosition8(uint32_t position, uint32_t size)
+{
+	try
+	{
+		if(size > 8) size = 8;
+		else if(size == 0) return 0;
+		uint8_t result = 0;
+
+		uint32_t bytePosition = position / 8;
+		int32_t bitPosition = position % 8;
+		int32_t sourceByteSize = (bitPosition + size) / 8 + ((bitPosition + size) % 8 != 0 ? 1 : 0);
+
+		if(bytePosition >= _data.size()) return 0;
+
+		uint8_t firstByte = (uint8_t)_data.at(bytePosition) & _bitMaskGet[bitPosition];
+		if(sourceByteSize == 1)
+		{
+			result = firstByte >> ((8 - ((bitPosition + size) % 8)) % 8);
+			return result;
+		}
+
+		result |= (uint16_t)firstByte << (size - (8 - bitPosition));
+
+		if(bytePosition + 1 >= _data.size()) return result;
+		result |= (uint8_t)_data.at(bytePosition + 1) >> ((8 - ((bitPosition + size) % 8)) % 8);
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return 0;
+}
+
+uint16_t MyPacket::getPosition16(uint32_t position, uint32_t size)
+{
+	try
+	{
+		if(size > 16) size = 16;
+		else if(size == 0) return 0;
+		uint16_t result = 0;
+
+		uint32_t bytePosition = position / 8;
+		int32_t bitPosition = position % 8;
+		int32_t sourceByteSize = (bitPosition + size) / 8 + ((bitPosition + size) % 8 != 0 ? 1 : 0);
+
+		if(bytePosition >= _data.size()) return 0;
+
+		uint8_t firstByte = (uint8_t)_data.at(bytePosition) & _bitMaskGet[bitPosition];
+		if(sourceByteSize == 1)
+		{
+			result = firstByte >> ((8 - ((bitPosition + size) % 8)) % 8);
+			return result;
+		}
+
+		int32_t bitsLeft = size - (8 - bitPosition);
+		result |= (uint16_t)firstByte << bitsLeft;
+		bitsLeft -= 8;
+
+		for(uint32_t i = bytePosition + 1; i < bytePosition + sourceByteSize - 1; i++)
+		{
+			if(i >= _data.size()) return result;
+			result |= (uint16_t)(uint8_t)_data.at(i) << bitsLeft;
+			bitsLeft -= 8;
+		}
+
+		if(bytePosition + sourceByteSize - 1 >= _data.size()) return result;
+		result |= (uint8_t)_data.at(bytePosition + sourceByteSize - 1) >> ((8 - ((bitPosition + size) % 8)) % 8);
+
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return 0;
+}
+
+uint32_t MyPacket::getPosition32(uint32_t position, uint32_t size)
+{
+	try
+	{
+		if(size > 32) size = 32;
+		else if(size == 0) return 0;
+		uint32_t result = 0;
+
+		uint32_t bytePosition = position / 8;
+		int32_t bitPosition = position % 8;
+		int32_t sourceByteSize = (bitPosition + size) / 8 + ((bitPosition + size) % 8 != 0 ? 1 : 0);
+
+		if(bytePosition >= _data.size()) return 0;
+
+		uint8_t firstByte = (uint8_t)_data.at(bytePosition) & _bitMaskGet[bitPosition];
+		if(sourceByteSize == 1)
+		{
+			result = firstByte >> ((8 - ((bitPosition + size) % 8)) % 8);
+			return result;
+		}
+
+		int32_t bitsLeft = size - (8 - bitPosition);
+		result |= (uint32_t)firstByte << bitsLeft;
+		bitsLeft -= 8;
+
+		for(uint32_t i = bytePosition + 1; i < bytePosition + sourceByteSize - 1; i++)
+		{
+			if(i >= _data.size()) return result;
+			result |= (uint32_t)(uint8_t)_data.at(i) << bitsLeft;
+			bitsLeft -= 8;
+		}
+
+		if(bytePosition + sourceByteSize - 1 >= _data.size()) return result;
+		result |= (uint8_t)_data.at(bytePosition + sourceByteSize - 1) >> ((8 - ((bitPosition + size) % 8)) % 8);
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return 0;
+}
+
+uint64_t MyPacket::getPosition64(uint32_t position, uint32_t size)
+{
+	try
+	{
+		if(size > 64) size = 64;
+		else if(size == 0) return 0;
+		uint64_t result = 0;
+
+		uint32_t bytePosition = position / 8;
+		int32_t bitPosition = position % 8;
+		int32_t sourceByteSize = (bitPosition + size) / 8 + ((bitPosition + size) % 8 != 0 ? 1 : 0);
+
+		if(bytePosition >= _data.size()) return 0;
+
+		uint8_t firstByte = (uint8_t)_data.at(bytePosition) & _bitMaskGet[bitPosition];
+		if(sourceByteSize == 1)
+		{
+			result = firstByte >> ((8 - ((bitPosition + size) % 8)) % 8);
+			return result;
+		}
+
+		int32_t bitsLeft = size - (8 - bitPosition);
+		result |= (uint64_t)firstByte << bitsLeft;
+		bitsLeft -= 8;
+
+		for(uint32_t i = bytePosition + 1; i < bytePosition + sourceByteSize - 1; i++)
+		{
+			if(i >= _data.size()) return result;
+			result |= (uint64_t)(uint8_t)_data.at(i) << bitsLeft;
+			bitsLeft -= 8;
+		}
+
+		if(bytePosition + sourceByteSize - 1 >= _data.size()) return result;
+		result |= (uint8_t)_data.at(bytePosition + sourceByteSize - 1) >> ((8 - ((bitPosition + size) % 8)) % 8);
+		return result;
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+	return 0;
+}
+
+void MyPacket::setPosition(uint32_t position, uint32_t size, const std::vector<uint8_t>& source)
+{
+	try
+	{
+		if(source.empty()) return;
+		if(source.size() == 1) setPosition(position, size, source[0]);
+		else if(source.size() == 2)
+		{
+			uint16_t intSource = ((uint16_t)source[0] << 8) | source[1];
+			setPosition(position, size, intSource);
+		}
+		else if(source.size() == 3)
+		{
+			uint32_t intSource = ((uint32_t)source[0] << 16) | ((uint32_t)source[1] << 8) | source[2];
+			setPosition(position, size, intSource);
+		}
+		else if(source.size() == 4)
+		{
+			uint32_t intSource = ((uint32_t)source[0] << 24) | ((uint32_t)source[1] << 16) | ((uint32_t)source[2] << 8) | source[3];
+			setPosition(position, size, intSource);
+		}
+		else if(source.size() == 5)
+		{
+			uint64_t intSource = ((uint64_t)source[0] << 32) | ((uint64_t)source[1] << 24) | ((uint64_t)source[2] << 16) | ((uint64_t)source[3] << 8) | source[4];
+			setPosition(position, size, intSource);
+		}
+		else if(source.size() == 6)
+		{
+			uint64_t intSource = ((uint64_t)source[0] << 40) | ((uint64_t)source[1] << 32) | ((uint64_t)source[2] << 24) | ((uint64_t)source[3] << 16) | ((uint64_t)source[4] << 8) | source[5];
+			setPosition(position, size, intSource);
+		}
+		else if(source.size() == 7)
+		{
+			uint64_t intSource = ((uint64_t)source[0] << 48) | ((uint64_t)source[1] << 40) | ((uint64_t)source[2] << 32) | ((uint64_t)source[3] << 24) | ((uint64_t)source[4] << 16) | ((uint64_t)source[5] << 8) | source[6];
+			setPosition(position, size, intSource);
+		}
+		else if(source.size() >= 8)
+		{
+			uint64_t intSource = ((uint64_t)source[0] << 56) | ((uint64_t)source[1] << 48) | ((uint64_t)source[2] << 40) | ((uint64_t)source[3] << 32) | ((uint64_t)source[4] << 24) | ((uint64_t)source[5] << 16) | ((uint64_t)source[6] << 8) | source[7];
+			setPosition(position, size, intSource);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void MyPacket::setPosition(uint32_t position, uint32_t size, uint8_t source)
+{
+	try
+	{
+		if(size > 8) size = 8;
+		else if(size == 0) return;
+		source = source << (8 - size);
+
+		int32_t bytePosition = position / 8;
+		int32_t bitPosition = position % 8;
+		int32_t targetByteCount = (bitPosition + size) / 8 + ((bitPosition + size) % 8 != 0 ? 1 : 0);
+		int32_t endIndex = targetByteCount - 1;
+		uint32_t requiredSize = bytePosition + targetByteCount;
+		if(_data.size() < requiredSize) _data.resize(requiredSize, 0);
+
+		if(endIndex == 0) _data[bytePosition] &= (_bitMaskSetStart[bitPosition] | _bitMaskSetEnd[(bitPosition + size) % 8]);
+		else
+		{
+			_data[bytePosition] &= _bitMaskSetStart[bitPosition];
+			_data[bytePosition + endIndex] &= _bitMaskSetEnd[(bitPosition + size) % 8];
+		}
+		_data[bytePosition] |= source >> bitPosition;
+		if(endIndex == 0) return;
+		_data[bytePosition + endIndex] |= (source << ((endIndex - 1) * 8 + (8 - bitPosition)));
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void MyPacket::setPosition(uint32_t position, uint32_t size, uint16_t source)
+{
+	try
+	{
+		if(size > 16) size = 16;
+		else if(size == 0) return;
+		source = source << (16 - size);
+
+		int32_t bytePosition = position / 8;
+		int32_t bitPosition = position % 8;
+		int32_t targetByteCount = (bitPosition + size) / 8 + ((bitPosition + size) % 8 != 0 ? 1 : 0);
+		int32_t endIndex = targetByteCount - 1;
+		uint32_t requiredSize = bytePosition + targetByteCount;
+		if(_data.size() < requiredSize) _data.resize(requiredSize, 0);
+
+		if(endIndex == 0) _data[bytePosition] &= (_bitMaskSetStart[bitPosition] | _bitMaskSetEnd[(bitPosition + size) % 8]);
+		else
+		{
+			_data[bytePosition] &= _bitMaskSetStart[bitPosition];
+			_data[bytePosition + endIndex] &= _bitMaskSetEnd[(bitPosition + size) % 8];
+		}
+		_data[bytePosition] |= source >> (bitPosition + 8);
+		if(endIndex == 0) return;
+		for(int32_t i = 1; i < endIndex; i++)
+		{
+			_data[bytePosition + i] = (source << ((i - 1) * 8 + (8 - bitPosition))) >> (16 - i * 8);
+		}
+		_data[bytePosition + endIndex] |= (source << ((endIndex - 1) * 8 + (8 - bitPosition))) >> (16 - endIndex * 8);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void MyPacket::setPosition(uint32_t position, uint32_t size, uint32_t source)
+{
+	try
+	{
+		if(size > 32) size = 32;
+		else if(size == 0) return;
+		source = source << (32 - size);
+
+		int32_t bytePosition = position / 8;
+		int32_t bitPosition = position % 8;
+		int32_t targetByteCount = (bitPosition + size) / 8 + ((bitPosition + size) % 8 != 0 ? 1 : 0);
+		int32_t endIndex = targetByteCount - 1;
+		uint32_t requiredSize = bytePosition + targetByteCount;
+		if(_data.size() < requiredSize) _data.resize(requiredSize, 0);
+
+		if(endIndex == 0) _data[bytePosition] &= (_bitMaskSetStart[bitPosition] | _bitMaskSetEnd[(bitPosition + size) % 8]);
+		else
+		{
+			_data[bytePosition] &= _bitMaskSetStart[bitPosition];
+			_data[bytePosition + endIndex] &= _bitMaskSetEnd[(bitPosition + size) % 8];
+		}
+		_data[bytePosition] |= source >> (bitPosition + 24);
+		if(endIndex == 0) return;
+		for(int32_t i = 1; i < endIndex; i++)
+		{
+			_data[bytePosition + i] = (source << ((i - 1) * 8 + (8 - bitPosition))) >> (32 - i * 8);
+		}
+		_data[bytePosition + endIndex] |= (source << ((endIndex - 1) * 8 + (8 - bitPosition))) >> (32 - endIndex * 8);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+void MyPacket::setPosition(uint32_t position, uint32_t size, uint64_t source)
+{
+	try
+	{
+		if(size > 64) size = 64;
+		else if(size == 0) return;
+		source = source << (64 - size);
+
+		int32_t bytePosition = position / 8;
+		int32_t bitPosition = position % 8;
+		int32_t targetByteCount = (bitPosition + size) / 8 + ((bitPosition + size) % 8 != 0 ? 1 : 0);
+		int32_t endIndex = targetByteCount - 1;
+		uint32_t requiredSize = bytePosition + targetByteCount;
+		if(_data.size() < requiredSize) _data.resize(requiredSize, 0);
+
+		if(endIndex == 0) _data[bytePosition] &= (_bitMaskSetStart[bitPosition] | _bitMaskSetEnd[(bitPosition + size) % 8]);
+		else
+		{
+			_data[bytePosition] &= _bitMaskSetStart[bitPosition];
+			_data[bytePosition + endIndex] &= _bitMaskSetEnd[(bitPosition + size) % 8];
+		}
+		_data[bytePosition] |= source >> (bitPosition + 56);
+		if(endIndex == 0) return;
+		for(int32_t i = 1; i < endIndex; i++)
+		{
+			_data[bytePosition + i] = (source << ((i - 1) * 8 + (8 - bitPosition))) >> (64 - i * 8);
+		}
+		_data[bytePosition + endIndex] |= (source << ((endIndex - 1) * 8 + (8 - bitPosition))) >> (64 - endIndex * 8);
+	}
+	catch(const std::exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
+/*void MyPacket::setPosition(double index, double size, std::vector<uint8_t>& value)
 {
 	try
 	{
@@ -265,6 +779,6 @@ std::vector<uint8_t> MyPacket::getPosition(double index, double size, int32_t ma
     }
     result.push_back(0);
     return result;
-}
+}*/
 
 }

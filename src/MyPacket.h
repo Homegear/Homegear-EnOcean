@@ -68,9 +68,21 @@ class MyPacket : public BaseLib::Systems::Packet
         std::vector<char> getOptionalData() { return _optionalData; }
         std::vector<char> getBinary();
 
-        virtual std::vector<uint8_t> getPosition(double index, double size, int32_t mask);
-        virtual void setPosition(double index, double size, std::vector<uint8_t>& value);
+        std::vector<uint8_t> getPositionV(uint32_t position, uint32_t size);
+		uint8_t getPosition8(uint32_t position, uint32_t size);
+		uint16_t getPosition16(uint32_t position, uint32_t size);
+		uint32_t getPosition32(uint32_t position, uint32_t size);
+		uint64_t getPosition64(uint32_t position, uint32_t size);
+		void setPosition(uint32_t position, uint32_t size, const std::vector<uint8_t>& source);
+		void setPosition(uint32_t position, uint32_t size, uint8_t source);
+		void setPosition(uint32_t position, uint32_t size, uint16_t source);
+		void setPosition(uint32_t position, uint32_t size, uint32_t source);
+		void setPosition(uint32_t position, uint32_t size, uint64_t source);
     protected:
+		const uint8_t _bitMaskGet[8] = { 0xFF, 0x7F, 0x3F, 0x1F, 0x0F, 0x07, 0x03, 0x01 };
+		const uint8_t _bitMaskSetStart[8] = { 0x00, 0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE };
+		const uint8_t _bitMaskSetEnd[8] = { 0x00, 0x7F, 0x3F, 0x1F, 0x0F, 0x07, 0x03, 0x01 };
+
         bool _appendAddressAndStatus = false;
         std::vector<char> _packet;
         Type _type = Type::RESERVED;

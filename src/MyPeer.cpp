@@ -532,6 +532,7 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 			if(!frame) continue;
 			std::vector<char> erpPacket = packet->getData();
 			if(erpPacket.empty()) break;
+			int32_t erpPacketBitSize = erpPacket.size() * 8;
 			int32_t channel = -1;
 			if(frame->channel > -1) channel = frame->channel;
 			if(channel == -1) continue;
@@ -543,8 +544,8 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 				std::vector<uint8_t> data;
 				if((*j)->size > 0 && (*j)->index > 0)
 				{
-					if(((int32_t)(*j)->index) >= (signed)erpPacket.size()) continue;
-					data = packet->getPosition((*j)->index, (*j)->size, -1);
+					if(((int32_t)(*j)->index) >= erpPacketBitSize) continue;
+					data = packet->getPositionV((*j)->index, (*j)->size);
 
 					if((*j)->constValueInteger > -1)
 					{

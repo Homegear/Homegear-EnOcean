@@ -39,7 +39,7 @@ Security::Security(BaseLib::Obj* bl) : _bl(bl)
 	if((result = gcry_cipher_open(&_encryptHandle, GCRY_CIPHER_AES128, GCRY_CIPHER_MODE_ECB, GCRY_CIPHER_SECURE)) != GPG_ERR_NO_ERROR)
 	{
 		_encryptHandle = nullptr;
-		GD::out.printError("Error initializing cypher handle for encryption: " + _bl->hf.getGCRYPTError(result));
+		GD::out.printError("Error initializing cypher handle for encryption: " + BaseLib::Security::Gcrypt::getError(result));
 		return;
 	}
 	if(!_encryptHandle)
@@ -78,13 +78,13 @@ std::vector<char> Security::encryptRollingCode(const std::vector<char>& deviceAe
 			std::lock_guard<std::mutex> encryptGuard(_encryptMutex);
 			if((result = gcry_cipher_setkey(_encryptHandle, &deviceAesKey.at(0), deviceAesKey.size())) != GPG_ERR_NO_ERROR)
 			{
-				GD::out.printError("Error: Could not set key for encryption: " + _bl->hf.getGCRYPTError(result));
+				GD::out.printError("Error: Could not set key for encryption: " + BaseLib::Security::Gcrypt::getError(result));
 				return std::vector<char>();
 			}
 
 			if((result = gcry_cipher_encrypt(_encryptHandle, &encryptedRollingCode.at(0), encryptedRollingCode.size(), &plain.at(0), plain.size())) != GPG_ERR_NO_ERROR)
 			{
-				GD::out.printError("Error encrypting data: " + _bl->hf.getGCRYPTError(result));
+				GD::out.printError("Error encrypting data: " + BaseLib::Security::Gcrypt::getError(result));
 				return std::vector<char>();
 			}
 		}
@@ -208,13 +208,13 @@ std::vector<char> Security::getCmac(const std::vector<char>& deviceAesKey, const
 			std::lock_guard<std::mutex> encryptGuard(_encryptMutex);
 			if((result = gcry_cipher_setkey(_encryptHandle, &deviceAesKey.at(0), deviceAesKey.size())) != GPG_ERR_NO_ERROR)
 			{
-				GD::out.printError("Error: Could not set key for encryption: " + _bl->hf.getGCRYPTError(result));
+				GD::out.printError("Error: Could not set key for encryption: " + BaseLib::Security::Gcrypt::getError(result));
 				return std::vector<char>();
 			}
 
 			if((result = gcry_cipher_encrypt(_encryptHandle, &cmac.at(0), cmac.size(), &plain.at(0), plain.size())) != GPG_ERR_NO_ERROR)
 			{
-				GD::out.printError("Error encrypting data: " + _bl->hf.getGCRYPTError(result));
+				GD::out.printError("Error encrypting data: " + BaseLib::Security::Gcrypt::getError(result));
 				return std::vector<char>();
 			}
 		}
@@ -276,13 +276,13 @@ std::vector<char> Security::getSubkey(const std::vector<char>& deviceAesKey, boo
 			std::lock_guard<std::mutex> encryptGuard(_encryptMutex);
 			if((result = gcry_cipher_setkey(_encryptHandle, &deviceAesKey.at(0), deviceAesKey.size())) != GPG_ERR_NO_ERROR)
 			{
-				GD::out.printError("Error: Could not set key for encryption: " + _bl->hf.getGCRYPTError(result));
+				GD::out.printError("Error: Could not set key for encryption: " + BaseLib::Security::Gcrypt::getError(result));
 				return std::vector<char>();
 			}
 
 			if((result = gcry_cipher_encrypt(_encryptHandle, &subkey.at(0), subkey.size(), (void*)_subkeyInput, 16)) != GPG_ERR_NO_ERROR)
 			{
-				GD::out.printError("Error encrypting data: " + _bl->hf.getGCRYPTError(result));
+				GD::out.printError("Error encrypting data: " + BaseLib::Security::Gcrypt::getError(result));
 				return std::vector<char>();
 			}
 		}

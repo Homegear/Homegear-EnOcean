@@ -214,8 +214,7 @@ int32_t MyCentral::getFreeRfChannel(std::string& interfaceId)
 {
 	try
 	{
-		std::vector<std::shared_ptr<BaseLib::Systems::Peer>> peers;
-		getPeers(peers);
+		std::vector<std::shared_ptr<BaseLib::Systems::Peer>> peers = getPeers();
 		std::set<int32_t> usedChannels;
 		for(std::vector<std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
 		{
