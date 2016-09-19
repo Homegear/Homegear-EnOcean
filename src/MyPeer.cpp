@@ -532,7 +532,7 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 			if(!frame) continue;
 			std::vector<char> erpPacket = packet->getData();
 			if(erpPacket.empty()) break;
-			int32_t erpPacketBitSize = erpPacket.size() * 8;
+			uint32_t erpPacketBitSize = erpPacket.size() * 8;
 			int32_t channel = -1;
 			if(frame->channel > -1) channel = frame->channel;
 			if(channel == -1) continue;
@@ -542,10 +542,10 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 			for(BinaryPayloads::iterator j = frame->binaryPayloads.begin(); j != frame->binaryPayloads.end(); ++j)
 			{
 				std::vector<uint8_t> data;
-				if((*j)->size > 0 && (*j)->index > 0)
+				if((*j)->bitSize > 0 && (*j)->bitIndex > 0)
 				{
-					if(((int32_t)(*j)->index) >= erpPacketBitSize) continue;
-					data = packet->getPositionV((*j)->index, (*j)->size);
+					if((*j)->bitIndex >= erpPacketBitSize) continue;
+					data = packet->getPositionV((*j)->bitIndex, (*j)->bitSize);
 
 					if((*j)->constValueInteger > -1)
 					{
@@ -915,48 +915,25 @@ PVariable MyPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channe
 
 		if(type == ParameterGroup::Type::Enum::config)
 		{
-			std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> changedParameters;
-			//allParameters is necessary to temporarily store all values. It is used to set changedParameters.
-			//This is necessary when there are multiple variables per index and not all of them are changed.
-			std::map<int32_t, std::map<int32_t, std::vector<uint8_t>>> allParameters;
+			bool parameterChanged = false;
 			for(Struct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
-				std::vector<uint8_t> value;
 				if(configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
-				BaseLib::Systems::RPCConfigurationParameter* parameter = &configCentral[channel][i->first];
-				if(!parameter->rpcParameter) continue;
-				if(parameter->rpcParameter->password && i->second->stringValue.empty()) continue; //Don't safe password if empty
-				parameter->rpcParameter->convertToPacket(i->second, value);
-				std::vector<uint8_t> shiftedValue = value;
-				parameter->rpcParameter->adjustBitPosition(shiftedValue);
-				int32_t intIndex = (int32_t)parameter->rpcParameter->physical->index;
-				int32_t list = parameter->rpcParameter->physical->list;
-				if(list == -1) list = 0;
-				if(allParameters[list].find(intIndex) == allParameters[list].end()) allParameters[list][intIndex] = shiftedValue;
-				else
-				{
-					uint32_t index = 0;
-					for(std::vector<uint8_t>::iterator j = shiftedValue.begin(); j != shiftedValue.end(); ++j)
-					{
-						if(index >= allParameters[list][intIndex].size()) allParameters[list][intIndex].push_back(0);
-						allParameters[list][intIndex].at(index) |= *j;
-						index++;
-					}
-				}
-				parameter->data = value;
-				if(parameter->databaseID > 0) saveParameter(parameter->databaseID, parameter->data);
-				else saveParameter(0, ParameterGroup::Type::Enum::config, channel, i->first, parameter->data);
+				BaseLib::Systems::RPCConfigurationParameter& parameter = configCentral[channel][i->first];
+				if(!parameter.rpcParameter) continue;
+				if(parameter.rpcParameter->password && i->second->stringValue.empty()) continue; //Don't safe password if empty
+				parameter.rpcParameter->convertToPacket(i->second, parameter.data);
+				if(parameter.databaseID > 0) saveParameter(parameter.databaseID, parameter.data);
+				else saveParameter(0, ParameterGroup::Type::Enum::config, channel, i->first, parameter.data);
 
-				if(channel == 0 && i->first == "ENCRYPTION") _forceEncryption = i->second->booleanValue;
+				if(channel == 0 && i->first == "ENCRYPTION" && i->second->booleanValue != _forceEncryption) _forceEncryption = i->second->booleanValue;
 
-				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(allParameters[list][intIndex]) + ".");
-				//Only send to device when parameter is of type config
-				if(parameter->rpcParameter->physical->operationType != IPhysical::OperationType::Enum::config && parameter->rpcParameter->physical->operationType != IPhysical::OperationType::Enum::configString) continue;
-				changedParameters[list][intIndex] = allParameters[list][intIndex];
+				parameterChanged = true;
+				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameter.data) + ".");
 			}
 
-			if(!changedParameters.empty() && !changedParameters.begin()->second.empty()) raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
+			if(parameterChanged) raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
 		}
 		else if(type == ParameterGroup::Type::Enum::variables)
 		{
@@ -1115,14 +1092,14 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 			{
 				std::vector<uint8_t> data;
 				_bl->hf.memcpyBigEndian(data, (*i)->constValueInteger);
-				packet->setPosition((*i)->index, (*i)->size, data);
+				packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
 				continue;
 			}
 			//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC.
 			if((*i)->parameterId == rpcParameter->physical->groupId)
 			{
 				std::vector<uint8_t> data = valuesCentral[channel][valueKey].data;
-				packet->setPosition((*i)->index, (*i)->size, data);
+				packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
 			}
 			//Search for all other parameters
 			else
@@ -1134,7 +1111,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 					if((*i)->parameterId == j->second.rpcParameter->physical->groupId)
 					{
 						std::vector<uint8_t> data = j->second.data;
-						packet->setPosition((*i)->index, (*i)->size, data);
+						packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
 						paramFound = true;
 						break;
 					}
