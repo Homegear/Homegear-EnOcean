@@ -25,14 +25,14 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>2.0</index>
-					<size>2.0</size>
-					<parameterId>PRESSURE</parameterId>
+					<index>36</index>
+					<size>1</size>
+					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>4.3</index>
-					<size>0.1</size>
-					<constValueInteger>1</constValueInteger>
+					<index>14</index>
+					<size>10</size>
+					<parameterId>PRESSURE</parameterId>
 				</element>
 			</binaryPayload>
 		</packet>

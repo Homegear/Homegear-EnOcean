@@ -25,8 +25,8 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>1.0</index>
-					<size>0.1</size>
+					<index>15</index>
+					<size>1</size>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -86,6 +86,14 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>false</writeable>
+					<casts>
+						<booleanInteger>
+							<trueValue>1</trueValue>
+							<falseValue>0</falseValue>
+							<invert>true</invert>
+							<threshold>1</threshold>
+						</booleanInteger>
+					</casts>
 				</properties>
 				<logicalBoolean>
 					<defaultValue>false</defaultValue>

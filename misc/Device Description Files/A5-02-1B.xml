@@ -25,14 +25,14 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>3.0</index>
-					<size>1.0</size>
-					<parameterId>TEMPERATURE</parameterId>
+					<index>36</index>
+					<size>1</size>
+					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>4.3</index>
-					<size>0.1</size>
-					<constValueInteger>1</constValueInteger>
+					<index>24</index>
+					<size>8</size>
+					<parameterId>TEMPERATURE</parameterId>
 				</element>
 			</binaryPayload>
 		</packet>

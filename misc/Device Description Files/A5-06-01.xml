@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="A5-04-02">
-			<description>Temperature and Humidity Sensor -20°C to 60°C</description>
-			<typeNumber>0xA50402</typeNumber>
+		<device id="A5-06-01">
+			<description>Light Sensor 300lx to 60.000lx</description>
+			<typeNumber>0xA50601</typeNumber>
 		</device>
 	</supportedDevices>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
@@ -14,7 +14,7 @@
 			<configParameters>EnOceanConfig</configParameters>
 			<variables>maint_ch_values</variables>
 		</function>
-		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanTemperatureHumidity">
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanIllumination">
 			<variables>EnOceanVariables</variables>
 		</function>
 	</functions>
@@ -25,24 +25,28 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
+					<index>39</index>
+					<size>1</size>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
 					<index>36</index>
 					<size>1</size>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>38</index>
-					<size>1</size>
-					<constValueInteger>1</constValueInteger>
+					<index>8</index>
+					<size>8</size>
+					<parameterId>SUPPLY_VOLTAGE</parameterId>
 				</element>
 				<element>
-					<index>16</index>
-					<size>8</size>
-					<parameterId>HUMIDITY</parameterId>
+					<parameterId>ILLUMINATION_2</parameterId>
+					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
 					<index>24</index>
 					<size>8</size>
-					<parameterId>TEMPERATURE</parameterId>
+					<parameterId>ILLUMINATION_1</parameterId>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -52,19 +56,28 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
+					<index>39</index>
+					<size>1</size>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
 					<index>36</index>
 					<size>1</size>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>38</index>
-					<size>1</size>
-					<constValueInteger>0</constValueInteger>
+					<index>8</index>
+					<size>8</size>
+					<parameterId>SUPPLY_VOLTAGE</parameterId>
 				</element>
 				<element>
 					<index>16</index>
 					<size>8</size>
-					<parameterId>HUMIDITY</parameterId>
+					<parameterId>ILLUMINATION_2</parameterId>
+				</element>
+				<element>
+					<parameterId>ILLUMINATION_1</parameterId>
+					<constValueInteger>0</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -119,31 +132,27 @@
 			</parameter>
 		</variables>
 		<variables id="EnOceanVariables">
-			<parameter id="TEMPERATURE">
+			<parameter id="SUPPLY_VOLTAGE">
 				<properties>
 					<readable>true</readable>
 					<writeable>false</writeable>
 					<!-- Physical type is not signed -->
 					<signed>false</signed>
-					<unit>°C</unit>
+					<unit>V</unit>
 					<casts>
 						<round>
-							<decimalPlaces>1</decimalPlaces>
+							<decimalPlaces>2</decimalPlaces>
 						</round>
-						<decimalOffset>
-							<direction>toPacket</direction>
-							<addOffset>20</addOffset>
-						</decimalOffset>
 						<decimalIntegerScale>
-							<factor>3.125</factor>
+							<factor>50</factor>
 						</decimalIntegerScale>
 					</casts>
 				</properties>
 				<logicalDecimal>
-					<minimumValue>-20.0</minimumValue>
-					<maximumValue>60.0</maximumValue>
+					<minimumValue>0</minimumValue>
+					<maximumValue>5.1</maximumValue>
 				</logicalDecimal>
-				<physicalInteger groupId="TEMPERATURE">
+				<physicalInteger groupId="SUPPLY_VOLTAGE">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
@@ -155,27 +164,70 @@
 					</packet>
 				</packets>
 			</parameter>
-			<parameter id="HUMIDITY">
+			<parameter id="ILLUMINATION_1">
 				<properties>
 					<readable>true</readable>
 					<writeable>false</writeable>
 					<!-- Physical type is not signed -->
 					<signed>false</signed>
-					<unit>°C</unit>
+					<unit>lx</unit>
 					<casts>
 						<round>
 							<decimalPlaces>1</decimalPlaces>
 						</round>
+						<decimalOffset>
+							<direction>toPacket</direction>
+							<addOffset>-300</addOffset>
+						</decimalOffset>
 						<decimalIntegerScale>
-							<factor>2.5</factor>
+							<factor>0.0085858585</factor>
 						</decimalIntegerScale>
 					</casts>
 				</properties>
 				<logicalDecimal>
-					<minimumValue>0.0</minimumValue>
-					<maximumValue>100.0</maximumValue>
+					<minimumValue>300</minimumValue>
+					<maximumValue>30000</maximumValue>
+					<specialValues>
+						<specialValue id="unset">0</specialValue>
+					</specialValues>
 				</logicalDecimal>
-				<physicalInteger groupId="HUMIDITY">
+				<physicalInteger groupId="ILLUMINATION_1">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_1">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="ILLUMINATION_2">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>lx</unit>
+					<casts>
+						<round>
+							<decimalPlaces>1</decimalPlaces>
+						</round>
+						<decimalOffset>
+							<direction>toPacket</direction>
+							<addOffset>-600</addOffset>
+						</decimalOffset>
+						<decimalIntegerScale>
+							<factor>0.0042929293</factor>
+						</decimalIntegerScale>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>600</minimumValue>
+					<maximumValue>60000</maximumValue>
+				</logicalDecimal>
+				<physicalInteger groupId="ILLUMINATION_2">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>

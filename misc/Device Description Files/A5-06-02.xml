@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="A5-38-02">
-			<description>Dimmer</description>
-			<typeNumber>0xA53802</typeNumber>
+		<device id="A5-06-02">
+			<description>Light Sensor 0lx to 1.020lx</description>
+			<typeNumber>0xA50602</typeNumber>
 		</device>
 	</supportedDevices>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
@@ -14,106 +14,70 @@
 			<configParameters>EnOceanConfig</configParameters>
 			<variables>maint_ch_values</variables>
 		</function>
-		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanDimmer">
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanIllumination">
 			<variables>EnOceanVariables</variables>
 		</function>
 	</functions>
 	<packets>
-		<packet id="TEACH_IN">
-			<direction>fromCentral</direction>
-			<type>0xA5</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<index>8</index>
-					<size>8</size>
-					<constValueInteger>2</constValueInteger>
-				</element>
-				<element>
-					<index>16</index>
-					<size>8</size>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<index>24</index>
-					<size>8</size>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<index>32</index>
-					<size>8</size>
-					<constValueInteger>0</constValueInteger>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="LEVEL_INFO">
+		<packet id="INFO_1">
 			<direction>toCentral</direction>
 			<type>0xA5</type>
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>8</index>
-					<size>8</size>
-					<constValueInteger>2</constValueInteger>
-				</element>
-				<element>
-					<index>16</index>
-					<size>8</size>
-					<parameterId>LEVEL</parameterId>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="LEVEL_SET_ON">
-			<direction>fromCentral</direction>
-			<type>0xA5</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<index>8</index>
-					<size>8</size>
-					<constValueInteger>2</constValueInteger>
-				</element>
-				<element>
-					<index>16</index>
-					<size>8</size>
-					<parameterId>LEVEL</parameterId>
-				</element>
-				<element>
-					<index>24</index>
-					<size>8</size>
+					<index>39</index>
+					<size>1</size>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>32</index>
-					<size>8</size>
-					<constValueInteger>0x09</constValueInteger>
+					<index>36</index>
+					<size>1</size>
+					<constValueInteger>1</constValueInteger>
 				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="LEVEL_SET_OFF">
-			<direction>fromCentral</direction>
-			<type>0xA5</type>
-			<subtype>1</subtype>
-			<binaryPayload>
 				<element>
 					<index>8</index>
 					<size>8</size>
-					<constValueInteger>2</constValueInteger>
+					<parameterId>SUPPLY_VOLTAGE</parameterId>
 				</element>
 				<element>
-					<index>16</index>
-					<size>8</size>
+					<parameterId>ILLUMINATION_2</parameterId>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
 					<index>24</index>
 					<size>8</size>
-					<constValueInteger>0</constValueInteger>
+					<parameterId>ILLUMINATION_1</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_2">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<index>39</index>
+					<size>1</size>
+					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>32</index>
+					<index>36</index>
+					<size>1</size>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<index>8</index>
 					<size>8</size>
-					<constValueInteger>0x08</constValueInteger>
+					<parameterId>SUPPLY_VOLTAGE</parameterId>
+				</element>
+				<element>
+					<index>16</index>
+					<size>8</size>
+					<parameterId>ILLUMINATION_2</parameterId>
+				</element>
+				<element>
+					<parameterId>ILLUMINATION_1</parameterId>
+					<constValueInteger>0</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -166,66 +130,104 @@
 					<operationType>internal</operationType>
 				</physicalInteger>
 			</parameter>
-			<parameter id="RF_CHANNEL">
-				<properties>
-					<writeable>false</writeable>
-				</properties>
-				<logicalInteger>
-					<minimumValue>-1</minimumValue>
-					<maximumValue>127</maximumValue>
-					<defaultValue>-1</defaultValue>
-				</logicalInteger>
-				<physicalInteger groupId="RF_CHANNEL">
-					<operationType>internal</operationType>
-				</physicalInteger>
-			</parameter>
 		</variables>
 		<variables id="EnOceanVariables">
-			<parameter id="LEVEL">
+			<parameter id="SUPPLY_VOLTAGE">
 				<properties>
 					<readable>true</readable>
-					<writeable>true</writeable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>V</unit>
+					<casts>
+						<round>
+							<decimalPlaces>2</decimalPlaces>
+						</round>
+						<decimalIntegerScale>
+							<factor>50</factor>
+						</decimalIntegerScale>
+					</casts>
 				</properties>
-				<logicalInteger>
+				<logicalDecimal>
 					<minimumValue>0</minimumValue>
-					<maximumValue>100</maximumValue>
-					<defaultValue>0</defaultValue>
-				</logicalInteger>
-				<physicalInteger groupId="LEVEL">
+					<maximumValue>5.1</maximumValue>
+				</logicalDecimal>
+				<physicalInteger groupId="SUPPLY_VOLTAGE">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
-					<packet id="LEVEL_INFO">
+					<packet id="INFO_1">
 						<type>event</type>
 					</packet>
-					<packet id="LEVEL_SET_ON">
-						<type>set</type>
-						<conditionOperator>g</conditionOperator>
-						<conditionValue>0</conditionValue>
-					</packet>
-					<packet id="LEVEL_SET_OFF">
-						<type>set</type>
-						<conditionOperator>e</conditionOperator>
-						<conditionValue>0</conditionValue>
+					<packet id="INFO_2">
+						<type>event</type>
 					</packet>
 				</packets>
 			</parameter>
-			<parameter id="PAIRING">
+			<parameter id="ILLUMINATION_1">
 				<properties>
-					<readable>false</readable>
-					<writeable>true</writeable>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>lx</unit>
+					<casts>
+						<round>
+							<decimalPlaces>1</decimalPlaces>
+						</round>
+						<decimalIntegerScale>
+							<factor>0.25</factor>
+						</decimalIntegerScale>
+					</casts>
 				</properties>
-				<logicalInteger>
-					<minimumValue>-1</minimumValue>
-					<maximumValue>127</maximumValue>
-					<defaultValue>-1</defaultValue>
-				</logicalInteger>
-				<physicalInteger>
+				<logicalDecimal>
+					<minimumValue>0</minimumValue>
+					<maximumValue>1020</maximumValue>
+					<specialValues>
+						<specialValue id="unset">0</specialValue>
+					</specialValues>
+				</logicalDecimal>
+				<physicalInteger groupId="ILLUMINATION_1">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
-					<packet id="TEACH_IN">
-						<type>set</type>
+					<packet id="INFO_1">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="ILLUMINATION_2">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>lx</unit>
+					<casts>
+						<round>
+							<decimalPlaces>1</decimalPlaces>
+						</round>
+						<decimalIntegerScale>
+							<factor>0.5</factor>
+						</decimalIntegerScale>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>0</minimumValue>
+					<maximumValue>510</maximumValue>
+				</logicalDecimal>
+				<physicalInteger groupId="ILLUMINATION_2">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_1">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_2">
+						<type>event</type>
 					</packet>
 				</packets>
 			</parameter>

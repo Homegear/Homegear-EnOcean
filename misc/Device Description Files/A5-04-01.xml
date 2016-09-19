@@ -25,24 +25,24 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>2.0</index>
-					<size>1.0</size>
+					<index>36</index>
+					<size>1</size>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<index>38</index>
+					<size>1</size>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<index>16</index>
+					<size>8</size>
 					<parameterId>HUMIDITY</parameterId>
 				</element>
 				<element>
-					<index>3.0</index>
-					<size>1.0</size>
+					<index>24</index>
+					<size>8</size>
 					<parameterId>TEMPERATURE</parameterId>
-				</element>
-				<element>
-					<index>4.1</index>
-					<size>0.1</size>
-					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
-					<index>4.3</index>
-					<size>0.1</size>
-					<constValueInteger>1</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -52,19 +52,19 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>2.0</index>
-					<size>1.0</size>
-					<parameterId>HUMIDITY</parameterId>
+					<index>36</index>
+					<size>1</size>
+					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>4.1</index>
-					<size>0.1</size>
+					<index>38</index>
+					<size>1</size>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>4.3</index>
-					<size>0.1</size>
-					<constValueInteger>1</constValueInteger>
+					<index>16</index>
+					<size>8</size>
+					<parameterId>HUMIDITY</parameterId>
 				</element>
 			</binaryPayload>
 		</packet>
