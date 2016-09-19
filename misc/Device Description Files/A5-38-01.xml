@@ -25,23 +25,23 @@
 			<subtype>1</subtype>
 			<binaryPayload>
 				<element>
-					<index>8</index>
-					<size>8</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>16</index>
-					<size>8</size>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>24</index>
-					<size>8</size>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>32</index>
-					<size>8</size>
+					<bitIndex>32</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 			</binaryPayload>
@@ -52,8 +52,8 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>10</index>
-					<size>1</size>
+					<bitIndex>10</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -64,33 +64,33 @@
 			<subtype>1</subtype>
 			<binaryPayload>
 				<element>
-					<index>8</index>
-					<size>8</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>16</index>
-					<size>16</size>
+					<bitIndex>16</bitIndex>
+					<bitSize>16</bitSize>
 					<parameterId>ON_TIME</parameterId>
 				</element>
 				<element>
-					<index>39</index>
-					<size>1</size>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 				<element>
-					<index>38</index>
-					<size>1</size>
+					<bitIndex>38</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>ON_TIME_TYPE</parameterId>
 				</element>
 				<element>
-					<index>37</index>
-					<size>1</size>
+					<bitIndex>37</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>LOCK</parameterId>
 				</element>
 				<element>
-					<index>36</index>
-					<size>1</size>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 			</binaryPayload>

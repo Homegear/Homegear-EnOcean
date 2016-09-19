@@ -25,23 +25,23 @@
 			<subtype>1</subtype>
 			<binaryPayload>
 				<element>
-					<index>8</index>
-					<size>8</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>2</constValueInteger>
 				</element>
 				<element>
-					<index>16</index>
-					<size>8</size>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>24</index>
-					<size>8</size>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>32</index>
-					<size>8</size>
+					<bitIndex>32</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 			</binaryPayload>
@@ -52,13 +52,13 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>8</index>
-					<size>8</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>2</constValueInteger>
 				</element>
 				<element>
-					<index>16</index>
-					<size>8</size>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
 					<parameterId>LEVEL</parameterId>
 				</element>
 			</binaryPayload>
@@ -69,23 +69,23 @@
 			<subtype>1</subtype>
 			<binaryPayload>
 				<element>
-					<index>8</index>
-					<size>8</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>2</constValueInteger>
 				</element>
 				<element>
-					<index>16</index>
-					<size>8</size>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
 					<parameterId>LEVEL</parameterId>
 				</element>
 				<element>
-					<index>24</index>
-					<size>8</size>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>32</index>
-					<size>8</size>
+					<bitIndex>32</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>0x09</constValueInteger>
 				</element>
 			</binaryPayload>
@@ -96,23 +96,23 @@
 			<subtype>1</subtype>
 			<binaryPayload>
 				<element>
-					<index>8</index>
-					<size>8</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>2</constValueInteger>
 				</element>
 				<element>
-					<index>16</index>
-					<size>8</size>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>24</index>
-					<size>8</size>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>32</index>
-					<size>8</size>
+					<bitIndex>32</bitIndex>
+					<bitSize>8</bitSize>
 					<constValueInteger>0x08</constValueInteger>
 				</element>
 			</binaryPayload>

@@ -25,13 +25,13 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>36</index>
-					<size>1</size>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>24</index>
-					<size>8</size>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
 					<parameterId>TEMPERATURE</parameterId>
 				</element>
 			</binaryPayload>

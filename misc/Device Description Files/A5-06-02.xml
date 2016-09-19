@@ -25,18 +25,18 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>39</index>
-					<size>1</size>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>36</index>
-					<size>1</size>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>8</index>
-					<size>8</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
 					<parameterId>SUPPLY_VOLTAGE</parameterId>
 				</element>
 				<element>
@@ -44,8 +44,8 @@
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>24</index>
-					<size>8</size>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
 					<parameterId>ILLUMINATION_1</parameterId>
 				</element>
 			</binaryPayload>
@@ -56,23 +56,23 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>39</index>
-					<size>1</size>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>36</index>
-					<size>1</size>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>8</index>
-					<size>8</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
 					<parameterId>SUPPLY_VOLTAGE</parameterId>
 				</element>
 				<element>
-					<index>16</index>
-					<size>8</size>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
 					<parameterId>ILLUMINATION_2</parameterId>
 				</element>
 				<element>

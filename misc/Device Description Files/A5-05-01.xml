@@ -25,13 +25,13 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>36</index>
-					<size>1</size>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>14</index>
-					<size>10</size>
+					<bitIndex>14</bitIndex>
+					<bitSize>10</bitSize>
 					<parameterId>PRESSURE</parameterId>
 				</element>
 			</binaryPayload>

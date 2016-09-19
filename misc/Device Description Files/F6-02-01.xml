@@ -38,18 +38,18 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>8</index>
-					<size>3</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -60,23 +60,23 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>15</index>
-					<size>1</size>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>12</index>
-					<size>3</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -87,18 +87,18 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>8</index>
-					<size>3</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>3</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -109,13 +109,13 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -126,8 +126,8 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>14</constValueInteger>
 				</element>
 				<element>
@@ -142,8 +142,8 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>10</constValueInteger>
 				</element>
 				<element>
@@ -158,8 +158,8 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>7</constValueInteger>
 				</element>
 				<element>
@@ -174,8 +174,8 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>6</constValueInteger>
 				</element>
 				<element>
@@ -190,8 +190,8 @@
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>15</constValueInteger>
 				</element>
 				<element>
@@ -206,18 +206,18 @@
 			<channel>2</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>8</index>
-					<size>3</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -228,23 +228,23 @@
 			<channel>2</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>15</index>
-					<size>1</size>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>12</index>
-					<size>3</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -255,18 +255,18 @@
 			<channel>2</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>8</index>
-					<size>3</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>3</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -277,13 +277,13 @@
 			<channel>2</channel>
 			<binaryPayload>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -294,8 +294,8 @@
 			<channel>2</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>13</constValueInteger>
 				</element>
 				<element>
@@ -310,8 +310,8 @@
 			<channel>2</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>9</constValueInteger>
 				</element>
 				<element>
@@ -326,8 +326,8 @@
 			<channel>2</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>6</constValueInteger>
 				</element>
 				<element>
@@ -342,8 +342,8 @@
 			<channel>2</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>5</constValueInteger>
 				</element>
 				<element>
@@ -358,8 +358,8 @@
 			<channel>2</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>15</constValueInteger>
 				</element>
 				<element>
@@ -374,18 +374,18 @@
 			<channel>3</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>8</index>
-					<size>3</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>3</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -396,23 +396,23 @@
 			<channel>3</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>15</index>
-					<size>1</size>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>12</index>
-					<size>3</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>3</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -423,18 +423,18 @@
 			<channel>3</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>8</index>
-					<size>3</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>3</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -445,13 +445,13 @@
 			<channel>3</channel>
 			<binaryPayload>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -462,8 +462,8 @@
 			<channel>3</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>12</constValueInteger>
 				</element>
 				<element>
@@ -478,8 +478,8 @@
 			<channel>3</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>7</constValueInteger>
 				</element>
 				<element>
@@ -494,8 +494,8 @@
 			<channel>3</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>6</constValueInteger>
 				</element>
 				<element>
@@ -510,8 +510,8 @@
 			<channel>3</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>5</constValueInteger>
 				</element>
 				<element>
@@ -526,8 +526,8 @@
 			<channel>3</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>15</constValueInteger>
 				</element>
 				<element>
@@ -542,18 +542,18 @@
 			<channel>4</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>8</index>
-					<size>3</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>2</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -564,23 +564,23 @@
 			<channel>4</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>15</index>
-					<size>1</size>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<index>12</index>
-					<size>3</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>2</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -591,18 +591,18 @@
 			<channel>4</channel>
 			<binaryPayload>
 				<element>
-					<index>51</index>
-					<size>1</size>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>8</index>
-					<size>3</size>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
 					<constValueInteger>3</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -613,13 +613,13 @@
 			<channel>4</channel>
 			<binaryPayload>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
-					<index>11</index>
-					<size>1</size>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
@@ -630,8 +630,8 @@
 			<channel>4</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>11</constValueInteger>
 				</element>
 				<element>
@@ -646,8 +646,8 @@
 			<channel>4</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>10</constValueInteger>
 				</element>
 				<element>
@@ -662,8 +662,8 @@
 			<channel>4</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>9</constValueInteger>
 				</element>
 				<element>
@@ -678,8 +678,8 @@
 			<channel>4</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>6</constValueInteger>
 				</element>
 				<element>
@@ -694,8 +694,8 @@
 			<channel>4</channel>
 			<binaryPayload>
 				<element>
-					<index>12</index>
-					<size>4</size>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
 					<constValueInteger>15</constValueInteger>
 				</element>
 				<element>
