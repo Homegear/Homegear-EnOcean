@@ -157,7 +157,7 @@
 					<writeable>false</writeable>
 					<!-- Physical type is not signed -->
 					<signed>false</signed>
-					<unit>°C</unit>
+					<unit>%</unit>
 					<casts>
 						<round>
 							<decimalPlaces>1</decimalPlaces>

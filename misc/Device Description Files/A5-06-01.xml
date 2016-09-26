@@ -164,7 +164,7 @@
 					</packet>
 				</packets>
 			</parameter>
-			<parameter id="ILLUMINATION_1">
+			<parameter id="ILLUMINATION_2">
 				<properties>
 					<readable>true</readable>
 					<writeable>false</writeable>
@@ -191,7 +191,7 @@
 						<specialValue id="unset">0</specialValue>
 					</specialValues>
 				</logicalDecimal>
-				<physicalInteger groupId="ILLUMINATION_1">
+				<physicalInteger groupId="ILLUMINATION_2">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
@@ -203,7 +203,7 @@
 					</packet>
 				</packets>
 			</parameter>
-			<parameter id="ILLUMINATION_2">
+			<parameter id="ILLUMINATION_1">
 				<properties>
 					<readable>true</readable>
 					<writeable>false</writeable>
@@ -227,7 +227,7 @@
 					<minimumValue>600</minimumValue>
 					<maximumValue>60000</maximumValue>
 				</logicalDecimal>
-				<physicalInteger groupId="ILLUMINATION_2">
+				<physicalInteger groupId="ILLUMINATION_1">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>

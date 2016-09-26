@@ -131,13 +131,13 @@
 					<writeable>false</writeable>
 					<!-- Physical type is not signed -->
 					<signed>false</signed>
-					<unit>°C</unit>
+					<unit>%</unit>
 					<casts>
 						<round>
 							<decimalPlaces>1</decimalPlaces>
 						</round>
 						<decimalIntegerScale>
-							<factor>2.5</factor>
+							<factor>2.55</factor>
 						</decimalIntegerScale>
 					</casts>
 				</properties>
