@@ -746,17 +746,16 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 {
 	try
 	{
-		if(serialNumber.size() < 10 || serialNumber.size() > 12) return Variable::createError(-1, "The serial number needs to have a size between 10 and 12.");
-		if(peerExists(serialNumber)) return Variable::createError(-5, "This peer is already paired to this central.");
+		std::string serial = "EOD" + BaseLib::HelperFunctions::getHexString(address, 8);
+		if(peerExists(serial)) return Variable::createError(-5, "This peer is already paired to this central.");
 
-		std::shared_ptr<MyPeer> peer = createPeer(deviceType, address, serialNumber, false);
+		std::shared_ptr<MyPeer> peer = createPeer(deviceType, address, serial, false);
 		if(!peer || !peer->getRpcDevice()) return Variable::createError(-6, "Unknown device type.");
 
 		try
 		{
 			peer->save(true, true, false);
 			peer->initializeCentralConfig();
-			peer->setAddress(address); //Needs to be set again, so it is saved to CONFIG_PARAMETER IP_ADDRESS
 			peer->setPhysicalInterfaceId(interfaceId);
 			_peersMutex.lock();
 			_peers[peer->getAddress()] = peer;

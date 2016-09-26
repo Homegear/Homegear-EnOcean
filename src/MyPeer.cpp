@@ -545,7 +545,7 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 				if((*j)->bitSize > 0 && (*j)->bitIndex > 0)
 				{
 					if((*j)->bitIndex >= erpPacketBitSize) continue;
-					data = packet->getPositionV((*j)->bitIndex, (*j)->bitSize);
+					data = packet->getPosition((*j)->bitIndex, (*j)->bitSize);
 
 					if((*j)->constValueInteger > -1)
 					{
