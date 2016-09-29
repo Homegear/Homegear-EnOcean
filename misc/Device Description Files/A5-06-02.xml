@@ -172,21 +172,19 @@
 					<signed>false</signed>
 					<unit>lx</unit>
 					<casts>
-						<round>
-							<decimalPlaces>1</decimalPlaces>
-						</round>
-						<decimalIntegerScale>
+						<integerIntegerScale>
+							<operation>multiplication</operation>
 							<factor>0.25</factor>
-						</decimalIntegerScale>
+						</integerIntegerScale>
 					</casts>
 				</properties>
-				<logicalDecimal>
+				<logicalInteger>
 					<minimumValue>0</minimumValue>
 					<maximumValue>1020</maximumValue>
 					<specialValues>
 						<specialValue id="unset">0</specialValue>
 					</specialValues>
-				</logicalDecimal>
+				</logicalInteger>
 				<physicalInteger groupId="ILLUMINATION_1">
 					<operationType>command</operationType>
 				</physicalInteger>
@@ -207,18 +205,16 @@
 					<signed>false</signed>
 					<unit>lx</unit>
 					<casts>
-						<round>
-							<decimalPlaces>1</decimalPlaces>
-						</round>
-						<decimalIntegerScale>
+						<integerIntegerScale>
+							<operation>multiplication</operation>
 							<factor>0.5</factor>
-						</decimalIntegerScale>
+						</integerIntegerScale>
 					</casts>
 				</properties>
-				<logicalDecimal>
+				<logicalInteger>
 					<minimumValue>0</minimumValue>
 					<maximumValue>510</maximumValue>
-				</logicalDecimal>
+				</logicalInteger>
 				<physicalInteger groupId="ILLUMINATION_2">
 					<operationType>command</operationType>
 				</physicalInteger>

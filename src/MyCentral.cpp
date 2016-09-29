@@ -782,7 +782,7 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 		PVariable deviceDescriptions(new Variable(VariableType::tArray));
 		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(clientInfo, true, std::map<std::string, bool>());
 		raiseRPCNewDevices(deviceDescriptions);
-		GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
+		GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
 
 		return PVariable(new Variable((uint32_t)peer->getID()));
 	}

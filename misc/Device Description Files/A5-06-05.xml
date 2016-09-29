@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="A5-06-01">
-			<description>Light Sensor 300lx to 60.000lx</description>
-			<typeNumber>0xA50601</typeNumber>
+		<device id="A5-06-05">
+			<description>Light Sensor 0lx to 10.200lx</description>
+			<typeNumber>0xA50605</typeNumber>
 		</device>
 	</supportedDevices>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
@@ -164,7 +164,7 @@
 					</packet>
 				</packets>
 			</parameter>
-			<parameter id="ILLUMINATION_2">
+			<parameter id="ILLUMINATION_1">
 				<properties>
 					<readable>true</readable>
 					<writeable>false</writeable>
@@ -174,19 +174,18 @@
 					<casts>
 						<integerIntegerScale>
 							<operation>multiplication</operation>
-							<offset>-300</offset>
-							<factor>0.0085858585</factor>
+							<factor>0.025</factor>
 						</integerIntegerScale>
 					</casts>
 				</properties>
 				<logicalInteger>
-					<minimumValue>300</minimumValue>
-					<maximumValue>30000</maximumValue>
+					<minimumValue>0</minimumValue>
+					<maximumValue>10200</maximumValue>
 					<specialValues>
 						<specialValue id="unset">0</specialValue>
 					</specialValues>
 				</logicalInteger>
-				<physicalInteger groupId="ILLUMINATION_2">
+				<physicalInteger groupId="ILLUMINATION_1">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
@@ -198,7 +197,7 @@
 					</packet>
 				</packets>
 			</parameter>
-			<parameter id="ILLUMINATION_1">
+			<parameter id="ILLUMINATION_2">
 				<properties>
 					<readable>true</readable>
 					<writeable>false</writeable>
@@ -208,16 +207,15 @@
 					<casts>
 						<integerIntegerScale>
 							<operation>multiplication</operation>
-							<offset>-600</offset>
-							<factor>0.0042929293</factor>
+							<factor>0.05</factor>
 						</integerIntegerScale>
 					</casts>
 				</properties>
 				<logicalInteger>
-					<minimumValue>600</minimumValue>
-					<maximumValue>60000</maximumValue>
+					<minimumValue>0</minimumValue>
+					<maximumValue>5100</maximumValue>
 				</logicalInteger>
-				<physicalInteger groupId="ILLUMINATION_1">
+				<physicalInteger groupId="ILLUMINATION_2">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>

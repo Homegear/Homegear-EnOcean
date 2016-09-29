@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="A5-06-01">
-			<description>Light Sensor 300lx to 60.000lx</description>
-			<typeNumber>0xA50601</typeNumber>
+		<device id="A5-06-04">
+			<description>Curtain Wall Brightness Sensor</description>
+			<typeNumber>0xA50604</typeNumber>
 		</device>
 	</supportedDevices>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
@@ -19,65 +19,64 @@
 		</function>
 	</functions>
 	<packets>
-		<packet id="INFO_1">
+		<packet id="INFO_ILLUMINATION">
 			<direction>toCentral</direction>
 			<type>0xA5</type>
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<bitIndex>39</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
 					<bitIndex>36</bitIndex>
 					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>8</bitIndex>
-					<bitSize>8</bitSize>
-					<parameterId>SUPPLY_VOLTAGE</parameterId>
-				</element>
-				<element>
-					<parameterId>ILLUMINATION_2</parameterId>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>24</bitIndex>
-					<bitSize>8</bitSize>
-					<parameterId>ILLUMINATION_1</parameterId>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="INFO_2">
-			<direction>toCentral</direction>
-			<type>0xA5</type>
-			<channel>1</channel>
-			<binaryPayload>
-				<element>
-					<bitIndex>39</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>36</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>8</bitIndex>
-					<bitSize>8</bitSize>
-					<parameterId>SUPPLY_VOLTAGE</parameterId>
 				</element>
 				<element>
 					<bitIndex>16</bitIndex>
-					<bitSize>8</bitSize>
-					<parameterId>ILLUMINATION_2</parameterId>
+					<bitSize>16</bitSize>
+					<parameterId>ILLUMINATION</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_TEMPERATURE">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<parameterId>ILLUMINATION_1</parameterId>
-					<constValueInteger>0</constValueInteger>
+					<bitIndex>38</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>TEMPERATURE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_ENERGY">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>32</bitIndex>
+					<bitSize>4</bitSize>
+					<parameterId>ENERGY_STORAGE</parameterId>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -132,99 +131,83 @@
 			</parameter>
 		</variables>
 		<variables id="EnOceanVariables">
-			<parameter id="SUPPLY_VOLTAGE">
+			<parameter id="TEMPERATURE">
 				<properties>
 					<readable>true</readable>
 					<writeable>false</writeable>
 					<!-- Physical type is not signed -->
 					<signed>false</signed>
-					<unit>V</unit>
+					<unit>°C</unit>
 					<casts>
 						<round>
-							<decimalPlaces>2</decimalPlaces>
+							<decimalPlaces>1</decimalPlaces>
 						</round>
+						<decimalOffset>
+							<direction>toPacket</direction>
+							<addOffset>20</addOffset>
+						</decimalOffset>
 						<decimalIntegerScale>
-							<factor>50</factor>
+							<factor>3.125</factor>
 						</decimalIntegerScale>
 					</casts>
 				</properties>
 				<logicalDecimal>
-					<minimumValue>0</minimumValue>
-					<maximumValue>5.1</maximumValue>
+					<minimumValue>-20.0</minimumValue>
+					<maximumValue>60.0</maximumValue>
 				</logicalDecimal>
-				<physicalInteger groupId="SUPPLY_VOLTAGE">
+				<physicalInteger groupId="TEMPERATURE">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
-					<packet id="INFO_1">
-						<type>event</type>
-					</packet>
-					<packet id="INFO_2">
+					<packet id="INFO_TEMPERATURE">
 						<type>event</type>
 					</packet>
 				</packets>
 			</parameter>
-			<parameter id="ILLUMINATION_2">
+			<parameter id="ILLUMINATION">
 				<properties>
 					<readable>true</readable>
 					<writeable>false</writeable>
 					<!-- Physical type is not signed -->
 					<signed>false</signed>
 					<unit>lx</unit>
-					<casts>
-						<integerIntegerScale>
-							<operation>multiplication</operation>
-							<offset>-300</offset>
-							<factor>0.0085858585</factor>
-						</integerIntegerScale>
-					</casts>
 				</properties>
 				<logicalInteger>
-					<minimumValue>300</minimumValue>
-					<maximumValue>30000</maximumValue>
-					<specialValues>
-						<specialValue id="unset">0</specialValue>
-					</specialValues>
+					<minimumValue>0</minimumValue>
+					<maximumValue>65535</maximumValue>
 				</logicalInteger>
-				<physicalInteger groupId="ILLUMINATION_2">
+				<physicalInteger groupId="ILLUMINATION">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
-					<packet id="INFO_1">
-						<type>event</type>
-					</packet>
-					<packet id="INFO_2">
+					<packet id="INFO_ILLUMINATION">
 						<type>event</type>
 					</packet>
 				</packets>
 			</parameter>
-			<parameter id="ILLUMINATION_1">
+			<parameter id="ENERGY_STORAGE">
 				<properties>
 					<readable>true</readable>
 					<writeable>false</writeable>
 					<!-- Physical type is not signed -->
 					<signed>false</signed>
-					<unit>lx</unit>
+					<unit>%</unit>
 					<casts>
 						<integerIntegerScale>
 							<operation>multiplication</operation>
-							<offset>-600</offset>
-							<factor>0.0042929293</factor>
+							<factor>0.15</factor>
 						</integerIntegerScale>
 					</casts>
 				</properties>
 				<logicalInteger>
-					<minimumValue>600</minimumValue>
-					<maximumValue>60000</maximumValue>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
 				</logicalInteger>
-				<physicalInteger groupId="ILLUMINATION_1">
+				<physicalInteger groupId="ENERGY_STORAGE">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
-					<packet id="INFO_1">
-						<type>event</type>
-					</packet>
-					<packet id="INFO_2">
+					<packet id="INFO_ENERGY">
 						<type>event</type>
 					</packet>
 				</packets>
