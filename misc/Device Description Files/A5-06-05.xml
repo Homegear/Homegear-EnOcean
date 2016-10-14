@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="A5-38-02">
-			<description>Dimmer</description>
-			<typeNumber>0xA53802</typeNumber>
+		<device id="A5-06-05">
+			<description>Light Sensor 0lx to 10.200lx</description>
+			<typeNumber>0xA50605</typeNumber>
 		</device>
 	</supportedDevices>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
@@ -14,47 +14,20 @@
 			<configParameters>EnOceanConfig</configParameters>
 			<variables>maint_ch_values</variables>
 		</function>
-		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanDimmer">
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanIllumination">
 			<variables>EnOceanVariables</variables>
 		</function>
 	</functions>
 	<packets>
-		<packet id="TEACH_IN">
-			<direction>fromCentral</direction>
-			<type>0xA5</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<bitIndex>8</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>2</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>16</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>24</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>32</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="LEVEL_INFO">
+		<packet id="INFO_1">
 			<direction>toCentral</direction>
 			<type>0xA5</type>
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<bitIndex>8</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>2</constValueInteger>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
 					<bitIndex>36</bitIndex>
@@ -62,63 +35,49 @@
 					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<bitIndex>16</bitIndex>
-					<bitSize>8</bitSize>
-					<parameterId>LEVEL</parameterId>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="LEVEL_SET_ON">
-			<direction>fromCentral</direction>
-			<type>0xA5</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
 					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>2</constValueInteger>
+					<parameterId>SUPPLY_VOLTAGE</parameterId>
 				</element>
 				<element>
-					<bitIndex>16</bitIndex>
-					<bitSize>8</bitSize>
-					<parameterId>LEVEL</parameterId>
-				</element>
-				<element>
-					<bitIndex>24</bitIndex>
-					<bitSize>8</bitSize>
-					<parameterId>RAMPING_TIME</parameterId>
-				</element>
-				<element>
-					<bitIndex>32</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0x09</constValueInteger>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="LEVEL_SET_OFF">
-			<direction>fromCentral</direction>
-			<type>0xA5</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<bitIndex>8</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>2</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>16</bitIndex>
-					<bitSize>8</bitSize>
+					<parameterId>ILLUMINATION_2</parameterId>
 					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
 					<bitIndex>24</bitIndex>
 					<bitSize>8</bitSize>
-					<parameterId>RAMPING_TIME</parameterId>
+					<parameterId>ILLUMINATION_1</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_2">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
 				</element>
 				<element>
-					<bitIndex>32</bitIndex>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>0x08</constValueInteger>
+					<parameterId>SUPPLY_VOLTAGE</parameterId>
+				</element>
+				<element>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>ILLUMINATION_2</parameterId>
+				</element>
+				<element>
+					<parameterId>ILLUMINATION_1</parameterId>
+					<constValueInteger>0</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -171,92 +130,100 @@
 					<operationType>internal</operationType>
 				</physicalInteger>
 			</parameter>
-			<parameter id="RF_CHANNEL">
-				<properties>
-					<writeable>false</writeable>
-				</properties>
-				<logicalInteger>
-					<minimumValue>-1</minimumValue>
-					<maximumValue>127</maximumValue>
-					<defaultValue>-1</defaultValue>
-				</logicalInteger>
-				<physicalInteger groupId="RF_CHANNEL">
-					<operationType>internal</operationType>
-				</physicalInteger>
-			</parameter>
 		</variables>
 		<variables id="EnOceanVariables">
-			<parameter id="LEVEL">
+			<parameter id="SUPPLY_VOLTAGE">
 				<properties>
 					<readable>true</readable>
-					<writeable>true</writeable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>V</unit>
+					<casts>
+						<round>
+							<decimalPlaces>2</decimalPlaces>
+						</round>
+						<decimalIntegerScale>
+							<factor>50</factor>
+						</decimalIntegerScale>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>0</minimumValue>
+					<maximumValue>5.1</maximumValue>
+				</logicalDecimal>
+				<physicalInteger groupId="SUPPLY_VOLTAGE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_1">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="ILLUMINATION_1">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>lx</unit>
 					<casts>
 						<integerIntegerScale>
 							<operation>multiplication</operation>
-							<factor>2.55</factor>
+							<factor>0.025</factor>
 						</integerIntegerScale>
 					</casts>
 				</properties>
 				<logicalInteger>
 					<minimumValue>0</minimumValue>
-					<maximumValue>100</maximumValue>
-					<defaultValue>0</defaultValue>
+					<maximumValue>10200</maximumValue>
+					<specialValues>
+						<specialValue id="unset">0</specialValue>
+					</specialValues>
 				</logicalInteger>
-				<physicalInteger groupId="LEVEL">
+				<physicalInteger groupId="ILLUMINATION_1">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
-					<packet id="LEVEL_INFO">
+					<packet id="INFO_1">
 						<type>event</type>
 					</packet>
-					<packet id="LEVEL_SET_ON">
-						<type>set</type>
-						<conditionOperator>g</conditionOperator>
-						<conditionValue>0</conditionValue>
-						<autoReset>
-							<parameterId>RAMPING_TIME</parameterId>
-						</autoReset>
-					</packet>
-					<packet id="LEVEL_SET_OFF">
-						<type>set</type>
-						<conditionOperator>e</conditionOperator>
-						<conditionValue>0</conditionValue>
-						<autoReset>
-							<parameterId>RAMPING_TIME</parameterId>
-						</autoReset>
+					<packet id="INFO_2">
+						<type>event</type>
 					</packet>
 				</packets>
 			</parameter>
-			<parameter id="RAMPING_TIME">
+			<parameter id="ILLUMINATION_2">
 				<properties>
-					<readable>false</readable>
-					<unit>s</unit>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>lx</unit>
+					<casts>
+						<integerIntegerScale>
+							<operation>multiplication</operation>
+							<factor>0.05</factor>
+						</integerIntegerScale>
+					</casts>
 				</properties>
 				<logicalInteger>
 					<minimumValue>0</minimumValue>
-					<maximumValue>255</maximumValue>
-					<defaultValue>0</defaultValue>
+					<maximumValue>5100</maximumValue>
 				</logicalInteger>
-				<physicalInteger groupId="RAMPING_TIME">
-					<operationType>store</operationType>
-				</physicalInteger>
-			</parameter>
-			<parameter id="PAIRING">
-				<properties>
-					<readable>false</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalInteger>
-					<minimumValue>-1</minimumValue>
-					<maximumValue>127</maximumValue>
-					<defaultValue>-1</defaultValue>
-				</logicalInteger>
-				<physicalInteger>
+				<physicalInteger groupId="ILLUMINATION_2">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
-					<packet id="TEACH_IN">
-						<type>set</type>
+					<packet id="INFO_1">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_2">
+						<type>event</type>
 					</packet>
 				</packets>
 			</parameter>

@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
+	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<device id="A5-06-01">
+			<description>Light Sensor 300lx to 60.000lx</description>
+			<typeNumber>0xA50601</typeNumber>
+		</device>
+	</supportedDevices>
+	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="0" type="MAINTENANCE">
+			<properties>
+				<internal>true</internal>
+			</properties>
+			<configParameters>EnOceanConfig</configParameters>
+			<variables>maint_ch_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanIllumination">
+			<variables>EnOceanVariables</variables>
+		</function>
+	</functions>
+	<packets>
+		<packet id="INFO_1">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>SUPPLY_VOLTAGE</parameterId>
+				</element>
+				<element>
+					<parameterId>ILLUMINATION_2</parameterId>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>ILLUMINATION_1</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_2">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>SUPPLY_VOLTAGE</parameterId>
+				</element>
+				<element>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>ILLUMINATION_2</parameterId>
+				</element>
+				<element>
+					<parameterId>ILLUMINATION_1</parameterId>
+					<constValueInteger>0</constValueInteger>
+				</element>
+			</binaryPayload>
+		</packet>
+	</packets>
+	<parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<configParameters id="EnOceanConfig">
+			<parameter id="ENCRYPTION">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
+				<physicalBoolean>
+					<operationType>config</operationType>
+				</physicalBoolean>
+			</parameter>
+		</configParameters>
+		<variables id="maint_ch_values">
+			<parameter id="UNREACH">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<service>true</service>
+				</properties>
+				<logicalBoolean />
+				<physicalBoolean>
+					<operationType>internal</operationType>
+				</physicalBoolean>
+			</parameter>
+			<parameter id="STICKY_UNREACH">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<service>true</service>
+					<sticky>true</sticky>
+				</properties>
+				<logicalBoolean />
+				<physicalBoolean>
+					<operationType>internal</operationType>
+				</physicalBoolean>
+			</parameter>
+			<parameter id="RSSI_DEVICE">
+				<properties>
+					<writeable>false</writeable>
+				</properties>
+				<logicalInteger/>
+				<physicalInteger groupId="RSSI_DEVICE">
+					<operationType>internal</operationType>
+				</physicalInteger>
+			</parameter>
+		</variables>
+		<variables id="EnOceanVariables">
+			<parameter id="SUPPLY_VOLTAGE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>V</unit>
+					<casts>
+						<round>
+							<decimalPlaces>2</decimalPlaces>
+						</round>
+						<decimalIntegerScale>
+							<factor>50</factor>
+						</decimalIntegerScale>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>0</minimumValue>
+					<maximumValue>5.1</maximumValue>
+				</logicalDecimal>
+				<physicalInteger groupId="SUPPLY_VOLTAGE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_1">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="ILLUMINATION_2">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>lx</unit>
+					<casts>
+						<integerIntegerScale>
+							<operation>multiplication</operation>
+							<offset>-300</offset>
+							<factor>0.0085858585</factor>
+						</integerIntegerScale>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<minimumValue>300</minimumValue>
+					<maximumValue>30000</maximumValue>
+					<specialValues>
+						<specialValue id="unset">0</specialValue>
+					</specialValues>
+				</logicalInteger>
+				<physicalInteger groupId="ILLUMINATION_2">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_1">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="ILLUMINATION_1">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>lx</unit>
+					<casts>
+						<integerIntegerScale>
+							<operation>multiplication</operation>
+							<offset>-600</offset>
+							<factor>0.0042929293</factor>
+						</integerIntegerScale>
+					</casts>
+				</properties>
+				<logicalInteger>
+					<minimumValue>600</minimumValue>
+					<maximumValue>60000</maximumValue>
+				</logicalInteger>
+				<physicalInteger groupId="ILLUMINATION_1">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_1">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDevice>

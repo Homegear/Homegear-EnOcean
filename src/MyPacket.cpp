@@ -121,150 +121,45 @@ std::vector<char> MyPacket::getBinary()
     return std::vector<char>();
 }
 
-void MyPacket::setPosition(double index, double size, std::vector<uint8_t>& value)
+std::vector<uint8_t> MyPacket::getPosition(uint32_t position, uint32_t size)
 {
 	try
 	{
-		if(size < 0)
-		{
-			GD::out.printError("Error: Negative size not allowed.");
-			return;
-		}
-		double byteIndex = std::floor(index);
-		if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
-		{
-			if(value.empty()) value.push_back(0);
-			int32_t intByteIndex = byteIndex;
-			if(size > 1.0)
-			{
-				GD::out.printError("Error: Can't set partial byte index > 1.");
-				return;
-			}
-			while((signed)_data.size() - 1 < intByteIndex)
-			{
-				_data.push_back(0);
-			}
-			_data.at(intByteIndex) |= value.at(value.size() - 1) << (std::lround(index * 10) % 10);
-		}
-		else
-		{
-			uint32_t intByteIndex = byteIndex;
-			uint32_t bytes = (uint32_t)std::ceil(size);
-			while(_data.size() < intByteIndex + bytes)
-			{
-				_data.push_back(0);
-			}
-			if(value.empty()) return;
-			uint32_t bitSize = std::lround(size * 10) % 10;
-			if(bitSize > 8) bitSize = 8;
-			if(bytes == 0) bytes = 1; //size is 0 - assume 1
-			//if(bytes > value.size()) bytes = value.size();
-			if(bytes <= value.size())
-			{
-				_data.at(intByteIndex) |= value.at(0) & _bitmask[bitSize];
-				for(uint32_t i = 1; i < bytes; i++)
-				{
-					_data.at(intByteIndex + i) |= value.at(i);
-				}
-			}
-			else
-			{
-				uint32_t missingBytes = bytes - value.size();
-				for(uint32_t i = 0; i < value.size(); i++)
-				{
-					_data.at(intByteIndex + missingBytes + i) |= value.at(i);
-				}
-			}
-		}
+		return BaseLib::BitReaderWriter::getPosition(_data, position, size);
 	}
 	catch(const std::exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(BaseLib::Exception& ex)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     catch(...)
     {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+    return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> MyPacket::getPosition(double index, double size, int32_t mask)
+void MyPacket::setPosition(uint32_t position, uint32_t size, const std::vector<uint8_t>& source)
 {
-	std::vector<uint8_t> result;
 	try
 	{
-		if(size < 0)
-		{
-			GD::out.printError("Error: Negative size not allowed.");
-			result.push_back(0);
-			return result;
-		}
-		if(index < 0)
-		{
-			GD::out.printError("Error: Packet index < 0 requested.");
-			result.push_back(0);
-			return result;
-		}
-		double byteIndex = std::floor(index);
-		int32_t intByteIndex = byteIndex;
-		if(byteIndex >= _data.size())
-		{
-			result.push_back(0);
-			return result;
-		}
-		if(byteIndex != index || size < 0.8) //0.8 == 8 Bits
-		{
-			if(size > 1)
-			{
-				GD::out.printError("Error: Partial byte index > 1 requested.");
-				result.push_back(0);
-				return result;
-			}
-			//The round is necessary, because for example (uint32_t)(0.2 * 10) is 1
-			uint32_t bitSize = std::lround(size * 10);
-			if(bitSize > 8) bitSize = 8;
-			result.push_back((_data.at(intByteIndex) >> (std::lround(index * 10) % 10)) & _bitmask[bitSize]);
-		}
-		else
-		{
-			uint32_t bytes = (uint32_t)std::ceil(size);
-			uint32_t bitSize = std::lround(size * 10) % 10;
-			if(bitSize > 8) bitSize = 8;
-			if(bytes == 0) bytes = 1; //size is 0 - assume 1
-			uint8_t currentByte = _data.at(intByteIndex) & _bitmask[bitSize];
-			if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - 1) * 8));
-			result.push_back(currentByte);
-			for(uint32_t i = 1; i < bytes; i++)
-			{
-				if((intByteIndex + i) >= _data.size()) result.push_back(0);
-				else
-				{
-					currentByte = _data.at(intByteIndex + i);
-					if(mask != -1 && bytes <= 4) currentByte &= (mask >> ((bytes - i - 1) * 8));
-					result.push_back(currentByte);
-				}
-			}
-		}
-		if(result.empty()) result.push_back(0);
-		return result;
+		BaseLib::BitReaderWriter::setPosition(position, size, _data, source);
 	}
 	catch(const std::exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    result.push_back(0);
-    return result;
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(const Exception& ex)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 }

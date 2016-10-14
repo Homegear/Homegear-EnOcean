@@ -68,10 +68,10 @@ class MyPacket : public BaseLib::Systems::Packet
         std::vector<char> getOptionalData() { return _optionalData; }
         std::vector<char> getBinary();
 
-        virtual std::vector<uint8_t> getPosition(double index, double size, int32_t mask);
-        virtual void setPosition(double index, double size, std::vector<uint8_t>& value);
+        std::vector<uint8_t> getPosition(uint32_t position, uint32_t size);
+		void setPosition(uint32_t position, uint32_t size, const std::vector<uint8_t>& source);
     protected:
-        bool _appendAddressAndStatus = false;
+		bool _appendAddressAndStatus = false;
         std::vector<char> _packet;
         Type _type = Type::RESERVED;
         int32_t _rssi = 0;

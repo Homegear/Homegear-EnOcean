@@ -52,11 +52,11 @@ public:
 	void dispose();
 
 	//Features
-	virtual bool wireless() { return false; }
+	virtual bool wireless() { return true; }
 	//End features
 
 	//{{{ In table variables
-	std::string getPhysicalInterfaceId() { return _physicalInterfaceId; }
+	std::string getPhysicalInterfaceId();
 	void setPhysicalInterfaceId(std::string);
 	//}}}
 

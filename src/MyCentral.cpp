@@ -214,8 +214,7 @@ int32_t MyCentral::getFreeRfChannel(std::string& interfaceId)
 {
 	try
 	{
-		std::vector<std::shared_ptr<BaseLib::Systems::Peer>> peers;
-		getPeers(peers);
+		std::vector<std::shared_ptr<BaseLib::Systems::Peer>> peers = getPeers();
 		std::set<int32_t> usedChannels;
 		for(std::vector<std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
 		{
@@ -434,7 +433,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 				PVariable deviceDescriptions(new Variable(VariableType::tArray));
 				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
 				raiseRPCNewDevices(deviceDescriptions);
-				GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
+				GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
 				stringStream << "Added peer " << std::to_string(peer->getID()) << " with address 0x" << BaseLib::HelperFunctions::getHexString(address, 8) << " and serial number " << serial << "." << std::dec << std::endl;
 			}
 			return stringStream.str();
@@ -555,7 +554,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 					else if(filterType == "type")
 					{
 						int32_t deviceType = BaseLib::Math::getNumber(filterValue, true);
-						if((int32_t)i->second->getDeviceType().type() != deviceType) continue;
+						if((int32_t)i->second->getDeviceType() != deviceType) continue;
 					}
 
 					stringStream << std::setw(idWidth) << std::setfill(' ') << std::to_string(i->second->getID()) << bar;
@@ -570,7 +569,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 					stringStream << name << bar
 						<< std::setw(serialWidth) << i->second->getSerialNumber() << bar
 						<< std::setw(addressWidth) << BaseLib::HelperFunctions::getHexString(i->second->getAddress(), 8) << bar
-						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType().type(), 6) << bar;
+						<< std::setw(typeWidth1) << BaseLib::HelperFunctions::getHexString(i->second->getDeviceType(), 6) << bar;
 					if(i->second->getRpcDevice())
 					{
 						PSupportedDevice type = i->second->getRpcDevice()->getType(i->second->getDeviceType(), i->second->getFirmwareVersion());
@@ -692,7 +691,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 			if(!_currentPeer) stringStream << "This peer is not paired to this central." << std::endl;
 			else
 			{
-				stringStream << "Peer with id " << std::hex << std::to_string(id) << " and device type 0x" << _bl->hf.getHexString(_currentPeer->getDeviceType().type()) << " selected." << std::dec << std::endl;
+				stringStream << "Peer with id " << std::hex << std::to_string(id) << " and device type 0x" << _bl->hf.getHexString(_currentPeer->getDeviceType()) << " selected." << std::dec << std::endl;
 				stringStream << "For information about the peer's commands type: \"help\"" << std::endl;
 			}
 			return stringStream.str();
@@ -714,12 +713,11 @@ std::string MyCentral::handleCliCommand(std::string command)
     return "Error executing command. See log file for more details.\n";
 }
 
-std::shared_ptr<MyPeer> MyCentral::createPeer(int32_t type, int32_t address, std::string serialNumber, bool save)
+std::shared_ptr<MyPeer> MyCentral::createPeer(uint32_t deviceType, int32_t address, std::string serialNumber, bool save)
 {
 	try
 	{
 		std::shared_ptr<MyPeer> peer(new MyPeer(_deviceId, this));
-		BaseLib::Systems::LogicalDeviceType deviceType(MY_FAMILY_ID, type);
 		peer->setDeviceType(deviceType);
 		peer->setAddress(address);
 		peer->setSerialNumber(serialNumber);
@@ -747,17 +745,16 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 {
 	try
 	{
-		if(serialNumber.size() < 10 || serialNumber.size() > 12) return Variable::createError(-1, "The serial number needs to have a size between 10 and 12.");
-		if(peerExists(serialNumber)) return Variable::createError(-5, "This peer is already paired to this central.");
+		std::string serial = "EOD" + BaseLib::HelperFunctions::getHexString(address, 8);
+		if(peerExists(serial)) return Variable::createError(-5, "This peer is already paired to this central.");
 
-		std::shared_ptr<MyPeer> peer = createPeer(deviceType, address, serialNumber, false);
+		std::shared_ptr<MyPeer> peer = createPeer(deviceType, address, serial, false);
 		if(!peer || !peer->getRpcDevice()) return Variable::createError(-6, "Unknown device type.");
 
 		try
 		{
 			peer->save(true, true, false);
 			peer->initializeCentralConfig();
-			peer->setAddress(address); //Needs to be set again, so it is saved to CONFIG_PARAMETER IP_ADDRESS
 			peer->setPhysicalInterfaceId(interfaceId);
 			_peersMutex.lock();
 			_peers[peer->getAddress()] = peer;
@@ -784,7 +781,7 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 		PVariable deviceDescriptions(new Variable(VariableType::tArray));
 		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(clientInfo, true, std::map<std::string, bool>());
 		raiseRPCNewDevices(deviceDescriptions);
-		GD::out.printMessage("Added peer 0x" + BaseLib::HelperFunctions::getHexString(peer->getID()) + ".");
+		GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
 
 		return PVariable(new Variable((uint32_t)peer->getID()));
 	}
