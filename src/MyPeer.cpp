@@ -306,6 +306,12 @@ std::string MyPeer::printConfig()
     return "";
 }
 
+std::string MyPeer::getPhysicalInterfaceId()
+{
+	if(_physicalInterfaceId.empty()) setPhysicalInterfaceId(GD::defaultPhysicalInterface->getID());
+	return _physicalInterfaceId;
+}
+
 void MyPeer::setPhysicalInterfaceId(std::string id)
 {
 	if(id.empty() || (GD::physicalInterfaces.find(id) != GD::physicalInterfaces.end() && GD::physicalInterfaces.at(id)))
