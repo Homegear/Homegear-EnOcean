@@ -122,6 +122,33 @@
 				</element>
 			</binaryPayload>
 		</packet>
+		<packet id="STATE_SET_ON">
+			<direction>fromCentral</direction>
+			<type>0xA5</type>
+			<subtype>1</subtype>
+			<binaryPayload>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
+					<constValueInteger>2</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>STATE_LEVEL</parameterId>
+				</element>
+				<element>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>32</bitIndex>
+					<bitSize>8</bitSize>
+					<constValueInteger>0x09</constValueInteger>
+				</element>
+			</binaryPayload>
+		</packet>
 	</packets>
 	<parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
 		<configParameters id="EnOceanConfig">
@@ -215,6 +242,20 @@
 					</packet>
 				</packets>
 			</parameter>
+			<parameter id="STATE_LEVEL">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
+					<defaultValue>100</defaultValue>
+				</logicalInteger>
+				<physicalInteger groupId="STATE_LEVEL">
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
 			<parameter id="STATE">
 				<properties>
 					<readable>true</readable>
@@ -228,7 +269,7 @@
 					<packet id="LEVEL_INFO">
 						<type>event</type>
 					</packet>
-					<packet id="LEVEL_SET_ON">
+					<packet id="STATE_SET_ON">
 						<type>set</type>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
