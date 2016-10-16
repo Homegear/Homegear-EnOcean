@@ -227,6 +227,38 @@
 					</packet>
 				</packets>
 			</parameter>
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalInteger groupId="LEVEL">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="LEVEL_INFO">
+						<type>event</type>
+					</packet>
+					<packet id="LEVEL_SET_ON">
+						<type>set</type>
+						<conditionOperator>g</conditionOperator>
+						<conditionValue>0</conditionValue>
+						<autoReset>
+							<parameterId>RAMPING_TIME</parameterId>
+						</autoReset>
+					</packet>
+					<packet id="LEVEL_SET_OFF">
+						<type>set</type>
+						<conditionOperator>e</conditionOperator>
+						<conditionValue>0</conditionValue>
+						<autoReset>
+							<parameterId>RAMPING_TIME</parameterId>
+						</autoReset>
+					</packet>
+				</packets>
+				</packets>
+			</parameter>
 			<parameter id="RAMPING_TIME">
 				<properties>
 					<readable>false</readable>

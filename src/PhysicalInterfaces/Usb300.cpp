@@ -48,6 +48,26 @@ Usb300::~Usb300()
 	GD::bl->threadManager.join(_initThread);
 }
 
+void Usb300::setup(int32_t userID, int32_t groupID)
+{
+    try
+    {
+    	setDevicePermission(userID, groupID);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void Usb300::startListening()
 {
 	try
