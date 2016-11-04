@@ -62,10 +62,17 @@ public:
 	virtual PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags);
 	virtual PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags);
 	virtual PVariable getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, uint64_t id, std::map<std::string, bool> fields);
+	virtual PVariable getSniffedDevices(BaseLib::PRpcClientInfo clientInfo);
 	virtual PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t channel, ParameterGroup::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, PVariable paramset);
 	virtual PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteId, int32_t remoteChannel, PVariable paramset);
 	virtual PVariable setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string interfaceId);
+	virtual PVariable startSniffing(BaseLib::PRpcClientInfo clientInfo);
+	virtual PVariable stopSniffing(BaseLib::PRpcClientInfo clientInfo);
 protected:
+	bool _sniff = false;
+	std::mutex _sniffedAddressesMutex;
+	std::set<int32_t> _sniffedAddresses;
+
 	virtual void init();
 	virtual void loadPeers();
 	virtual void savePeers(bool full);

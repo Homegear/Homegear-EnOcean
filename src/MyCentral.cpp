@@ -256,7 +256,15 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 		if(_bl->debugLevel >= 4) std::cout << BaseLib::HelperFunctions::getTimeString(myPacket->timeReceived()) << " EnOcean packet received (" << senderId << std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" << "): " << BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) << " - Sender address: 0x" << BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8) << std::endl;
 
 		PMyPeer peer = getPeer(myPacket->senderAddress());
-		if(!peer) return false;
+		if(!peer)
+		{
+			if(_sniff)
+			{
+				std::lock_guard<std::mutex> sniffedAddressesGuard(_sniffedAddressesMutex);
+				_sniffedAddresses.insert(myPacket->senderAddress());
+			}
+			return false;
+		}
 		if(senderId != peer->getPhysicalInterfaceId()) return false;
 
 		peer->packetReceived(myPacket);
@@ -907,6 +915,35 @@ PVariable MyCentral::getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, uint64_t 
     return Variable::createError(-32500, "Unknown application error.");
 }
 
+PVariable MyCentral::getSniffedDevices(BaseLib::PRpcClientInfo clientInfo)
+{
+	try
+	{
+		PVariable array(new Variable(VariableType::tArray));
+
+		std::lock_guard<std::mutex> sniffedAddressesGuard(_sniffedAddressesMutex);
+		array->arrayValue->reserve(_sniffedAddresses.size());
+		for(auto address : _sniffedAddresses)
+		{
+			array->arrayValue->push_back(PVariable(new Variable(address)));
+		}
+		return array;
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Variable::createError(-32500, "Unknown application error.");
+}
+
 PVariable MyCentral::putParamset(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t channel, ParameterGroup::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, PVariable paramset)
 {
 	try
@@ -981,6 +1018,20 @@ PVariable MyCentral::setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t p
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Variable::createError(-32500, "Unknown application error.");
+}
+
+PVariable MyCentral::startSniffing(BaseLib::PRpcClientInfo clientInfo)
+{
+	std::lock_guard<std::mutex> sniffedAddressesGuard(_sniffedAddressesMutex);
+	_sniffedAddresses.clear();
+	_sniff = true;
+	return PVariable(new Variable());
+}
+
+PVariable MyCentral::stopSniffing(BaseLib::PRpcClientInfo clientInfo)
+{
+	_sniff = false;
+	return PVariable(new Variable());
 }
 
 }
