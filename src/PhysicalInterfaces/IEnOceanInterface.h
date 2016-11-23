@@ -98,7 +98,7 @@ protected:
 
 	std::map<char, std::string> _responseStatusCodes;
 
-	BaseLib::Obj* _bl = nullptr;
+	BaseLib::SharedObjects* _bl = nullptr;
 	BaseLib::Output _out;
 	uint32_t _baseAddress = 0;
 

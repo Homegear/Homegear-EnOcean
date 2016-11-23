@@ -38,14 +38,14 @@ namespace MyFamily
 class Security
 {
     public:
-        Security(BaseLib::Obj* bl);
+        Security(BaseLib::SharedObjects* bl);
         virtual ~Security();
 
         bool decrypt(const std::vector<char>& deviceAesKey, std::vector<char>& data, int32_t dataSize, int32_t rollingCode, int32_t rollingCodeSize);
         bool checkCmac(const std::vector<char>& deviceAesKey, const std::vector<char>& encryptedData, int32_t dataSize, int32_t& rollingCode, int32_t rollingCodeSize, int32_t cmacSize);
         std::vector<char> getCmac(const std::vector<char>& deviceAesKey, const std::vector<char>& encryptedData, int32_t dataSize, int32_t rollingCode, int32_t rollingCodeSize, int32_t cmacSize);
     protected:
-        BaseLib::Obj* _bl = nullptr;
+        BaseLib::SharedObjects* _bl = nullptr;
 
         const char _subkeyInput[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 

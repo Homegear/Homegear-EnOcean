@@ -31,7 +31,7 @@
 
 namespace MyFamily
 {
-	BaseLib::Obj* GD::bl = nullptr;
+	BaseLib::SharedObjects* GD::bl = nullptr;
 	MyFamily* GD::family = nullptr;
 	std::map<std::string, std::shared_ptr<IEnOceanInterface>> GD::physicalInterfaces;
 	std::shared_ptr<IEnOceanInterface> GD::defaultPhysicalInterface;

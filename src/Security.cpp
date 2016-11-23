@@ -33,7 +33,7 @@
 
 namespace MyFamily
 {
-Security::Security(BaseLib::Obj* bl) : _bl(bl)
+Security::Security(BaseLib::SharedObjects* bl) : _bl(bl)
 {
 	gcry_error_t result;
 	if((result = gcry_cipher_open(&_encryptHandle, GCRY_CIPHER_AES128, GCRY_CIPHER_MODE_ECB, GCRY_CIPHER_SECURE)) != GPG_ERR_NO_ERROR)
