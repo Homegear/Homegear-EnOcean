@@ -63,6 +63,7 @@ public:
 	std::shared_ptr<IEnOceanInterface>& getPhysicalInterface() { return _physicalInterface; }
 
 	int32_t getRfChannel() { return _rfChannel; }
+	void setRfChannel(int32_t value);
 
 	virtual std::string handleCliCommand(std::string command);
 	void packetReceived(PMyPacket& packet);

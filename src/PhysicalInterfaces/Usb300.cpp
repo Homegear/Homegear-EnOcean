@@ -139,6 +139,19 @@ void Usb300::init()
 {
 	try
     {
+		/* Set address - only possible 10 times
+		std::vector<char> data2{ 0x55, 0x00, 0x05, 0x00, 0x05, 0x00, 0x07, (char)(uint8_t)0xFF, (char)(uint8_t)0xA0, (char)(uint8_t)0xA0, (char)(uint8_t)0xA0, 0x00 };
+		addCrc8(data2);
+		std::vector<char> response2;
+		getResponse(0x02, data2, response2);
+		std::cerr << "Moin " << BaseLib::HelperFunctions::getHexString(data2) << std::endl;
+		if(response2.size() != 8 || response2[1] != 0 || response2[2] != 1 || response2[3] != 0 || response2[4] != 2 || response2[6] != 0)
+		{
+			_out.printError("Error setting address on device: " + BaseLib::HelperFunctions::getHexString(data2));
+			_stopped = true;
+			return;
+		}*/
+
 		std::vector<char> data{ 0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x08, 0x00 };
 		addCrc8(data);
 		std::vector<char> response;
@@ -149,7 +162,7 @@ void Usb300::init()
 			_stopped = true;
 			return;
 		}
-		_baseAddress = (response[7] << 24) | (response[8] << 16) | (response[9] << 8) | response[10];
+		_baseAddress = ((int32_t)(uint8_t)response[7] << 24) | ((int32_t)(uint8_t)response[8] << 16) | ((int32_t)(uint8_t)response[9] << 8) | (uint8_t)response[10];
 
 		_out.printInfo("Info: Base address set to 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + ". Remaining changes: " + std::to_string(response[11]));
 

@@ -91,6 +91,7 @@ PVariable MyFamily::getPairingMethods()
 		if(!_central) return PVariable(new Variable(VariableType::tArray));
 		PVariable array(new Variable(VariableType::tArray));
 		array->arrayValue->push_back(PVariable(new Variable(std::string("createDevice"))));
+		array->arrayValue->push_back(PVariable(new Variable(std::string("setInstallMode"))));
 		return array;
 	}
 	catch(const std::exception& ex)

@@ -526,6 +526,42 @@ void MyPeer::setRssiDevice(uint8_t rssi)
     }
 }
 
+void MyPeer::setRfChannel(int32_t rfChannel)
+{
+	try
+	{
+		if(rfChannel < 0 || rfChannel > 127) return;
+		BaseLib::PVariable value(new BaseLib::Variable(rfChannel));
+		std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelIterator = valuesCentral.find(0);
+		if(channelIterator != valuesCentral.end())
+		{
+			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("RF_CHANNEL");
+			if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+			{
+				parameterIterator->second.rpcParameter->convertToPacket(value, parameterIterator->second.data);
+				if(parameterIterator->second.databaseID > 0) saveParameter(parameterIterator->second.databaseID, parameterIterator->second.data);
+				else saveParameter(0, ParameterGroup::Type::Enum::variables, 0, "RF_CHANNEL", parameterIterator->second.data);
+				_rfChannel = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
+				if(_bl->debugLevel >= 4) GD::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":0" + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterIterator->second.data) + ".");
+			}
+			else GD::out.printError("Error: Parameter RF_CHANNEL not found.");
+		}
+		else GD::out.printError("Error: Parameter RF_CHANNEL not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& frameValues)
 {
 	try

@@ -65,6 +65,7 @@ public:
 	virtual PVariable getSniffedDevices(BaseLib::PRpcClientInfo clientInfo);
 	virtual PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t channel, ParameterGroup::Type::Enum type, std::string remoteSerialNumber, int32_t remoteChannel, PVariable paramset);
 	virtual PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteId, int32_t remoteChannel, PVariable paramset);
+	virtual PVariable setInstallMode(BaseLib::PRpcClientInfo clientInfo, bool on, uint32_t duration = 60, bool debugOutput = true);
 	virtual PVariable setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string interfaceId);
 	virtual PVariable startSniffing(BaseLib::PRpcClientInfo clientInfo);
 	virtual PVariable stopSniffing(BaseLib::PRpcClientInfo clientInfo);
@@ -73,6 +74,12 @@ protected:
 	std::mutex _sniffedAddressesMutex;
 	std::set<int32_t> _sniffedAddresses;
 
+	std::atomic_bool _pairing;
+	std::atomic<uint32_t> _timeLeftInPairingMode;
+	std::atomic_bool _stopPairingModeThread;
+	std::mutex _pairingModeThreadMutex;
+	std::thread _pairingModeThread;
+
 	virtual void init();
 	virtual void loadPeers();
 	virtual void savePeers(bool full);
@@ -80,6 +87,9 @@ protected:
 	virtual void saveVariables() {}
 	std::shared_ptr<MyPeer> createPeer(uint32_t deviceType, int32_t address, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);
+
+	void pairingModeTimer(int32_t duration, bool debugOutput = true);
+	bool handlePairingRequest(std::string& interfaceId, PMyPacket packet);
 };
 
 }
