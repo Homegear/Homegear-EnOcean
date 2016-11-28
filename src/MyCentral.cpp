@@ -300,7 +300,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 	{
 		std::vector<char> payload = packet->getData();
 		if(payload.size() < 4) return false;
-		int32_t eep = ((int32_t)(uint8_t)payload.at(0) << 16) | (((int32_t)(uint8_t)payload.at(1) >> 2) << 8) | ((payload.at(1) & 3) << 5) | (payload.at(2) >> 3);
+		int32_t eep = ((int32_t)(uint8_t)payload.at(0) << 16) | (((int32_t)(uint8_t)payload.at(1) >> 2) << 8) | (((uint8_t)payload.at(1) & 3) << 5) | ((uint8_t)payload.at(2) >> 3);
 		std::string serial = "EOD" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 8);
 
 		auto physicalInterfaceIterator = GD::physicalInterfaces.find(interfaceId);
@@ -316,6 +316,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
 				return false;
 			}
+			GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ". If nothing happens, the EEP is not yet supported.");
 			std::shared_ptr<MyPeer> peer = createPeer(eep, packet->senderAddress(), serial, false);
 			if(!peer || !peer->getRpcDevice()) return false;
 			try

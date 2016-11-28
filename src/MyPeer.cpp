@@ -603,7 +603,7 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 							abort = true;
 							break;
 						}
-						else continue;
+						else if((*j)->parameterId.empty()) continue;
 					}
 				}
 				else if((*j)->constValueInteger > -1)
@@ -611,6 +611,17 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 					_bl->hf.memcpyBigEndian(data, (*j)->constValueInteger);
 				}
 				else continue;
+
+				//Check for low battery
+				if((*j)->parameterId == "LOWBAT")
+				{
+					if(data.size() > 0 && data.at(0))
+					{
+						serviceMessages->set("LOWBAT", true);
+						if(_bl->debugLevel >= 4) GD::out.printInfo("Info: LOWBAT of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " was set to \"true\".");
+					}
+					else serviceMessages->set("LOWBAT", false);
+				}
 
 				for(std::vector<PParameter>::iterator k = frame->associatedVariables.begin(); k != frame->associatedVariables.end(); ++k)
 				{
@@ -843,6 +854,48 @@ void MyPeer::packetReceived(PMyPacket& packet)
 
 						valueKeys[*j]->push_back(i->first);
 						rpcValues[*j]->push_back(parameter.rpcParameter->convertFromPacket(i->second.value, true));
+					}
+				}
+			}
+
+			if(!frame->responseTypeId.empty())
+			{
+				if(_rfChannel == -1) GD::out.printError("Error: RF_CHANNEL is not set. Please pair the device.");
+				else
+				{
+					PacketsById::iterator packetIterator = _rpcDevice->packetsById.find(frame->responseTypeId);
+					if(packetIterator == _rpcDevice->packetsById.end()) GD::out.printError("Error: Response packet with ID \"" + frame->responseTypeId + "\" not found.");
+					else
+					{
+						PPacket responseFrame = packetIterator->second;
+						if(responseFrame->subtype == -1) responseFrame->subtype = 1;
+						PMyPacket packet(new MyPacket((MyPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | _rfChannel));
+
+						for(BinaryPayloads::iterator i = responseFrame->binaryPayloads.begin(); i != responseFrame->binaryPayloads.end(); ++i)
+						{
+							if((*i)->constValueInteger > -1)
+							{
+								std::vector<uint8_t> data;
+								_bl->hf.memcpyBigEndian(data, (*i)->constValueInteger);
+								packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
+								continue;
+							}
+							bool paramFound = false;
+							for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator j = valuesCentral[responseFrame->channel].begin(); j != valuesCentral[responseFrame->channel].end(); ++j)
+							{
+								//Only compare id. Till now looking for value_id was not necessary.
+								if((*i)->parameterId == j->second.rpcParameter->physical->groupId)
+								{
+									std::vector<uint8_t> data = j->second.data;
+									packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
+									paramFound = true;
+									break;
+								}
+							}
+							if(!paramFound) GD::out.printError("Error constructing packet. param \"" + (*i)->parameterId + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + responseFrame->id);
+						}
+
+						_physicalInterface->sendPacket(packet);
 					}
 				}
 			}
