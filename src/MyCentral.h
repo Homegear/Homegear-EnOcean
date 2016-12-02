@@ -71,8 +71,8 @@ public:
 	virtual PVariable stopSniffing(BaseLib::PRpcClientInfo clientInfo);
 protected:
 	bool _sniff = false;
-	std::mutex _sniffedAddressesMutex;
-	std::set<int32_t> _sniffedAddresses;
+	std::mutex _sniffedPacketsMutex;
+	std::map<int32_t, std::vector<PMyPacket>> _sniffedPackets;
 
 	std::atomic_bool _pairing;
 	std::atomic<uint32_t> _timeLeftInPairingMode;

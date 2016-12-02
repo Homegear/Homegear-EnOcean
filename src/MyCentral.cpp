@@ -268,8 +268,18 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 		{
 			if(_sniff)
 			{
-				std::lock_guard<std::mutex> sniffedAddressesGuard(_sniffedAddressesMutex);
-				_sniffedAddresses.insert(myPacket->senderAddress());
+				std::lock_guard<std::mutex> sniffedPacketsGuard(_sniffedPacketsMutex);
+				auto sniffedPacketsIterator = _sniffedPackets.find(myPacket->senderAddress());
+				if(sniffedPacketsIterator == _sniffedPackets.end())
+				{
+					_sniffedPackets[myPacket->senderAddress()].reserve(100);
+					_sniffedPackets[myPacket->senderAddress()].push_back(myPacket);
+				}
+				else
+				{
+					if(sniffedPacketsIterator->second.size() + 1 > sniffedPacketsIterator->second.capacity()) sniffedPacketsIterator->second.reserve(sniffedPacketsIterator->second.capacity() + 100);
+					sniffedPacketsIterator->second.push_back(myPacket);
+				}
 			}
 			if(_pairing) return handlePairingRequest(senderId, myPacket);
 			return false;
@@ -1062,11 +1072,27 @@ PVariable MyCentral::getSniffedDevices(BaseLib::PRpcClientInfo clientInfo)
 	{
 		PVariable array(new Variable(VariableType::tArray));
 
-		std::lock_guard<std::mutex> sniffedAddressesGuard(_sniffedAddressesMutex);
-		array->arrayValue->reserve(_sniffedAddresses.size());
-		for(auto address : _sniffedAddresses)
+		std::lock_guard<std::mutex> sniffedPacketsGuard(_sniffedPacketsMutex);
+		array->arrayValue->reserve(_sniffedPackets.size());
+		for(auto peerPackets : _sniffedPackets)
 		{
-			array->arrayValue->push_back(PVariable(new Variable(address)));
+			PVariable info(new Variable(VariableType::tStruct));
+			array->arrayValue->push_back(info);
+
+			info->structValue->insert(StructElement("ADDRESS", PVariable(new Variable(peerPackets.first))));
+			if(!peerPackets.second.empty()) info->structValue->insert(StructElement("RORG", PVariable(new Variable(peerPackets.second.back()->getRorg()))));
+			if(!peerPackets.second.empty()) info->structValue->insert(StructElement("RSSI", PVariable(new Variable(peerPackets.second.back()->getRssi()))));
+
+			PVariable packets(new Variable(VariableType::tArray));
+			info->structValue->insert(StructElement("PACKETS", packets));
+
+			for(auto packet : peerPackets.second)
+			{
+				PVariable packetInfo(new Variable(VariableType::tStruct));
+				packetInfo->structValue->insert(StructElement("TIME_RECEIVED", PVariable(new Variable(packet->timeReceived() / 1000))));
+				packetInfo->structValue->insert(StructElement("PACKET", PVariable(new Variable(BaseLib::HelperFunctions::getHexString(packet->getBinary())))));
+				packets->arrayValue->push_back(packetInfo);
+			}
 		}
 		return array;
 	}
@@ -1228,8 +1254,8 @@ PVariable MyCentral::setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t p
 
 PVariable MyCentral::startSniffing(BaseLib::PRpcClientInfo clientInfo)
 {
-	std::lock_guard<std::mutex> sniffedAddressesGuard(_sniffedAddressesMutex);
-	_sniffedAddresses.clear();
+	std::lock_guard<std::mutex> sniffedPacketsGuard(_sniffedPacketsMutex);
+	_sniffedPackets.clear();
 	_sniff = true;
 	return PVariable(new Variable());
 }

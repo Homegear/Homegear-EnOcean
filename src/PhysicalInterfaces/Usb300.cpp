@@ -152,17 +152,22 @@ void Usb300::init()
 			return;
 		}*/
 
-		std::vector<char> data{ 0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x08, 0x00 };
-		addCrc8(data);
 		std::vector<char> response;
-		getResponse(0x02, data, response);
-		if(response.size() != 13 || response[1] != 0 || response[2] != 5 || response[3] != 1 || response[6] != 0)
+		for(int32_t i = 0; i < 10; i++)
 		{
-			_out.printError("Error reading address from device: " + BaseLib::HelperFunctions::getHexString(data));
-			_stopped = true;
-			return;
+			std::vector<char> data{ 0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x08, 0x00 };
+			addCrc8(data);
+			getResponse(0x02, data, response);
+			if(response.size() != 13 || response[1] != 0 || response[2] != 5 || response[3] != 1 || response[6] != 0)
+			{
+				if(i < 9) continue;
+				_out.printError("Error reading address from device: " + BaseLib::HelperFunctions::getHexString(data));
+				_stopped = true;
+				return;
+			}
+			_baseAddress = ((int32_t)(uint8_t)response[7] << 24) | ((int32_t)(uint8_t)response[8] << 16) | ((int32_t)(uint8_t)response[9] << 8) | (uint8_t)response[10];
+			break;
 		}
-		_baseAddress = ((int32_t)(uint8_t)response[7] << 24) | ((int32_t)(uint8_t)response[8] << 16) | ((int32_t)(uint8_t)response[9] << 8) | (uint8_t)response[10];
 
 		_out.printInfo("Info: Base address set to 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + ". Remaining changes: " + std::to_string(response[11]));
 
