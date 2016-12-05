@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="01-A5-38-02">
-			<description>Eltako FUD61NPN-230V</description>
-			<typeNumber>0x01A53802</typeNumber>
+		<device id="Generic Switch">
+			<description>Generic Switch</description>
+			<typeNumber>0x1A53801</typeNumber>
 		</device>
 	</supportedDevices>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
@@ -14,138 +14,69 @@
 			<configParameters>EnOceanConfig</configParameters>
 			<variables>maint_ch_values</variables>
 		</function>
-		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanDimmer">
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanSwitch">
 			<variables>EnOceanVariables</variables>
 		</function>
 	</functions>
 	<packets>
 		<packet id="TEACH_IN">
 			<direction>fromCentral</direction>
-			<type>0xA5</type>
+			<type>0xF6</type>
 			<subtype>1</subtype>
 			<binaryPayload>
 				<element>
 					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>2</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>16</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>24</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>32</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
+					<constValueInteger>0x10</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
-		<packet id="LEVEL_INFO">
+		<packet id="STATE_INFO">
 			<direction>toCentral</direction>
-			<type>0xA5</type>
+			<type>0xF6</type>
 			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>10</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="STATE_SET">
+			<direction>fromCentral</direction>
+			<type>0xF6</type>
+			<subtype>1</subtype>
 			<binaryPayload>
 				<element>
 					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>2</constValueInteger>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>16</bitIndex>
+					<bitSize>16</bitSize>
+					<parameterId>ON_TIME</parameterId>
+				</element>
+				<element>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+				<element>
+					<bitIndex>38</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>ON_TIME_TYPE</parameterId>
+				</element>
+				<element>
+					<bitIndex>37</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>LOCK</parameterId>
 				</element>
 				<element>
 					<bitIndex>36</bitIndex>
 					<bitSize>1</bitSize>
 					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>16</bitIndex>
-					<bitSize>8</bitSize>
-					<parameterId>LEVEL</parameterId>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="LEVEL_SET_ON">
-			<direction>fromCentral</direction>
-			<type>0xA5</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<bitIndex>8</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>2</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>16</bitIndex>
-					<bitSize>8</bitSize>
-					<parameterId>LEVEL</parameterId>
-				</element>
-				<element>
-					<bitIndex>24</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>32</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0x09</constValueInteger>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="LEVEL_SET_OFF">
-			<direction>fromCentral</direction>
-			<type>0xA5</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<bitIndex>8</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>2</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>16</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>24</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>32</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0x08</constValueInteger>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="STATE_SET_ON">
-			<direction>fromCentral</direction>
-			<type>0xA5</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<bitIndex>8</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>2</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>16</bitIndex>
-					<bitSize>8</bitSize>
-					<parameterId>STATE_LEVEL</parameterId>
-				</element>
-				<element>
-					<bitIndex>24</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>32</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0x09</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -213,73 +144,79 @@
 			</parameter>
 		</variables>
 		<variables id="EnOceanVariables">
-			<parameter id="LEVEL">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalInteger>
-					<minimumValue>0</minimumValue>
-					<maximumValue>100</maximumValue>
-					<defaultValue>0</defaultValue>
-				</logicalInteger>
-				<physicalInteger groupId="LEVEL">
-					<operationType>command</operationType>
-				</physicalInteger>
-				<packets>
-					<packet id="LEVEL_INFO">
-						<type>event</type>
-					</packet>
-					<packet id="LEVEL_SET_ON">
-						<type>set</type>
-						<conditionOperator>g</conditionOperator>
-						<conditionValue>0</conditionValue>
-					</packet>
-					<packet id="LEVEL_SET_OFF">
-						<type>set</type>
-						<conditionOperator>e</conditionOperator>
-						<conditionValue>0</conditionValue>
-					</packet>
-				</packets>
-			</parameter>
-			<parameter id="STATE_LEVEL">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalInteger>
-					<minimumValue>0</minimumValue>
-					<maximumValue>100</maximumValue>
-					<defaultValue>0</defaultValue>
-				</logicalInteger>
-				<physicalInteger groupId="STATE_LEVEL">
-					<operationType>store</operationType>
-				</physicalInteger>
-			</parameter>
 			<parameter id="STATE">
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
 				</properties>
-				<logicalBoolean/>
-				<physicalInteger groupId="LEVEL">
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
+				<physicalInteger groupId="STATE">
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
-					<packet id="LEVEL_INFO">
+					<packet id="STATE_INFO">
 						<type>event</type>
 					</packet>
-					<packet id="STATE_SET_ON">
+					<packet id="STATE_SET">
 						<type>set</type>
-						<conditionOperator>g</conditionOperator>
-						<conditionValue>0</conditionValue>
-					</packet>
-					<packet id="LEVEL_SET_OFF">
-						<type>set</type>
-						<conditionOperator>e</conditionOperator>
-						<conditionValue>0</conditionValue>
+						<autoReset>
+							<parameterId>ON_TIME</parameterId>
+						</autoReset>
 					</packet>
 				</packets>
+			</parameter>
+			<parameter id="ON_TIME">
+				<properties>
+					<readable>false</readable>
+					<unit>s</unit>
+					<casts>
+						<decimalIntegerScale>
+							<factor>10.000000</factor>
+						</decimalIntegerScale>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>0.0</minimumValue>
+					<maximumValue>6553.5</maximumValue>
+					<defaultValue>0.0</defaultValue>
+				</logicalDecimal>
+				<physicalInteger groupId="ON_TIME">
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="LOCK">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
+				<physicalInteger groupId="LOCK">
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="ON_TIME_TYPE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalEnumeration>
+					<defaultValue>0</defaultValue>
+					<value>
+						<id>Duration</id>
+						<index>0</index>
+					</value>
+					<value>
+						<id>Delay</id>
+						<index>1</index>
+					</value>
+				</logicalEnumeration>
+				<physicalInteger groupId="ON_TIME_TYPE">
+					<operationType>store</operationType>
+				</physicalInteger>
 			</parameter>
 			<parameter id="PAIRING">
 				<properties>

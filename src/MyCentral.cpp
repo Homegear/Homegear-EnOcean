@@ -53,6 +53,11 @@ void MyCentral::dispose(bool wait)
 	{
 		if(_disposing) return;
 		_disposing = true;
+		{
+			std::lock_guard<std::mutex> pairingModeGuard(_pairingModeThreadMutex);
+			_stopPairingModeThread = true;
+			_bl->threadManager.join(_pairingModeThread);
+		}
 		GD::out.printDebug("Removing device " + std::to_string(_deviceId) + " from physical device's event queue...");
 		for(std::map<std::string, std::shared_ptr<IEnOceanInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); ++i)
 		{
@@ -80,6 +85,9 @@ void MyCentral::init()
 	{
 		if(_initialized) return; //Prevent running init two times
 		_initialized = true;
+		_pairing = false;
+		_stopPairingModeThread = false;
+		_timeLeftInPairingMode = 0;
 
 		for(std::map<std::string, std::shared_ptr<IEnOceanInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); ++i)
 		{
@@ -260,14 +268,118 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 		{
 			if(_sniff)
 			{
-				std::lock_guard<std::mutex> sniffedAddressesGuard(_sniffedAddressesMutex);
-				_sniffedAddresses.insert(myPacket->senderAddress());
+				std::lock_guard<std::mutex> sniffedPacketsGuard(_sniffedPacketsMutex);
+				auto sniffedPacketsIterator = _sniffedPackets.find(myPacket->senderAddress());
+				if(sniffedPacketsIterator == _sniffedPackets.end())
+				{
+					_sniffedPackets[myPacket->senderAddress()].reserve(100);
+					_sniffedPackets[myPacket->senderAddress()].push_back(myPacket);
+				}
+				else
+				{
+					if(sniffedPacketsIterator->second.size() + 1 > sniffedPacketsIterator->second.capacity()) sniffedPacketsIterator->second.reserve(sniffedPacketsIterator->second.capacity() + 100);
+					sniffedPacketsIterator->second.push_back(myPacket);
+				}
 			}
+			if(_pairing) return handlePairingRequest(senderId, myPacket);
 			return false;
 		}
 		if(senderId != peer->getPhysicalInterfaceId()) return false;
 
 		peer->packetReceived(myPacket);
+		return true;
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
+bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
+{
+	try
+	{
+		std::vector<char> payload = packet->getData();
+		if(payload.size() < 4) return false;
+		int32_t eep = ((int32_t)(uint8_t)payload.at(0) << 16) | (((int32_t)(uint8_t)payload.at(1) >> 2) << 8) | (((uint8_t)payload.at(1) & 3) << 5) | ((uint8_t)payload.at(2) >> 3);
+		std::string serial = "EOD" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 8);
+
+		auto physicalInterfaceIterator = GD::physicalInterfaces.find(interfaceId);
+		if(physicalInterfaceIterator == GD::physicalInterfaces.end()) return false;
+		std::shared_ptr<IEnOceanInterface> physicalInterface = physicalInterfaceIterator->second;
+		if(!physicalInterface) return false;
+
+		if(!peerExists(serial) && !peerExists(packet->senderAddress()))
+		{
+			int32_t rfChannel = getFreeRfChannel(interfaceId);
+			if(rfChannel == -1)
+			{
+				GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
+				return false;
+			}
+			GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ". If nothing happens, the EEP is not yet supported.");
+			std::shared_ptr<MyPeer> peer = createPeer(eep, packet->senderAddress(), serial, false);
+			if(!peer || !peer->getRpcDevice()) return false;
+			try
+			{
+				std::unique_lock<std::mutex> peersGuard(_peersMutex);
+				if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+				peersGuard.unlock();
+				peer->save(true, true, false);
+				peer->initializeCentralConfig();
+				peer->setPhysicalInterfaceId(interfaceId);
+				peer->setRfChannel(rfChannel);
+				peersGuard.lock();
+				_peers[peer->getAddress()] = peer;
+				_peersById[peer->getID()] = peer;
+				peersGuard.unlock();
+			}
+			catch(const std::exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(BaseLib::Exception& ex)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+			}
+			catch(...)
+			{
+				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+			}
+
+			PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel()));
+			std::vector<char> responsePayload;
+			responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
+			responsePayload.back() = 0xF0;
+			response->setData(responsePayload);
+			physicalInterface->sendPacket(response);
+
+			PVariable deviceDescriptions(new Variable(VariableType::tArray));
+			deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
+			raiseRPCNewDevices(deviceDescriptions);
+			GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
+		}
+		else
+		{
+			std::shared_ptr<MyPeer> peer = getPeer(packet->senderAddress());
+			if(!peer) return false;
+			PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel()));
+			std::vector<char> responsePayload;
+			responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
+			responsePayload.back() = 0xF0;
+			response->setData(responsePayload);
+			physicalInterface->sendPacket(response);
+		}
+		return true;
 	}
 	catch(const std::exception& ex)
     {
@@ -377,12 +489,51 @@ std::string MyCentral::handleCliCommand(std::string command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
+			stringStream << "pairing on (pon)    Enables pairing mode" << std::endl;
+			stringStream << "pairing off (pof)   Disables pairing mode" << std::endl;
 			stringStream << "peers create (pc)   Creates a new peer" << std::endl;
 			stringStream << "peers list (ls)     List all peers" << std::endl;
 			stringStream << "peers remove (pr)   Remove a peer" << std::endl;
 			stringStream << "peers select (ps)   Select a peer" << std::endl;
 			stringStream << "peers setname (pn)  Name a peer" << std::endl;
 			stringStream << "unselect (u)        Unselect this device" << std::endl;
+			return stringStream.str();
+		}
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "pairing on", "pon", "", 0, arguments, showHelp))
+		{
+			if(showHelp)
+			{
+				stringStream << "Description: This command enables pairing mode." << std::endl;
+				stringStream << "Usage: pairing on [DURATION]" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  DURATION: Optional duration in seconds to stay in pairing mode." << std::endl;
+				return stringStream.str();
+			}
+
+			int32_t duration = 60;
+			if(!arguments.empty())
+			{
+				duration = BaseLib::Math::getNumber(arguments.at(0), false);
+				if(duration < 5 || duration > 3600) return "Invalid duration. Duration has to be greater than 5 and less than 3600.\n";
+			}
+
+			setInstallMode(nullptr, true, duration, false);
+			stringStream << "Pairing mode enabled." << std::endl;
+			return stringStream.str();
+		}
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "pairing off", "pof", "", 0, arguments, showHelp))
+		{
+			if(showHelp)
+			{
+				stringStream << "Description: This command disables pairing mode." << std::endl;
+				stringStream << "Usage: pairing off" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  There are no parameters." << std::endl;
+				return stringStream.str();
+			}
+
+			setInstallMode(nullptr, false, -1, false);
+			stringStream << "Pairing mode disabled." << std::endl;
 			return stringStream.str();
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "peers create", "pc", "", 3, arguments, showHelp))
@@ -921,11 +1072,27 @@ PVariable MyCentral::getSniffedDevices(BaseLib::PRpcClientInfo clientInfo)
 	{
 		PVariable array(new Variable(VariableType::tArray));
 
-		std::lock_guard<std::mutex> sniffedAddressesGuard(_sniffedAddressesMutex);
-		array->arrayValue->reserve(_sniffedAddresses.size());
-		for(auto address : _sniffedAddresses)
+		std::lock_guard<std::mutex> sniffedPacketsGuard(_sniffedPacketsMutex);
+		array->arrayValue->reserve(_sniffedPackets.size());
+		for(auto peerPackets : _sniffedPackets)
 		{
-			array->arrayValue->push_back(PVariable(new Variable(address)));
+			PVariable info(new Variable(VariableType::tStruct));
+			array->arrayValue->push_back(info);
+
+			info->structValue->insert(StructElement("ADDRESS", PVariable(new Variable(peerPackets.first))));
+			if(!peerPackets.second.empty()) info->structValue->insert(StructElement("RORG", PVariable(new Variable(peerPackets.second.back()->getRorg()))));
+			if(!peerPackets.second.empty()) info->structValue->insert(StructElement("RSSI", PVariable(new Variable(peerPackets.second.back()->getRssi()))));
+
+			PVariable packets(new Variable(VariableType::tArray));
+			info->structValue->insert(StructElement("PACKETS", packets));
+
+			for(auto packet : peerPackets.second)
+			{
+				PVariable packetInfo(new Variable(VariableType::tStruct));
+				packetInfo->structValue->insert(StructElement("TIME_RECEIVED", PVariable(new Variable(packet->timeReceived() / 1000))));
+				packetInfo->structValue->insert(StructElement("PACKET", PVariable(new Variable(BaseLib::HelperFunctions::getHexString(packet->getBinary())))));
+				packets->arrayValue->push_back(packetInfo);
+			}
 		}
 		return array;
 	}
@@ -997,6 +1164,71 @@ PVariable MyCentral::putParamset(BaseLib::PRpcClientInfo clientInfo, uint64_t pe
     return Variable::createError(-32500, "Unknown application error.");
 }
 
+void MyCentral::pairingModeTimer(int32_t duration, bool debugOutput)
+{
+	try
+	{
+		_pairing = true;
+		if(debugOutput) GD::out.printInfo("Info: Pairing mode enabled.");
+		_timeLeftInPairingMode = duration;
+		int64_t startTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		int64_t timePassed = 0;
+		while(timePassed < ((int64_t)duration * 1000) && !_stopPairingModeThread)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(250));
+			timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - startTime;
+			_timeLeftInPairingMode = duration - (timePassed / 1000);
+		}
+		_timeLeftInPairingMode = 0;
+		_pairing = false;
+		if(debugOutput) GD::out.printInfo("Info: Pairing mode disabled.");
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+std::shared_ptr<Variable> MyCentral::setInstallMode(BaseLib::PRpcClientInfo clientInfo, bool on, uint32_t duration, bool debugOutput)
+{
+	try
+	{
+		std::lock_guard<std::mutex> pairingModeGuard(_pairingModeThreadMutex);
+		if(_disposing) return Variable::createError(-32500, "Central is disposing.");
+		_stopPairingModeThread = true;
+		_bl->threadManager.join(_pairingModeThread);
+		_stopPairingModeThread = false;
+		_timeLeftInPairingMode = 0;
+		if(on && duration >= 5)
+		{
+			_timeLeftInPairingMode = duration; //It's important to set it here, because the thread often doesn't completely initialize before getInstallMode requests _timeLeftInPairingMode
+			_bl->threadManager.start(_pairingModeThread, true, &MyCentral::pairingModeTimer, this, duration, debugOutput);
+		}
+		return PVariable(new Variable(VariableType::tVoid));
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Variable::createError(-32500, "Unknown application error.");
+}
+
 PVariable MyCentral::setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string interfaceId)
 {
 	try
@@ -1022,8 +1254,8 @@ PVariable MyCentral::setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t p
 
 PVariable MyCentral::startSniffing(BaseLib::PRpcClientInfo clientInfo)
 {
-	std::lock_guard<std::mutex> sniffedAddressesGuard(_sniffedAddressesMutex);
-	_sniffedAddresses.clear();
+	std::lock_guard<std::mutex> sniffedPacketsGuard(_sniffedPacketsMutex);
+	_sniffedPackets.clear();
 	_sniff = true;
 	return PVariable(new Variable());
 }

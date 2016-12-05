@@ -1,0 +1,942 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
+	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<device id="A5-20-04">
+			<description>Heating Radiator Valve Drive</description>
+			<typeNumber>0xA52004</typeNumber>
+		</device>
+	</supportedDevices>
+	<properties>
+		<receiveMode>wakeUp</receiveMode>
+	</properties>
+	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="0" type="MAINTENANCE">
+			<properties>
+				<internal>true</internal>
+			</properties>
+			<configParameters>EnOceanConfig</configParameters>
+			<variables>maint_ch_values</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanValveDrive">
+			<variables>EnOceanVariables</variables>
+		</function>
+	</functions>
+	<packets>
+		<packet id="INFO_2">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<responseTypeId>INFO_RESPONSE</responseTypeId>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>CURRENT_VALVE_POSITION</parameterId>
+				</element>
+				<element>
+					<bitIndex>37</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>BUTTON_LOCKED</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_3">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>38</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>NEW_SETPOINT_TEMPERATURE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_4">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>32</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>38</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>FEED_TEMPERATURE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_5">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>32</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>TEMPERATURE</parameterId>
+				</element>
+				<element>
+					<constValueInteger>0</constValueInteger>
+					<parameterId>LOWBAT</parameterId>
+				</element>
+				<element>
+					<constValueInteger>0</constValueInteger>
+					<parameterId>FAILURE_CODE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_6">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>FAILURE_CODE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_7">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>0</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
+					<constValueInteger>18</constValueInteger>
+					<parameterId>LOWBAT</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_8">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>32</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
+					<constValueInteger>0</constValueInteger>
+					<parameterId>LOWBAT</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_9">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>32</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
+					<constValueInteger>0</constValueInteger>
+					<parameterId>FAILURE_CODE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO_RESPONSE">
+			<direction>fromCentral</direction>
+			<type>0xA5</type>
+			<subtype>1</subtype>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>VALVE_POSITION</parameterId>
+				</element>
+				<element>
+					<bitIndex>16</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>SETPOINT_TEMPERATURE</parameterId>
+				</element>
+				<element>
+					<bitIndex>25</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>DISABLE_TEMPERATURE_MEASUREMENT</parameterId>
+				</element>
+				<element>
+					<bitIndex>26</bitIndex>
+					<bitSize>6</bitSize>
+					<parameterId>WAKE_UP_CYCLE</parameterId>
+				</element>
+				<element>
+					<bitIndex>34</bitIndex>
+					<bitSize>2</bitSize>
+					<parameterId>DISPLAY_ORIENTATION</parameterId>
+				</element>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>37</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>LOCK_BUTTON</parameterId>
+				</element>
+				<element>
+					<bitIndex>38</bitIndex>
+					<bitSize>2</bitSize>
+					<parameterId>SERVICE_COMMAND</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+	</packets>
+	<parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
+		<configParameters id="EnOceanConfig"/>
+		<variables id="maint_ch_values">
+			<parameter id="UNREACH">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<service>true</service>
+				</properties>
+				<logicalBoolean />
+				<physicalBoolean>
+					<operationType>internal</operationType>
+				</physicalBoolean>
+			</parameter>
+			<parameter id="STICKY_UNREACH">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<service>true</service>
+					<sticky>true</sticky>
+				</properties>
+				<logicalBoolean />
+				<physicalBoolean>
+					<operationType>internal</operationType>
+				</physicalBoolean>
+			</parameter>
+			<parameter id="RSSI_DEVICE">
+				<properties>
+					<writeable>false</writeable>
+				</properties>
+				<logicalInteger/>
+				<physicalInteger groupId="RSSI_DEVICE">
+					<operationType>internal</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="LOWBAT">
+				<properties>
+					<writeable>false</writeable>
+					<service>true</service>
+				</properties>
+				<logicalBoolean/>
+				<physicalInteger groupId="LOWBAT">
+					<operationType>internal</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_5">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_7">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_8">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="RF_CHANNEL">
+				<properties>
+					<writeable>false</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>-1</minimumValue>
+					<maximumValue>127</maximumValue>
+					<defaultValue>-1</defaultValue>
+				</logicalInteger>
+				<physicalInteger groupId="RF_CHANNEL">
+					<operationType>internal</operationType>
+				</physicalInteger>
+			</parameter>
+		</variables>
+		<variables id="EnOceanVariables">
+			<parameter id="CURRENT_VALVE_POSITION">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>%</unit>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
+				</logicalInteger>
+				<physicalInteger groupId="CURRENT_VALVE_POSITION">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="VALVE_POSITION">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>%</unit>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
+				</logicalInteger>
+				<physicalInteger groupId="VALVE_POSITION">
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="FEED_TEMPERATURE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>°C</unit>
+					<casts>
+						<round>
+							<decimalPlaces>1</decimalPlaces>
+						</round>
+						<decimalIntegerScale>
+							<factor>4.25</factor>
+							<offset>-20</offset>
+						</decimalIntegerScale>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>20.0</minimumValue>
+					<maximumValue>80.0</maximumValue>
+				</logicalDecimal>
+				<physicalInteger groupId="FEED_TEMPERATURE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_4">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="NEW_SETPOINT_TEMPERATURE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>°C</unit>
+					<casts>
+						<round>
+							<decimalPlaces>0.5</decimalPlaces>
+						</round>
+						<decimalIntegerScale>
+							<factor>12.75</factor>
+							<offset>-10</offset>
+						</decimalIntegerScale>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>10.0</minimumValue>
+					<maximumValue>30.0</maximumValue>
+				</logicalDecimal>
+				<physicalInteger groupId="NEW_SETPOINT_TEMPERATURE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_3">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="SETPOINT_TEMPERATURE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>°C</unit>
+					<casts>
+						<round>
+							<decimalPlaces>0.5</decimalPlaces>
+						</round>
+						<decimalIntegerScale>
+							<factor>12.75</factor>
+							<offset>-10</offset>
+						</decimalIntegerScale>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<defaultValue>21.0</defaultValue>
+					<minimumValue>10.0</minimumValue>
+					<maximumValue>30.0</maximumValue>
+				</logicalDecimal>
+				<physicalInteger groupId="SETPOINT_TEMPERATURE">
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="DISABLE_TEMPERATURE_MEASUREMENT">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
+				<physicalInteger groupId="DISABLE_TEMPERATURE_MEASUREMENT">
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="TEMPERATURE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>°C</unit>
+					<casts>
+						<round>
+							<decimalPlaces>1</decimalPlaces>
+						</round>
+						<decimalIntegerScale>
+							<factor>12.75</factor>
+							<offset>-10</offset>
+						</decimalIntegerScale>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>10.0</minimumValue>
+					<maximumValue>30.0</maximumValue>
+				</logicalDecimal>
+				<physicalInteger groupId="TEMPERATURE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_5">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="FAILURE_CODE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<service>true</service>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>°C</unit>
+				</properties>
+				<logicalEnumeration>
+					<defaultValue>0</defaultValue>
+					<value>
+						<id>MeasurementError</id>
+						<index>17</index>
+					</value>
+					<value>
+						<id>BatteryLow</id>
+						<index>18</index>
+					</value>
+					<value>
+						<id>FrostProtection</id>
+						<index>20</index>
+					</value>
+					<value>
+						<id>BlockedValve</id>
+						<index>33</index>
+					</value>
+					<value>
+						<id>EndPointDetectionError</id>
+						<index>36</index>
+					</value>
+					<value>
+						<id>NoValve</id>
+						<index>40</index>
+					</value>
+					<value>
+						<id>NotTaughtIn</id>
+						<index>49</index>
+					</value>
+					<value>
+						<id>NoResponseFromController</id>
+						<index>53</index>
+					</value>
+					<value>
+						<id>TeachInError</id>
+						<index>54</index>
+					</value>
+				</logicalEnumeration>
+				<physicalInteger groupId="FAILURE_CODE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_5">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_6">
+						<type>event</type>
+					</packet>
+					<packet id="INFO_9">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="WAKE_UP_CYCLE">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+				</properties>
+				<logicalEnumeration>
+					<defaultValue>9</defaultValue>
+					<value>
+						<id>10 seconds</id>
+						<index>0</index>
+					</value>
+					<value>
+						<id>60 seconds</id>
+						<index>1</index>
+					</value>
+					<value>
+						<id>90 seconds</id>
+						<index>2</index>
+					</value>
+					<value>
+						<id>120 seconds</id>
+						<index>3</index>
+					</value>
+					<value>
+						<id>150 seconds</id>
+						<index>4</index>
+					</value>
+					<value>
+						<id>180 seconds</id>
+						<index>5</index>
+					</value>
+					<value>
+						<id>210 seconds</id>
+						<index>6</index>
+					</value>
+					<value>
+						<id>240 seconds</id>
+						<index>7</index>
+					</value>
+					<value>
+						<id>270 seconds</id>
+						<index>8</index>
+					</value>
+					<value>
+						<id>300 seconds</id>
+						<index>9</index>
+					</value>
+					<value>
+						<id>330 seconds</id>
+						<index>10</index>
+					</value>
+					<value>
+						<id>360 seconds</id>
+						<index>11</index>
+					</value>
+					<value>
+						<id>390 seconds</id>
+						<index>12</index>
+					</value>
+					<value>
+						<id>420 seconds</id>
+						<index>13</index>
+					</value>
+					<value>
+						<id>450 seconds</id>
+						<index>14</index>
+					</value>
+					<value>
+						<id>480 seconds</id>
+						<index>15</index>
+					</value>
+					<value>
+						<id>510 seconds</id>
+						<index>16</index>
+					</value>
+					<value>
+						<id>540 seconds</id>
+						<index>17</index>
+					</value>
+					<value>
+						<id>570 seconds</id>
+						<index>18</index>
+					</value>
+					<value>
+						<id>600 seconds</id>
+						<index>19</index>
+					</value>
+					<value>
+						<id>630 seconds</id>
+						<index>20</index>
+					</value>
+					<value>
+						<id>660 seconds</id>
+						<index>21</index>
+					</value>
+					<value>
+						<id>690 seconds</id>
+						<index>22</index>
+					</value>
+					<value>
+						<id>720 seconds</id>
+						<index>23</index>
+					</value>
+					<value>
+						<id>750 seconds</id>
+						<index>24</index>
+					</value>
+					<value>
+						<id>780 seconds</id>
+						<index>25</index>
+					</value>
+					<value>
+						<id>810 seconds</id>
+						<index>26</index>
+					</value>
+					<value>
+						<id>840 seconds</id>
+						<index>27</index>
+					</value>
+					<value>
+						<id>870 seconds</id>
+						<index>28</index>
+					</value>
+					<value>
+						<id>900 seconds</id>
+						<index>29</index>
+					</value>
+					<value>
+						<id>930 seconds</id>
+						<index>30</index>
+					</value>
+					<value>
+						<id>960 seconds</id>
+						<index>31</index>
+					</value>
+					<value>
+						<id>990 seconds</id>
+						<index>32</index>
+					</value>
+					<value>
+						<id>1020 seconds</id>
+						<index>33</index>
+					</value>
+					<value>
+						<id>1050 seconds</id>
+						<index>34</index>
+					</value>
+					<value>
+						<id>1080 seconds</id>
+						<index>35</index>
+					</value>
+					<value>
+						<id>1110 seconds</id>
+						<index>36</index>
+					</value>
+					<value>
+						<id>1140 seconds</id>
+						<index>37</index>
+					</value>
+					<value>
+						<id>1170 seconds</id>
+						<index>38</index>
+					</value>
+					<value>
+						<id>1200 seconds</id>
+						<index>39</index>
+					</value>
+					<value>
+						<id>1230 seconds</id>
+						<index>40</index>
+					</value>
+					<value>
+						<id>1260 seconds</id>
+						<index>41</index>
+					</value>
+					<value>
+						<id>1290 seconds</id>
+						<index>42</index>
+					</value>
+					<value>
+						<id>1320 seconds</id>
+						<index>43</index>
+					</value>
+					<value>
+						<id>1350 seconds</id>
+						<index>44</index>
+					</value>
+					<value>
+						<id>1380 seconds</id>
+						<index>45</index>
+					</value>
+					<value>
+						<id>1410 seconds</id>
+						<index>46</index>
+					</value>
+					<value>
+						<id>1440 seconds</id>
+						<index>47</index>
+					</value>
+					<value>
+						<id>1470 seconds</id>
+						<index>48</index>
+					</value>
+					<value>
+						<id>1500 seconds</id>
+						<index>49</index>
+					</value>
+					<value>
+						<id>3 hours</id>
+						<index>50</index>
+					</value>
+					<value>
+						<id>6 hours</id>
+						<index>51</index>
+					</value>
+					<value>
+						<id>9 hours</id>
+						<index>52</index>
+					</value>
+					<value>
+						<id>12 hours</id>
+						<index>53</index>
+					</value>
+					<value>
+						<id>15 hours</id>
+						<index>54</index>
+					</value>
+					<value>
+						<id>18 hours</id>
+						<index>55</index>
+					</value>
+					<value>
+						<id>21 hours</id>
+						<index>56</index>
+					</value>
+					<value>
+						<id>24 hours</id>
+						<index>57</index>
+					</value>
+					<value>
+						<id>27 hours</id>
+						<index>58</index>
+					</value>
+					<value>
+						<id>30 hours</id>
+						<index>59</index>
+					</value>
+					<value>
+						<id>33 hours</id>
+						<index>60</index>
+					</value>
+					<value>
+						<id>36 hours</id>
+						<index>61</index>
+					</value>
+					<value>
+						<id>39 hours</id>
+						<index>62</index>
+					</value>
+					<value>
+						<id>42 hours</id>
+						<index>63</index>
+					</value>
+				</logicalEnumeration>
+				<physicalInteger groupId="WAKE_UP_CYCLE">
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="DISPLAY_ORIENTATION">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+				</properties>
+				<logicalEnumeration>
+					<defaultValue>0</defaultValue>
+					<value>
+						<id>0°</id>
+						<index>0</index>
+					</value>
+					<value>
+						<id>90°</id>
+						<index>1</index>
+					</value>
+					<value>
+						<id>180°</id>
+						<index>2</index>
+					</value>
+					<value>
+						<id>270°</id>
+						<index>3</index>
+					</value>
+				</logicalEnumeration>
+				<physicalInteger groupId="DISPLAY_ORIENTATION">
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="BUTTON_LOCKED">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+				</properties>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
+				<physicalInteger groupId="BUTTON_LOCKED">
+					<operationType>store</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="LOCK_BUTTON">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
+				<physicalInteger groupId="LOCK_BUTTON">
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="SERVICE_COMMAND">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+				</properties>
+				<logicalEnumeration>
+					<defaultValue>0</defaultValue>
+					<value>
+						<id>None</id>
+						<index>0</index>
+					</value>
+					<value>
+						<id>OpenValve</id>
+						<index>1</index>
+					</value>
+					<value>
+						<id>RunInitialization</id>
+						<index>2</index>
+					</value>
+					<value>
+						<id>CloseValve</id>
+						<index>3</index>
+					</value>
+				</logicalEnumeration>
+				<physicalInteger groupId="SERVICE_COMMAND">
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDevice>

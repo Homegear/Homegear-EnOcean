@@ -526,6 +526,42 @@ void MyPeer::setRssiDevice(uint8_t rssi)
     }
 }
 
+void MyPeer::setRfChannel(int32_t rfChannel)
+{
+	try
+	{
+		if(rfChannel < 0 || rfChannel > 127) return;
+		BaseLib::PVariable value(new BaseLib::Variable(rfChannel));
+		std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelIterator = valuesCentral.find(0);
+		if(channelIterator != valuesCentral.end())
+		{
+			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("RF_CHANNEL");
+			if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+			{
+				parameterIterator->second.rpcParameter->convertToPacket(value, parameterIterator->second.data);
+				if(parameterIterator->second.databaseID > 0) saveParameter(parameterIterator->second.databaseID, parameterIterator->second.data);
+				else saveParameter(0, ParameterGroup::Type::Enum::variables, 0, "RF_CHANNEL", parameterIterator->second.data);
+				_rfChannel = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
+				if(_bl->debugLevel >= 4) GD::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":0" + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterIterator->second.data) + ".");
+			}
+			else GD::out.printError("Error: Parameter RF_CHANNEL not found.");
+		}
+		else GD::out.printError("Error: Parameter RF_CHANNEL not found.");
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& frameValues)
 {
 	try
@@ -567,7 +603,7 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 							abort = true;
 							break;
 						}
-						else continue;
+						else if((*j)->parameterId.empty()) continue;
 					}
 				}
 				else if((*j)->constValueInteger > -1)
@@ -575,6 +611,17 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 					_bl->hf.memcpyBigEndian(data, (*j)->constValueInteger);
 				}
 				else continue;
+
+				//Check for low battery
+				if((*j)->parameterId == "LOWBAT")
+				{
+					if(data.size() > 0 && data.at(0))
+					{
+						serviceMessages->set("LOWBAT", true);
+						if(_bl->debugLevel >= 4) GD::out.printInfo("Info: LOWBAT of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " was set to \"true\".");
+					}
+					else serviceMessages->set("LOWBAT", false);
+				}
 
 				for(std::vector<PParameter>::iterator k = frame->associatedVariables.begin(); k != frame->associatedVariables.end(); ++k)
 				{
@@ -810,6 +857,48 @@ void MyPeer::packetReceived(PMyPacket& packet)
 					}
 				}
 			}
+
+			if(!frame->responseTypeId.empty())
+			{
+				if(_rfChannel == -1) GD::out.printError("Error: RF_CHANNEL is not set. Please pair the device.");
+				else
+				{
+					PacketsById::iterator packetIterator = _rpcDevice->packetsById.find(frame->responseTypeId);
+					if(packetIterator == _rpcDevice->packetsById.end()) GD::out.printError("Error: Response packet with ID \"" + frame->responseTypeId + "\" not found.");
+					else
+					{
+						PPacket responseFrame = packetIterator->second;
+						if(responseFrame->subtype == -1) responseFrame->subtype = 1;
+						PMyPacket packet(new MyPacket((MyPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | _rfChannel));
+
+						for(BinaryPayloads::iterator i = responseFrame->binaryPayloads.begin(); i != responseFrame->binaryPayloads.end(); ++i)
+						{
+							if((*i)->constValueInteger > -1)
+							{
+								std::vector<uint8_t> data;
+								_bl->hf.memcpyBigEndian(data, (*i)->constValueInteger);
+								packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
+								continue;
+							}
+							bool paramFound = false;
+							for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator j = valuesCentral[responseFrame->channel].begin(); j != valuesCentral[responseFrame->channel].end(); ++j)
+							{
+								//Only compare id. Till now looking for value_id was not necessary.
+								if((*i)->parameterId == j->second.rpcParameter->physical->groupId)
+								{
+									std::vector<uint8_t> data = j->second.data;
+									packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
+									paramFound = true;
+									break;
+								}
+							}
+							if(!paramFound) GD::out.printError("Error constructing packet. param \"" + (*i)->parameterId + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + responseFrame->id);
+						}
+
+						_physicalInterface->sendPacket(packet);
+					}
+				}
+			}
 		}
 
 		//if(!rpcValues.empty() && !resendPacket)
@@ -1040,7 +1129,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 		}
 		else if(rpcParameter->physical->operationType != IPhysical::OperationType::Enum::command) return Variable::createError(-6, "Parameter is not settable.");
 		if(rpcParameter->setPackets.empty()) return Variable::createError(-6, "parameter is read only");
-		std::shared_ptr<Parameter::Packet> setRequest;
+		std::vector<std::shared_ptr<Parameter::Packet>> setRequests;
 		if(!rpcParameter->setPackets.empty())
 		{
 			for(std::vector<std::shared_ptr<Parameter::Packet>>::iterator i = rpcParameter->setPackets.begin(); i != rpcParameter->setPackets.end(); ++i)
@@ -1051,15 +1140,12 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 					if(parameter.rpcParameter->logical->type == BaseLib::DeviceDescription::ILogical::Type::Enum::tBoolean) intValue = value->booleanValue;
 					if(!(*i)->checkCondition(intValue)) continue;
 				}
-				setRequest = (*i);
-				break;
+				setRequests.push_back(*i);
 			}
 		}
 
-		if(!setRequest) return Variable::createError(-6, "No frame was found for parameter " + valueKey);
-		PacketsById::iterator packetIterator = _rpcDevice->packetsById.find(setRequest->id);
-		if(packetIterator == _rpcDevice->packetsById.end()) return Variable::createError(-6, "No frame was found for parameter " + valueKey);
-		PPacket frame = packetIterator->second;
+		if(setRequests.empty()) return Variable::createError(-6, "No frame was found for parameter " + valueKey);
+
 		rpcParameter->convertToPacket(value, parameter.data);
 		if(parameter.databaseID > 0) saveParameter(parameter.databaseID, parameter.data);
 		else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey, parameter.data);
@@ -1094,68 +1180,76 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 
 		if(_rfChannel == -1) return Variable::createError(-5, "RF_CHANNEL is not set. Please pair the device.");
 
-		if(frame->subtype == -1) frame->subtype = 1;
-		PMyPacket packet(new MyPacket((MyPacket::Type)frame->subtype, (uint8_t)frame->type, _physicalInterface->getBaseAddress() | _rfChannel));
-
-		for(BinaryPayloads::iterator i = frame->binaryPayloads.begin(); i != frame->binaryPayloads.end(); ++i)
+		for(std::shared_ptr<Parameter::Packet> setRequest : setRequests)
 		{
-			if((*i)->constValueInteger > -1)
+			PacketsById::iterator packetIterator = _rpcDevice->packetsById.find(setRequest->id);
+			if(packetIterator == _rpcDevice->packetsById.end()) return Variable::createError(-6, "No frame was found for parameter " + valueKey);
+			PPacket frame = packetIterator->second;
+
+			if(frame->subtype == -1) frame->subtype = 1;
+			PMyPacket packet(new MyPacket((MyPacket::Type)frame->subtype, (uint8_t)frame->type, _physicalInterface->getBaseAddress() | _rfChannel));
+
+			for(BinaryPayloads::iterator i = frame->binaryPayloads.begin(); i != frame->binaryPayloads.end(); ++i)
 			{
-				std::vector<uint8_t> data;
-				_bl->hf.memcpyBigEndian(data, (*i)->constValueInteger);
-				packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
-				continue;
-			}
-			//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC.
-			if((*i)->parameterId == rpcParameter->physical->groupId)
-			{
-				std::vector<uint8_t> data = valuesCentral[channel][valueKey].data;
-				packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
-			}
-			//Search for all other parameters
-			else
-			{
-				bool paramFound = false;
-				for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator j = valuesCentral[channel].begin(); j != valuesCentral[channel].end(); ++j)
+				if((*i)->constValueInteger > -1)
 				{
-					//Only compare id. Till now looking for value_id was not necessary.
-					if((*i)->parameterId == j->second.rpcParameter->physical->groupId)
-					{
-						std::vector<uint8_t> data = j->second.data;
-						packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
-						paramFound = true;
-						break;
-					}
+					std::vector<uint8_t> data;
+					_bl->hf.memcpyBigEndian(data, (*i)->constValueInteger);
+					packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
+					continue;
 				}
-				if(!paramFound) GD::out.printError("Error constructing packet. param \"" + (*i)->parameterId + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
-			}
-		}
-
-		if(!setRequest->autoReset.empty())
-		{
-			for(std::vector<std::string>::iterator j = setRequest->autoReset.begin(); j != setRequest->autoReset.end(); ++j)
-			{
-				std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator resetParameterIterator = channelIterator->second.find(*j);
-				if(resetParameterIterator == channelIterator->second.end()) continue;
-				PVariable logicalDefaultValue = resetParameterIterator->second.rpcParameter->logical->getDefaultValue();
-				std::vector<uint8_t> defaultValue;
-				resetParameterIterator->second.rpcParameter->convertToPacket(logicalDefaultValue, defaultValue);
-				if(defaultValue != resetParameterIterator->second.data)
+				//We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC.
+				if((*i)->parameterId == rpcParameter->physical->groupId)
 				{
-					resetParameterIterator->second.data = defaultValue;
-					if(resetParameterIterator->second.databaseID > 0) saveParameter(resetParameterIterator->second.databaseID, resetParameterIterator->second.data);
-					else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, *j, resetParameterIterator->second.data);
-					GD::out.printInfo( "Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
-					if(rpcParameter->readable)
+					std::vector<uint8_t> data = valuesCentral[channel][valueKey].data;
+					packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
+				}
+				//Search for all other parameters
+				else
+				{
+					bool paramFound = false;
+					for(std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator j = valuesCentral[channel].begin(); j != valuesCentral[channel].end(); ++j)
 					{
-						valueKeys->push_back(*j);
-						values->push_back(logicalDefaultValue);
+						//Only compare id. Till now looking for value_id was not necessary.
+						if((*i)->parameterId == j->second.rpcParameter->physical->groupId)
+						{
+							std::vector<uint8_t> data = j->second.data;
+							packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
+							paramFound = true;
+							break;
+						}
 					}
+					if(!paramFound) GD::out.printError("Error constructing packet. param \"" + (*i)->parameterId + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
 				}
 			}
-		}
 
-		_physicalInterface->sendPacket(packet);
+			if(!setRequest->autoReset.empty())
+			{
+				for(std::vector<std::string>::iterator j = setRequest->autoReset.begin(); j != setRequest->autoReset.end(); ++j)
+				{
+					std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator resetParameterIterator = channelIterator->second.find(*j);
+					if(resetParameterIterator == channelIterator->second.end()) continue;
+					PVariable logicalDefaultValue = resetParameterIterator->second.rpcParameter->logical->getDefaultValue();
+					std::vector<uint8_t> defaultValue;
+					resetParameterIterator->second.rpcParameter->convertToPacket(logicalDefaultValue, defaultValue);
+					if(defaultValue != resetParameterIterator->second.data)
+					{
+						resetParameterIterator->second.data = defaultValue;
+						if(resetParameterIterator->second.databaseID > 0) saveParameter(resetParameterIterator->second.databaseID, resetParameterIterator->second.data);
+						else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, *j, resetParameterIterator->second.data);
+						GD::out.printInfo( "Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+						if(rpcParameter->readable)
+						{
+							valueKeys->push_back(*j);
+							values->push_back(logicalDefaultValue);
+						}
+					}
+				}
+			}
+
+			_physicalInterface->sendPacket(packet);
+			if(setRequest->delay > 0) std::this_thread::sleep_for(std::chrono::milliseconds(setRequest->delay));
+		}
 
 		if(!valueKeys->empty())
 		{
