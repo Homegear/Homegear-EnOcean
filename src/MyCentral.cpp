@@ -1079,6 +1079,7 @@ PVariable MyCentral::getSniffedDevices(BaseLib::PRpcClientInfo clientInfo)
 			PVariable info(new Variable(VariableType::tStruct));
 			array->arrayValue->push_back(info);
 
+			info->structValue->insert(StructElement("FAMILYID", PVariable(new Variable(MY_FAMILY_ID))));
 			info->structValue->insert(StructElement("ADDRESS", PVariable(new Variable(peerPackets.first))));
 			if(!peerPackets.second.empty()) info->structValue->insert(StructElement("RORG", PVariable(new Variable(peerPackets.second.back()->getRorg()))));
 			if(!peerPackets.second.empty()) info->structValue->insert(StructElement("RSSI", PVariable(new Variable(peerPackets.second.back()->getRssi()))));
