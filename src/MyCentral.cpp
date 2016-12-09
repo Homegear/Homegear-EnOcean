@@ -544,7 +544,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 				stringStream << "Usage: peers create INTERFACE TYPE ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  INTERFACE: The id of the interface to associate the new device to as defined in the familie's configuration file." << std::endl;
-				stringStream << "  TYPE:      The 2 byte hexadecimal device type. Example: 0xF60201" << std::endl;
+				stringStream << "  TYPE:      The 3 or 4 byte hexadecimal device type (for most devices the EEP number). Example: 0xF60201" << std::endl;
 				stringStream << "  ADDRESS:   The 4 byte address/ID printed on the device. Example: 0x01952B7A" << std::endl;
 				return stringStream.str();
 			}
