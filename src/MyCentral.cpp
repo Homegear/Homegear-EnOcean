@@ -124,6 +124,11 @@ void MyCentral::loadPeers()
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 			_peersById[peerID] = peer;
 			_peers[peer->getAddress()] = peer;
+			if(peer->getRpcDevice()->addressSize == 25)
+			{
+				std::lock_guard<std::mutex> wildcardPeersGuard(_wildcardPeersMutex);
+				_wildcardPeers[peer->getAddress()] = peer;
+			}
 		}
 	}
 	catch(const std::exception& ex)
@@ -264,6 +269,12 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 		if(_bl->debugLevel >= 4) std::cout << BaseLib::HelperFunctions::getTimeString(myPacket->timeReceived()) << " EnOcean packet received (" << senderId << std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" << "): " << BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) << " - Sender address: 0x" << BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8) << std::endl;
 
 		PMyPeer peer = getPeer(myPacket->senderAddress());
+		if(!peer)
+		{
+			std::lock_guard<std::mutex> wildcardPeersGuard(_wildcardPeersMutex);
+			auto wildcardPeersIterator = _wildcardPeers.find(myPacket->senderAddress() & 0xFFFFFF80);
+			if(wildcardPeersIterator != _wildcardPeers.end()) peer = wildcardPeersIterator->second;
+		}
 		if(!peer)
 		{
 			if(_sniff)
@@ -444,6 +455,13 @@ void MyCentral::deletePeer(uint64_t id)
 
 		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
 		peer->deleteFromDatabase();
+
+		if(peer->getRpcDevice()->addressSize == 25)
+		{
+			std::lock_guard<std::mutex> wildcardPeersGuard(_wildcardPeersMutex);
+			_wildcardPeers.erase(peer->getAddress());
+		}
+
 		_peersMutex.lock();
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
 		if(_peersById.find(id) != _peersById.end()) _peersById.erase(id);
@@ -563,6 +581,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 				if(!peer || !peer->getRpcDevice()) return "Device type not supported.\n";
 				try
 				{
+					if(peer->getRpcDevice()->addressSize == 25) peer->setAddress(address & 0xFFFFFF80);
 					_peersMutex.lock();
 					if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 					_peersMutex.unlock();
@@ -573,6 +592,11 @@ std::string MyCentral::handleCliCommand(std::string command)
 					_peers[peer->getAddress()] = peer;
 					_peersById[peer->getID()] = peer;
 					_peersMutex.unlock();
+					if(peer->getRpcDevice()->addressSize == 25)
+					{
+						std::lock_guard<std::mutex> wildcardPeersGuard(_wildcardPeersMutex);
+						_wildcardPeers[peer->getAddress()] = peer;
+					}
 				}
 				catch(const std::exception& ex)
 				{
@@ -594,7 +618,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
 				raiseRPCNewDevices(deviceDescriptions);
 				GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
-				stringStream << "Added peer " << std::to_string(peer->getID()) << " with address 0x" << BaseLib::HelperFunctions::getHexString(address, 8) << " and serial number " << serial << "." << std::dec << std::endl;
+				stringStream << "Added peer " << std::to_string(peer->getID()) << " with address 0x" << BaseLib::HelperFunctions::getHexString(peer->getAddress(), 8) << " and serial number " << serial << "." << std::dec << std::endl;
 			}
 			return stringStream.str();
 		}
@@ -913,6 +937,7 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 
 		try
 		{
+			if(peer->getRpcDevice()->addressSize == 25) peer->setAddress(address & 0xFFFFFF80);
 			peer->save(true, true, false);
 			peer->initializeCentralConfig();
 			peer->setPhysicalInterfaceId(interfaceId);
@@ -921,6 +946,11 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 			_peersById[peer->getID()] = peer;
 			_peersBySerial[peer->getSerialNumber()] = peer;
 			_peersMutex.unlock();
+			if(peer->getRpcDevice()->addressSize == 25)
+			{
+				std::lock_guard<std::mutex> wildcardPeersGuard(_wildcardPeersMutex);
+				_wildcardPeers[peer->getAddress()] = peer;
+			}
 		}
 		catch(const std::exception& ex)
 		{

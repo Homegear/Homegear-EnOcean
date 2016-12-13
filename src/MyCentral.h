@@ -75,6 +75,8 @@ protected:
 	std::mutex _sniffedPacketsMutex;
 	std::map<int32_t, std::vector<PMyPacket>> _sniffedPackets;
 
+	std::mutex _wildcardPeersMutex;
+	std::map<int32_t, PMyPeer> _wildcardPeers;
 	std::atomic_bool _pairing;
 	std::atomic<uint32_t> _timeLeftInPairingMode;
 	std::atomic_bool _stopPairingModeThread;

@@ -580,7 +580,10 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 			std::vector<char> erpPacket = packet->getData();
 			if(erpPacket.empty()) break;
 			uint32_t erpPacketBitSize = erpPacket.size() * 8;
+			int32_t channelIndex = frame->channelIndex;
 			int32_t channel = -1;
+			if(channelIndex >= 0 && channelIndex < (signed)erpPacket.size()) channel = erpPacket.at(channelIndex);
+			if(channel > -1 && frame->channelSize < 1.0) channel &= (0xFF >> (8 - std::lround(frame->channelSize * 10) % 10));
 			if(frame->channel > -1) channel = frame->channel;
 			if(channel == -1) continue;
 			currentFrameValues.frameID = frame->id;
@@ -687,10 +690,9 @@ void MyPeer::packetReceived(PMyPacket& packet)
 {
 	try
 	{
-		if(!packet) return;
-		if(_disposing) return;
-		if(packet->senderAddress() != _address) return;
-		if(!_rpcDevice) return;
+		if(_disposing || !packet || !_rpcDevice) return;
+		if(_rpcDevice->addressSize != 25 && packet->senderAddress() != _address) return;
+		else if(_rpcDevice->addressSize == 25 && (signed)(packet->senderAddress() & 0xFFFFFF80) != _address) return;
 		std::shared_ptr<MyCentral> central = std::dynamic_pointer_cast<MyCentral>(getCentral());
 		if(!central) return;
 		setLastPacketReceived();
