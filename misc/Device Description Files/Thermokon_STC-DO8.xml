@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="Virtual Rocker Switch">
-			<description>Virtual Rocker Switch</description>
-			<typeNumber>0xFFF60201</typeNumber>
+		<device id="Thermokon STC-DO8">
+			<description>Thermokon STC-DO8</description>
+			<typeNumber>0x7F0001</typeNumber>
 		</device>
 	</supportedDevices>
+	<properties>
+		<addressSize>25</addressSize>
+	</properties>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
 		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="0" type="MAINTENANCE">
 			<properties>
@@ -14,11 +17,8 @@
 			<configParameters>EnOceanConfig</configParameters>
 			<variables>maint_ch_values</variables>
 		</function>
-		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanSwitch-1-Button-State">
-			<variables>EnOceanVariables1</variables>
-		</function>
-		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="2" type="EnOceanSwitch-2-Button-State">
-			<variables>EnOceanVariables2</variables>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" channelCount="8" type="ThermokonRelais">
+			<variables>EnOceanVariables</variables>
 		</function>
 	</functions>
 	<packets>
@@ -67,6 +67,18 @@
 					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="STATE_INFO">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channelIndex>8:0.7</channelIndex>
+			<binaryPayload>
+				<element>
+					<bitIndex>39</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -120,7 +132,7 @@
 				</physicalInteger>
 			</parameter>
 		</variables>
-		<variables id="EnOceanVariables1">
+		<variables id="EnOceanVariables">
 			<parameter id="PAIRING">
 				<properties>
 					<readable>true</readable>
@@ -137,7 +149,6 @@
 				<packets>
 					<packet id="STATE_SET_ON_1">
 						<type>set</type>
-						<delay>10</delay>
 					</packet>
 				</packets>
 			</parameter>
@@ -149,70 +160,15 @@
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
+					<packet id="STATE_INFO">
+						<type>event</type>
+					</packet>
 					<packet id="STATE_SET_ON_1">
 						<type>set</type>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
-						<delay>10</delay>
 					</packet>
 					<packet id="STATE_SET_ON_2">
-						<type>set</type>
-						<conditionOperator>e</conditionOperator>
-						<conditionValue>0</conditionValue>
-					</packet>
-				</packets>
-			</parameter>
-		</variables>
-		<variables id="EnOceanVariables2">
-			<parameter id="PAIRING">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalInteger>
-					<minimumValue>-1</minimumValue>
-					<maximumValue>127</maximumValue>
-					<defaultValue>-1</defaultValue>
-				</logicalInteger>
-				<physicalInteger>
-					<operationType>command</operationType>
-				</physicalInteger>
-				<packets>
-					<packet id="STATE_SET_ON_1">
-						<type>set</type>
-						<delay>10</delay>
-					</packet>
-					<packet id="STATE_SET_ON_2">
-						<type>set</type>
-					</packet>
-				</packets>
-			</parameter>
-			<parameter id="STATE">
-				<logicalBoolean>
-					<defaultValue>false</defaultValue>
-				</logicalBoolean>
-				<physicalInteger groupId="STATE">
-					<operationType>command</operationType>
-				</physicalInteger>
-				<packets>
-					<packet id="STATE_SET_ON_1">
-						<type>set</type>
-						<conditionOperator>g</conditionOperator>
-						<conditionValue>0</conditionValue>
-						<delay>10</delay>
-					</packet>
-					<packet id="STATE_SET_ON_2">
-						<type>set</type>
-						<conditionOperator>g</conditionOperator>
-						<conditionValue>0</conditionValue>
-					</packet>
-					<packet id="STATE_SET_OFF_1">
-						<type>set</type>
-						<conditionOperator>e</conditionOperator>
-						<conditionValue>0</conditionValue>
-						<delay>10</delay>
-					</packet>
-					<packet id="STATE_SET_OFF_2">
 						<type>set</type>
 						<conditionOperator>e</conditionOperator>
 						<conditionValue>0</conditionValue>

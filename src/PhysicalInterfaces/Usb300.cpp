@@ -48,11 +48,11 @@ Usb300::~Usb300()
 	GD::bl->threadManager.join(_initThread);
 }
 
-void Usb300::setup(int32_t userID, int32_t groupID)
+void Usb300::setup(int32_t userID, int32_t groupID, bool setPermissions)
 {
     try
     {
-    	setDevicePermission(userID, groupID);
+    	if(setPermissions) setDevicePermission(userID, groupID);
     }
     catch(const std::exception& ex)
     {
@@ -90,6 +90,13 @@ void Usb300::startListening()
 
 		_stopCallbackThread = false;
 		_stopped = false;
+		int32_t result = 0;
+		char byte = 0;
+		while(result == 0)
+		{
+			//Clear buffer, otherwise the address response cannot be sent by the module if the buffer is full.
+			result = _serial->readChar(byte, 100000);
+		}
 		if(_settings->listenThreadPriority > -1) _bl->threadManager.start(_listenThread, true, _settings->listenThreadPriority, _settings->listenThreadPolicy, &Usb300::listen, this);
 		else _bl->threadManager.start(_listenThread, true, &Usb300::listen, this);
 		IPhysicalInterface::startListening();

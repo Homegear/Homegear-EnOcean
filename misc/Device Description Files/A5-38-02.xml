@@ -315,7 +315,7 @@
 			</parameter>
 			<parameter id="PAIRING">
 				<properties>
-					<readable>false</readable>
+					<readable>true</readable>
 					<writeable>true</writeable>
 				</properties>
 				<logicalInteger>
