@@ -114,6 +114,29 @@ void MyPeer::dispose()
 	Peer::dispose();
 }
 
+void MyPeer::worker()
+{
+	try
+	{
+		if(_blindStateResetTime != -1 && BaseLib::HelperFunctions::getTime() >= _blindStateResetTime)
+		{
+			setValue(BaseLib::PRpcClientInfo(), 1, _blindUp ? "UP" : "DOWN", std::make_shared<BaseLib::Variable>(false), false);
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 void MyPeer::homegearStarted()
 {
 	try
@@ -1179,6 +1202,25 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 			}
 			else return Variable::createError(-5, "Parameter RF_CHANNEL not found.");
 		}
+		// {{{ Blinds
+			else if(_deviceType == 0x01A53807 && (valueKey == "UP" || valueKey == "DOWN"))
+			{
+				if(value->booleanValue)
+				{
+					channelIterator = configCentral.find(0);
+					if(channelIterator != configCentral.end())
+					{
+						std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("SIGNAL_DURATION");
+						if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+						{
+							_blindStateResetTime = BaseLib::HelperFunctions::getTime() + (parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000);
+							_blindUp = valueKey == "UP";
+						}
+					}
+				}
+				else _blindStateResetTime = -1;
+			}
+		// }}}
 
 		if(_rfChannel == -1) return Variable::createError(-5, "RF_CHANNEL is not set. Please pair the device.");
 

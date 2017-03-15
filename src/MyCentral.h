@@ -83,7 +83,11 @@ protected:
 	std::mutex _pairingModeThreadMutex;
 	std::thread _pairingModeThread;
 
+	std::atomic_bool _stopWorkerThread;
+	std::thread _workerThread;
+
 	virtual void init();
+	virtual void worker();
 	virtual void loadPeers();
 	virtual void savePeers(bool full);
 	virtual void loadVariables() {}
