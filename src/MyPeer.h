@@ -65,6 +65,7 @@ public:
 	int32_t getRfChannel() { return _rfChannel; }
 	void setRfChannel(int32_t value);
 
+	void worker();
 	virtual std::string handleCliCommand(std::string command);
 	void packetReceived(PMyPacket& packet);
 
@@ -128,6 +129,11 @@ protected:
 	bool _forceEncryption = false;
 	PSecurity _security;
 	std::vector<char> _aesKeyPart1;
+
+	// {{{ Variables for blinds
+		int64_t _blindStateResetTime = -1;
+		bool _blindUp = false;
+	// }}}
 
 	virtual void loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows);
     virtual void saveVariables();

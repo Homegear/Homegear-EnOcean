@@ -10,4 +10,4 @@ cd $SCRIPTDIR
 rm -Rf autom4te.cache
 ./bootstrap || exit 1
 ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --libdir=/usr/lib || exit 1
-CPPFLAGS=-DDEBUG CXXFLAGS="-g -O0" && make -j${BUILDTHREADS} && make install
+make -j${BUILDTHREADS} CPPFLAGS="-DDEBUG" CXXFLAGS="-g -O0" && make install
