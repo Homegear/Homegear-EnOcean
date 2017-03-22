@@ -371,7 +371,11 @@ void Usb300::processPacket(std::vector<char>& data)
 		else _requestsMutex.unlock();
 
 		PMyPacket packet(new MyPacket(data));
-		if(packet->getType() == MyPacket::Type::RADIO_ERP1 || packet->getType() == MyPacket::Type::RADIO_ERP2) raisePacketReceived(packet);
+		if(packet->getType() == MyPacket::Type::RADIO_ERP1 || packet->getType() == MyPacket::Type::RADIO_ERP2)
+		{
+			if(packet->senderAddress() & 0xFFFFFF80 == _baseAddress) _out.printInfo("Info: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
+			else raisePacketReceived(packet);
+		}
 	}
 	catch(const std::exception& ex)
     {
