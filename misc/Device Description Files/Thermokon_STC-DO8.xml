@@ -46,30 +46,6 @@
 				</element>
 			</binaryPayload>
 		</packet>
-		<packet id="STATE_SET_OFF_1">
-			<direction>fromCentral</direction>
-			<type>0xF6</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<bitIndex>8</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0x70</constValueInteger>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="STATE_SET_OFF_2">
-			<direction>fromCentral</direction>
-			<type>0xF6</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<bitIndex>8</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-			</binaryPayload>
-		</packet>
 		<packet id="STATE_INFO">
 			<direction>toCentral</direction>
 			<type>0xA5</type>
@@ -118,6 +94,8 @@
 					<operationType>internal</operationType>
 				</physicalInteger>
 			</parameter>
+		</variables>
+		<variables id="EnOceanVariables">
 			<parameter id="RF_CHANNEL">
 				<properties>
 					<writeable>false</writeable>
@@ -131,8 +109,6 @@
 					<operationType>internal</operationType>
 				</physicalInteger>
 			</parameter>
-		</variables>
-		<variables id="EnOceanVariables">
 			<parameter id="PAIRING">
 				<properties>
 					<readable>true</readable>

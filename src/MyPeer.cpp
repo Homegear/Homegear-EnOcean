@@ -473,17 +473,17 @@ bool MyPeer::load(BaseLib::Systems::ICentral* central)
 		serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
 		serviceMessages->load();
 
-		std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelIterator = valuesCentral.find(0);
-		if(channelIterator != valuesCentral.end())
+		for(auto channelIterator : valuesCentral)
 		{
-			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("RF_CHANNEL");
-			if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator.second.find("RF_CHANNEL");
+			if(parameterIterator != channelIterator.second.end() && parameterIterator->second.rpcParameter)
 			{
-				_rfChannel = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
+				if(channelIterator.first == 0) _globalRfChannel = true;
+				setRfChannel(channelIterator.first, parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue);
 			}
 		}
 
-		channelIterator = configCentral.find(0);
+		std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelIterator = configCentral.find(0);
 		if(channelIterator != configCentral.end())
 		{
 			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("ENCRYPTION");
@@ -549,13 +549,62 @@ void MyPeer::setRssiDevice(uint8_t rssi)
     }
 }
 
-void MyPeer::setRfChannel(int32_t rfChannel)
+int32_t MyPeer::getRfChannel(int32_t channel)
+{
+	try
+	{
+		std::lock_guard<std::mutex> rfChannelsGuard(_rfChannelsMutex);
+		return _rfChannels[channel];
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return 0;
+}
+
+std::vector<int32_t> MyPeer::getRfChannels()
+{
+	try
+	{
+		std::vector<int32_t> channels;
+		std::lock_guard<std::mutex> rfChannelsGuard(_rfChannelsMutex);
+		for(auto element : _rfChannels)
+		{
+			if(element.second != -1) channels.push_back(element.second);
+		}
+		return channels;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return std::vector<int32_t>();
+}
+
+void MyPeer::setRfChannel(int32_t channel, int32_t rfChannel)
 {
 	try
 	{
 		if(rfChannel < 0 || rfChannel > 127) return;
 		BaseLib::PVariable value(new BaseLib::Variable(rfChannel));
-		std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelIterator = valuesCentral.find(0);
+		std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelIterator = valuesCentral.find(channel);
 		if(channelIterator != valuesCentral.end())
 		{
 			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("RF_CHANNEL");
@@ -563,9 +612,14 @@ void MyPeer::setRfChannel(int32_t rfChannel)
 			{
 				parameterIterator->second.rpcParameter->convertToPacket(value, parameterIterator->second.data);
 				if(parameterIterator->second.databaseID > 0) saveParameter(parameterIterator->second.databaseID, parameterIterator->second.data);
-				else saveParameter(0, ParameterGroup::Type::Enum::variables, 0, "RF_CHANNEL", parameterIterator->second.data);
-				_rfChannel = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
-				if(_bl->debugLevel >= 4) GD::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":0" + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterIterator->second.data) + ".");
+				else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, "RF_CHANNEL", parameterIterator->second.data);
+
+				{
+					std::lock_guard<std::mutex> rfChannelsGuard(_rfChannelsMutex);
+					_rfChannels[channel] = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
+				}
+
+				if(_bl->debugLevel >= 4) GD::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterIterator->second.data) + ".");
 			}
 			else GD::out.printError("Error: Parameter RF_CHANNEL not found.");
 		}
@@ -885,7 +939,7 @@ void MyPeer::packetReceived(PMyPacket& packet)
 
 			if(!frame->responseTypeId.empty())
 			{
-				if(_rfChannel == -1) GD::out.printError("Error: RF_CHANNEL is not set. Please pair the device.");
+				if(getRfChannel(0) == -1) GD::out.printError("Error: RF_CHANNEL is not set. Please pair the device.");
 				else
 				{
 					PacketsById::iterator packetIterator = _rpcDevice->packetsById.find(frame->responseTypeId);
@@ -894,7 +948,7 @@ void MyPeer::packetReceived(PMyPacket& packet)
 					{
 						PPacket responseFrame = packetIterator->second;
 						if(responseFrame->subtype == -1) responseFrame->subtype = 1;
-						PMyPacket packet(new MyPacket((MyPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | _rfChannel));
+						PMyPacket packet(new MyPacket((MyPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | getRfChannel(0)));
 
 						for(BinaryPayloads::iterator i = responseFrame->binaryPayloads.begin(); i != responseFrame->binaryPayloads.end(); ++i)
 						{
@@ -1178,7 +1232,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 
 		if(valueKey == "PAIRING")
 		{
-			if(value->integerValue == -1 && _rfChannel != -1) value->integerValue = _rfChannel;
+			if(value->integerValue == -1 && getRfChannel(_globalRfChannel ? 0 : channel) != -1) value->integerValue = getRfChannel(_globalRfChannel ? 0 : channel);
 			if(value->integerValue == -1) value->integerValue = central->getFreeRfChannel(_physicalInterfaceId);
 			if(value->integerValue == -1)
 			{
@@ -1186,7 +1240,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 				return Variable::createError(-7, "There is no free channel to pair a new device. You need to either reuse a channel or install another communication module.");
 			}
 
-			std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelIterator = valuesCentral.find(0);
+			std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>>::iterator channelIterator = valuesCentral.find(_globalRfChannel ? 0 : channel);
 			if(channelIterator != valuesCentral.end())
 			{
 				std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("RF_CHANNEL");
@@ -1194,8 +1248,8 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 				{
 					parameterIterator->second.rpcParameter->convertToPacket(value, parameterIterator->second.data);
 					if(parameterIterator->second.databaseID > 0) saveParameter(parameterIterator->second.databaseID, parameterIterator->second.data);
-					else saveParameter(0, ParameterGroup::Type::Enum::variables, 0, "RF_CHANNEL", parameterIterator->second.data);
-					_rfChannel = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
+					else saveParameter(0, ParameterGroup::Type::Enum::variables, _globalRfChannel ? 0 : channel, "RF_CHANNEL", parameterIterator->second.data);
+					setRfChannel(_globalRfChannel ? 0 : channel, parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue);
 					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterIterator->second.data) + ".");
 				}
 				else return Variable::createError(-5, "Parameter RF_CHANNEL not found.");
@@ -1222,7 +1276,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 			}
 		// }}}
 
-		if(_rfChannel == -1) return Variable::createError(-5, "RF_CHANNEL is not set. Please pair the device.");
+		if(getRfChannel(_globalRfChannel ? 0 : channel) == -1) return Variable::createError(-5, "RF_CHANNEL is not set. Please pair the device.");
 
 		for(std::shared_ptr<Parameter::Packet> setRequest : setRequests)
 		{
@@ -1231,7 +1285,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 			PPacket frame = packetIterator->second;
 
 			if(frame->subtype == -1) frame->subtype = 1;
-			PMyPacket packet(new MyPacket((MyPacket::Type)frame->subtype, (uint8_t)frame->type, _physicalInterface->getBaseAddress() | _rfChannel));
+			PMyPacket packet(new MyPacket((MyPacket::Type)frame->subtype, (uint8_t)frame->type, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel)));
 
 			for(BinaryPayloads::iterator i = frame->binaryPayloads.begin(); i != frame->binaryPayloads.end(); ++i)
 			{
