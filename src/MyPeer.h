@@ -134,8 +134,12 @@ protected:
 	std::vector<char> _aesKeyPart1;
 
 	// {{{ Variables for blinds
+		int32_t _blindSignalDuration = -1;
 		int64_t _blindStateResetTime = -1;
 		bool _blindUp = false;
+		int64_t _lastBlindPositionUpdate = 0;
+		int64_t _lastRpcBlindPositionUpdate = 0;
+		int32_t _blindPosition = 0;
 	// }}}
 
 	virtual void loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows);
