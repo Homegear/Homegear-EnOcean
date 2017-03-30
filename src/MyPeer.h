@@ -62,8 +62,9 @@ public:
 
 	std::shared_ptr<IEnOceanInterface>& getPhysicalInterface() { return _physicalInterface; }
 
-	int32_t getRfChannel() { return _rfChannel; }
-	void setRfChannel(int32_t value);
+	int32_t getRfChannel(int32_t channel);
+	std::vector<int32_t> getRfChannels();
+	void setRfChannel(int32_t channel, int32_t value);
 
 	void worker();
 	virtual std::string handleCliCommand(std::string command);
@@ -124,15 +125,21 @@ protected:
 	bool _shuttingDown = false;
 	std::shared_ptr<IEnOceanInterface> _physicalInterface;
 	uint32_t _lastRssiDevice = 0;
-	int32_t _rfChannel = -1;
+	bool _globalRfChannel = false;
+	std::mutex _rfChannelsMutex;
+	std::unordered_map<int32_t, int32_t> _rfChannels;
 
 	bool _forceEncryption = false;
 	PSecurity _security;
 	std::vector<char> _aesKeyPart1;
 
 	// {{{ Variables for blinds
+		int32_t _blindSignalDuration = -1;
 		int64_t _blindStateResetTime = -1;
 		bool _blindUp = false;
+		int64_t _lastBlindPositionUpdate = 0;
+		int64_t _lastRpcBlindPositionUpdate = 0;
+		int32_t _blindPosition = 0;
 	// }}}
 
 	virtual void loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows);

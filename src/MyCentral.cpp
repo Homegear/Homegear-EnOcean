@@ -139,7 +139,7 @@ void MyCentral::worker()
 						std::lock_guard<std::mutex> peersGuard(_peersMutex);
 						if(_peersById.size() > 0)
 						{
-							int32_t windowTimePerPeer = _bl->settings.workerThreadWindow() / 4 / _peersById.size();
+							int32_t windowTimePerPeer = _bl->settings.workerThreadWindow() / 8 / _peersById.size();
 							sleepingTime = std::chrono::milliseconds(windowTimePerPeer);
 						}
 					}
@@ -323,8 +323,8 @@ int32_t MyCentral::getFreeRfChannel(std::string& interfaceId)
 			PMyPeer peer(std::dynamic_pointer_cast<MyPeer>(*i));
 			if(!peer) continue;
 			if(peer->getPhysicalInterfaceId() != interfaceId) continue;
-			int32_t currentChannel = peer->getRfChannel();
-			if(currentChannel != -1) usedChannels.insert(currentChannel);
+			std::vector<int32_t> channels = peer->getRfChannels();
+			usedChannels.insert(channels.begin(), channels.end());
 		}
 		for(int32_t i = 0; i < 128; ++i)
 		{
@@ -437,7 +437,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				peer->save(true, true, false);
 				peer->initializeCentralConfig();
 				peer->setPhysicalInterfaceId(interfaceId);
-				peer->setRfChannel(rfChannel);
+				peer->setRfChannel(0, rfChannel);
 				peersGuard.lock();
 				_peers[peer->getAddress()] = peer;
 				_peersById[peer->getID()] = peer;
@@ -456,7 +456,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 			}
 
-			PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel()));
+			PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0)));
 			std::vector<char> responsePayload;
 			responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
 			responsePayload.back() = 0xF0;
@@ -472,7 +472,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 		{
 			std::shared_ptr<MyPeer> peer = getPeer(packet->senderAddress());
 			if(!peer) return false;
-			PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel()));
+			PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0)));
 			std::vector<char> responsePayload;
 			responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
 			responsePayload.back() = 0xF0;
