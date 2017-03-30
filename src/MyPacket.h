@@ -56,7 +56,7 @@ class MyPacket : public BaseLib::Systems::Packet
 
         MyPacket();
         MyPacket(std::vector<char>& espPacket);
-        MyPacket(Type type, uint8_t rorg, int32_t senderAddress);
+        MyPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress);
         virtual ~MyPacket();
 
         Type getType() { return _type; }

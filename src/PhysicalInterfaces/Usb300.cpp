@@ -146,8 +146,8 @@ void Usb300::init()
 {
 	try
     {
-		/* Set address - only possible 10 times
-		std::vector<char> data2{ 0x55, 0x00, 0x05, 0x00, 0x05, 0x00, 0x07, (char)(uint8_t)0xFF, (char)(uint8_t)0xA0, (char)(uint8_t)0xA0, (char)(uint8_t)0xA0, 0x00 };
+		// Set address - only possible 10 times, Must start with "0xFF"
+		/*std::vector<char> data2{ 0x55, 0x00, 0x05, 0x00, 0x05, 0x00, 0x07, (char)(uint8_t)0xFF, (char)(uint8_t)0xA0, (char)(uint8_t)0xA0, (char)(uint8_t)0xA0, 0x00 };
 		addCrc8(data2);
 		std::vector<char> response2;
 		getResponse(0x02, data2, response2);

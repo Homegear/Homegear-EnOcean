@@ -63,14 +63,15 @@ MyPacket::MyPacket(std::vector<char>& espPacket) : _packet(espPacket)
 	}
 }
 
-MyPacket::MyPacket(Type type, uint8_t rorg, int32_t senderAddress) : _type(type), _rorg(rorg)
+MyPacket::MyPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress) : _type(type), _rorg(rorg)
 {
 	_senderAddress = senderAddress;
+	_destinationAddress = destinationAddress;
 	_appendAddressAndStatus = true;
 	_data.reserve(20);
 	_data.push_back((char)rorg);
-	if(type == Type::RADIO_ERP1) _optionalData = std::vector<char>{ 3, (char)(uint8_t)0xFF, (char)(uint8_t)0xFF, (char)(uint8_t)0xFF, (char)(uint8_t)0xFF, 0, 0 };
-	else if(type == Type::RADIO_ERP2) _optionalData = std::vector<char>{ 3, 0 };
+	if(type == Type::RADIO_ERP1) _optionalData = std::vector<char>{ 3, (char)(uint8_t)((destinationAddress >> 24) & 0xFF), (char)(uint8_t)((destinationAddress >> 16) & 0xFF), (char)(uint8_t)((destinationAddress >> 8) & 0xFF), (char)(uint8_t)(destinationAddress & 0xFF), 0, 0 };
+	else if(type == Type::RADIO_ERP2) _optionalData = std::vector<char>{ 3, (char)(uint8_t)0xFF };
 }
 
 MyPacket::~MyPacket()
