@@ -408,76 +408,162 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 {
 	try
 	{
-		std::vector<char> payload = packet->getData();
-		if(payload.size() < 4) return false;
-		int32_t eep = ((int32_t)(uint8_t)payload.at(0) << 16) | (((int32_t)(uint8_t)payload.at(1) >> 2) << 8) | (((uint8_t)payload.at(1) & 3) << 5) | ((uint8_t)payload.at(2) >> 3);
-		std::string serial = "EOD" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 8);
-
 		auto physicalInterfaceIterator = GD::physicalInterfaces.find(interfaceId);
 		if(physicalInterfaceIterator == GD::physicalInterfaces.end()) return false;
 		std::shared_ptr<IEnOceanInterface> physicalInterface = physicalInterfaceIterator->second;
 		if(!physicalInterface) return false;
 
-		if(!peerExists(serial) && !peerExists(packet->senderAddress()))
+		std::vector<char> payload = packet->getData();
+		if(packet->getRorg() == 0xD4) //UTE
 		{
-			int32_t rfChannel = getFreeRfChannel(interfaceId);
-			if(rfChannel == -1)
+			if(payload.size() < 8) return false;
+
+			int32_t eep = ((int32_t)(uint8_t)payload.at(7) << 16) | (((int32_t)(uint8_t)payload.at(6)) << 8) | ((uint8_t)payload.at(5));
+			std::string serial = "EOD" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 8);
+
+			uint8_t byte1 = payload.at(1);
+			if((byte1 & 0x0F) != 0) return false; //Command 0 => teach-in request
+			if(!(byte1 & 0x80))
 			{
-				GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
+				GD::out.printWarning("Warning: Could not teach-in device as it expects currently unsupported unidirectional communication.");
 				return false;
 			}
-			GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ". If nothing happens, the EEP is not yet supported.");
-			std::shared_ptr<MyPeer> peer = createPeer(eep, packet->senderAddress(), serial, false);
-			if(!peer || !peer->getRpcDevice()) return false;
-			try
+			bool responseExpected = !(byte1 & 0x40);
+			if((byte1 & 0x30) == 0x10)
 			{
-				std::unique_lock<std::mutex> peersGuard(_peersMutex);
-				if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
-				peersGuard.unlock();
-				peer->save(true, true, false);
-				peer->initializeCentralConfig();
-				peer->setPhysicalInterfaceId(interfaceId);
-				peer->setRfChannel(0, rfChannel);
-				peersGuard.lock();
-				_peers[peer->getAddress()] = peer;
-				_peersById[peer->getID()] = peer;
-				peersGuard.unlock();
-			}
-			catch(const std::exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(BaseLib::Exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				GD::out.printWarning("Warning: Could not teach-out device as the teach-out request is currently unsupported.");
+				return false;
 			}
 
-			PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0)));
-			std::vector<char> responsePayload;
-			responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
-			responsePayload.back() = 0xF0;
-			response->setData(responsePayload);
-			physicalInterface->sendPacket(response);
+			int32_t rfChannel = 0;
+			if(!peerExists(serial) && !peerExists(packet->senderAddress()))
+			{
+				rfChannel = getFreeRfChannel(interfaceId);
+				if(rfChannel == -1)
+				{
+					GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
+					return false;
+				}
+				GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ". If nothing happens, the EEP is not yet supported.");
+				std::shared_ptr<MyPeer> peer = createPeer(eep, packet->senderAddress(), serial, false);
+				if(!peer || !peer->getRpcDevice()) return false;
+				try
+				{
+					std::unique_lock<std::mutex> peersGuard(_peersMutex);
+					if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+					peersGuard.unlock();
+					peer->save(true, true, false);
+					peer->initializeCentralConfig();
+					peer->setPhysicalInterfaceId(interfaceId);
+					peer->setRfChannel(0, rfChannel);
+					peersGuard.lock();
+					_peers[peer->getAddress()] = peer;
+					_peersById[peer->getID()] = peer;
+					peersGuard.unlock();
+				}
+				catch(const std::exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(BaseLib::Exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
 
-			PVariable deviceDescriptions(new Variable(VariableType::tArray));
-			deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
-			raiseRPCNewDevices(deviceDescriptions);
-			GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
+				PVariable deviceDescriptions(new Variable(VariableType::tArray));
+				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
+				raiseRPCNewDevices(deviceDescriptions);
+				GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
+			}
+			else
+			{
+				std::shared_ptr<MyPeer> peer = getPeer(packet->senderAddress());
+				if(!peer) return false;
+				rfChannel = peer->getRfChannel(0);
+			}
+
+			if(responseExpected)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, packet->senderAddress()));
+				std::vector<char> responsePayload;
+				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 8);
+				responsePayload.at(1) = (responsePayload.at(1) & 0x80) | 0x11; // Command 1 => teach-in response
+				response->setData(responsePayload);
+				physicalInterface->sendPacket(response);
+			}
 		}
-		else
+		else if(packet->getRorg() == 0xA5) //4BS teach-in, variant 3
 		{
-			std::shared_ptr<MyPeer> peer = getPeer(packet->senderAddress());
-			if(!peer) return false;
-			PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0)));
-			std::vector<char> responsePayload;
-			responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
-			responsePayload.back() = 0xF0;
-			response->setData(responsePayload);
-			physicalInterface->sendPacket(response);
+			if(payload.size() < 4) return false;
+			int32_t eep = ((int32_t)(uint8_t)payload.at(0) << 16) | (((int32_t)(uint8_t)payload.at(1) >> 2) << 8) | (((uint8_t)payload.at(1) & 3) << 5) | ((uint8_t)payload.at(2) >> 3);
+			std::string serial = "EOD" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 8);
+
+			if(!peerExists(serial) && !peerExists(packet->senderAddress()))
+			{
+				int32_t rfChannel = getFreeRfChannel(interfaceId);
+				if(rfChannel == -1)
+				{
+					GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
+					return false;
+				}
+				GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ". If nothing happens, the EEP is not yet supported.");
+				std::shared_ptr<MyPeer> peer = createPeer(eep, packet->senderAddress(), serial, false);
+				if(!peer || !peer->getRpcDevice()) return false;
+				try
+				{
+					std::unique_lock<std::mutex> peersGuard(_peersMutex);
+					if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+					peersGuard.unlock();
+					peer->save(true, true, false);
+					peer->initializeCentralConfig();
+					peer->setPhysicalInterfaceId(interfaceId);
+					peer->setRfChannel(0, rfChannel);
+					peersGuard.lock();
+					_peers[peer->getAddress()] = peer;
+					_peersById[peer->getID()] = peer;
+					peersGuard.unlock();
+				}
+				catch(const std::exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(BaseLib::Exception& ex)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+				}
+				catch(...)
+				{
+					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+				}
+
+				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0), 0xFFFFFFFF));
+				std::vector<char> responsePayload;
+				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
+				responsePayload.back() = 0xF0;
+				response->setData(responsePayload);
+				physicalInterface->sendPacket(response);
+
+				PVariable deviceDescriptions(new Variable(VariableType::tArray));
+				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
+				raiseRPCNewDevices(deviceDescriptions);
+				GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
+			}
+			else
+			{
+				std::shared_ptr<MyPeer> peer = getPeer(packet->senderAddress());
+				if(!peer) return false;
+				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0), 0xFFFFFFFF));
+				std::vector<char> responsePayload;
+				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
+				responsePayload.back() = 0xF0;
+				response->setData(responsePayload);
+				physicalInterface->sendPacket(response);
+			}
 		}
 		return true;
 	}
@@ -711,7 +797,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 			}
 			return stringStream.str();
 		}
-		else if(BaseLib::HelperFunctions::checkCliCommand(command, "peers remove", "pr", "", 1, arguments, showHelp))
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "peers remove", "pr", "prm", 1, arguments, showHelp))
 		{
 			if(showHelp)
 			{

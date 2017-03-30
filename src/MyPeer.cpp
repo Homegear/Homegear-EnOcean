@@ -981,7 +981,7 @@ void MyPeer::packetReceived(PMyPacket& packet)
 					{
 						PPacket responseFrame = packetIterator->second;
 						if(responseFrame->subtype == -1) responseFrame->subtype = 1;
-						PMyPacket packet(new MyPacket((MyPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | getRfChannel(0)));
+						PMyPacket packet(new MyPacket((MyPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | getRfChannel(0), _address));
 
 						for(BinaryPayloads::iterator i = responseFrame->binaryPayloads.begin(); i != responseFrame->binaryPayloads.end(); ++i)
 						{
@@ -1333,7 +1333,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 								_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
 								_blindUp = positionDifference > 0;
 
-								PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel)));
+								PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
 								std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
 								packet->setPosition(8, 8, data);
 								_physicalInterface->sendPacket(packet);
@@ -1353,7 +1353,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 			PPacket frame = packetIterator->second;
 
 			if(frame->subtype == -1) frame->subtype = 1;
-			PMyPacket packet(new MyPacket((MyPacket::Type)frame->subtype, (uint8_t)frame->type, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel)));
+			PMyPacket packet(new MyPacket((MyPacket::Type)frame->subtype, (uint8_t)frame->type, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
 
 			for(BinaryPayloads::iterator i = frame->binaryPayloads.begin(); i != frame->binaryPayloads.end(); ++i)
 			{
