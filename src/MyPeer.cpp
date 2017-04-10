@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1329,7 +1329,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 							{
 								_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000;
 								int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
-								_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
+								_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + 1000 + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
 								_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
 								_blindUp = positionDifference > 0;
 
