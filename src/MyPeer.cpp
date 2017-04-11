@@ -125,13 +125,20 @@ void MyPeer::worker()
 			_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
 			if(_blindPosition < 0) _blindPosition = 0;
 			else if(_blindPosition > 10000) _blindPosition = 10000;
+			bool updatePosition = false;
 			if(BaseLib::HelperFunctions::getTime() >= _blindStateResetTime)
 			{
 				setValue(BaseLib::PRpcClientInfo(), 1, _blindUp ? "UP" : "DOWN", std::make_shared<BaseLib::Variable>(false), false);
+				updatePosition = true;
 			}
-			if(BaseLib::HelperFunctions::getTime() - _lastRpcBlindPositionUpdate > 5000)
+			if(BaseLib::HelperFunctions::getTime() - _lastRpcBlindPositionUpdate >= 1000)
 			{
 				_lastRpcBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
+				updatePosition = true;
+			}
+
+			if(updatePosition)
+			{
 				auto channelIterator = valuesCentral.find(1);
 				if(channelIterator != valuesCentral.end())
 				{
@@ -541,6 +548,36 @@ bool MyPeer::load(BaseLib::Systems::ICentral* central)
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
+}
+
+void MyPeer::initializeCentralConfig()
+{
+	try
+	{
+		Peer::initializeCentralConfig();
+
+		for(auto channelIterator : valuesCentral)
+		{
+			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator.second.find("RF_CHANNEL");
+			if(parameterIterator != channelIterator.second.end() && parameterIterator->second.rpcParameter)
+			{
+				if(channelIterator.first == 0) _globalRfChannel = true;
+				setRfChannel(channelIterator.first, parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
 }
 
 void MyPeer::setRssiDevice(uint8_t rssi)
@@ -1283,6 +1320,8 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 					else saveParameter(0, ParameterGroup::Type::Enum::variables, _globalRfChannel ? 0 : channel, "RF_CHANNEL", parameterIterator->second.data);
 					setRfChannel(_globalRfChannel ? 0 : channel, parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue);
 					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterIterator->second.data) + ".");
+					valueKeys->push_back("RF_CHANNEL");
+					values->push_back(value);
 				}
 				else return Variable::createError(-5, "Parameter RF_CHANNEL not found.");
 			}
@@ -1314,6 +1353,8 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 				}
 				else if(valueKey == "LEVEL")
 				{
+					if(value->integerValue > 10) value->integerValue = 10;
+					else if(value->integerValue < 0) value->integerValue = 0;
 					setValue(clientInfo, channel, valueKey == "UP" ? "DOWN" : "UP", std::make_shared<BaseLib::Variable>(false), false);
 
 					int32_t newPosition = value->integerValue * 1000;
@@ -1329,7 +1370,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 							{
 								_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000;
 								int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
-								_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + 1000 + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
+								_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
 								_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
 								_blindUp = positionDifference > 0;
 

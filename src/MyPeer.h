@@ -72,6 +72,7 @@ public:
 
 	virtual bool load(BaseLib::Systems::ICentral* central);
     virtual void savePeers() {}
+    virtual void initializeCentralConfig();
 
 	virtual int32_t getChannelGroupedWith(int32_t channel) { return -1; }
 	virtual int32_t getNewFirmwareVersion() { return 0; }
