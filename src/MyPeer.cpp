@@ -92,7 +92,6 @@ void MyPeer::init()
 {
 	try
 	{
-		_security.reset(new Security(GD::bl));
 	}
 	catch(const std::exception& ex)
 	{
@@ -922,6 +921,7 @@ void MyPeer::packetReceived(PMyPacket& packet)
 				GD::out.printError("Error: Encrypted packet received, but Homegear never received the encryption teach-in packets. Plaise activate \"encryption teach-in\" on your device.");
 				return;
 			}
+			if(!_security) _security.reset(new Security(GD::bl));
 			std::vector<char> data = packet->getData();
 			if(_security->checkCmac(_aesKey, data, packet->getDataSize() - _cmacSize - 5, _rollingCode, _rollingCodeSize, _cmacSize))
 			{
