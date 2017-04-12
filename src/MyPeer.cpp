@@ -1362,22 +1362,25 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 					{
 						int32_t positionDifference = newPosition - _blindPosition;
 
-						channelIterator = configCentral.find(0);
-						if(channelIterator != configCentral.end())
+						if(positionDifference != 0)
 						{
-							std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("SIGNAL_DURATION");
-							if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+							channelIterator = configCentral.find(0);
+							if(channelIterator != configCentral.end())
 							{
-								_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000;
-								int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
-								_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
-								_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
-								_blindUp = positionDifference > 0;
+								std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("SIGNAL_DURATION");
+								if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+								{
+									_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000;
+									int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
+									_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
+									_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
+									_blindUp = positionDifference > 0;
 
-								PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
-								std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
-								packet->setPosition(8, 8, data);
-								_physicalInterface->sendPacket(packet);
+									PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+									std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
+									packet->setPosition(8, 8, data);
+									_physicalInterface->sendPacket(packet);
+								}
 							}
 						}
 					}
