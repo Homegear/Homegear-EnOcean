@@ -113,6 +113,15 @@ protected:
 		std::map<std::string, FrameValue> values;
 	};
 
+	class RpcRequest
+	{
+	public:
+		std::mutex conditionVariableMutex;
+		std::condition_variable conditionVariable;
+		std::string responseId;
+	};
+	typedef std::shared_ptr<RpcRequest> PRpcRequest;
+
 	//In table variables:
 	std::string _physicalInterfaceId;
 	int32_t _rollingCode = -1;
@@ -133,6 +142,11 @@ protected:
 	bool _forceEncryption = false;
 	PSecurity _security;
 	std::vector<char> _aesKeyPart1;
+
+	// {{{ Variables for getting RPC responses to requests
+		std::mutex _rpcRequestsMutex;
+		std::unordered_map<std::string, PRpcRequest> _rpcRequests;
+	// }}}
 
 	// {{{ Variables for blinds
 		int32_t _blindSignalDuration = -1;
