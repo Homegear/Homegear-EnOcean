@@ -1248,6 +1248,72 @@ PVariable MyPeer::setInterface(BaseLib::PRpcClientInfo clientInfo, std::string i
     return Variable::createError(-32500, "Unknown application error.");
 }
 
+void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay)
+{
+	try
+	{
+		if(!responseId.empty())
+		{
+			int32_t resends = 0;
+			int32_t resendTimeout = 500;
+			auto channelIterator = configCentral.find(0);
+			if(channelIterator != configCentral.end())
+			{
+				std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("RESENDS_WHEN_NO_ACK");
+				if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+				{
+					resends = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
+					if(resends < 0) resends = 0;
+					else if(resends > 12) resends = 12;
+				}
+				parameterIterator = channelIterator->second.find("RESEND_TIMEOUT");
+				if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+				{
+					resendTimeout = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
+					if(resends < 10) resends = 10;
+					else if(resends > 10000) resends = 10000;
+				}
+			}
+			if(resends == 0) _physicalInterface->sendPacket(packet);
+			else
+			{
+				PRpcRequest rpcRequest = std::make_shared<RpcRequest>();
+				rpcRequest->responseId = responseId;
+				{
+					std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+					auto requestIterator = _rpcRequests.find(rpcRequest->responseId);
+					if(requestIterator != _rpcRequests.end()) requestIterator->second->abort = true;
+					_rpcRequests.emplace(rpcRequest->responseId, rpcRequest);
+				}
+				for(int32_t i = 0; i < resends + 1; i++)
+				{
+					std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
+					_physicalInterface->sendPacket(packet);
+					if(rpcRequest->conditionVariable.wait_for(conditionVariableGuard, std::chrono::milliseconds(resendTimeout)) == std::cv_status::no_timeout || rpcRequest->abort) break;
+				}
+				{
+					std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+					_rpcRequests.erase(rpcRequest->responseId);
+				}
+			}
+		}
+		else _physicalInterface->sendPacket(packet);
+		if(delay > 0) std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait)
 {
 	try
@@ -1350,8 +1416,11 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 							std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("SIGNAL_DURATION");
 							if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
 							{
+								int32_t newPosition = valueKey == "UP" ? 10000 : 0;
+								int32_t positionDifference = newPosition - _blindPosition;
 								_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000;
-								_blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindSignalDuration;
+								int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
+								_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
 								_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
 								_blindUp = valueKey == "UP";
 							}
@@ -1387,7 +1456,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 									PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
 									std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
 									packet->setPosition(8, 8, data);
-									_physicalInterface->sendPacket(packet);
+									sendPacket(packet, "STATE_INFO", 0);
 								}
 							}
 						}
@@ -1465,53 +1534,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 				}
 			}
 
-			if(!setRequest->responseId.empty())
-			{
-				int32_t resends = 0;
-				int32_t resendTimeout = 500;
-				channelIterator = configCentral.find(0);
-				if(channelIterator != configCentral.end())
-				{
-					std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("RESENDS_WHEN_NO_ACK");
-					if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
-					{
-						resends = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
-						if(resends < 0) resends = 0;
-						else if(resends > 12) resends = 12;
-					}
-					parameterIterator = channelIterator->second.find("RESEND_TIMEOUT");
-					if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
-					{
-						resendTimeout = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
-						if(resends < 10) resends = 10;
-						else if(resends > 10000) resends = 10000;
-					}
-				}
-				if(resends == 0) _physicalInterface->sendPacket(packet);
-				else
-				{
-					PRpcRequest rpcRequest = std::make_shared<RpcRequest>();
-					rpcRequest->responseId = setRequest->responseId;
-					{
-						std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
-						auto requestIterator = _rpcRequests.find(rpcRequest->responseId);
-						if(requestIterator != _rpcRequests.end()) requestIterator->second->abort = true;
-						_rpcRequests.emplace(rpcRequest->responseId, rpcRequest);
-					}
-					for(int32_t i = 0; i < resends + 1; i++)
-					{
-						std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
-						_physicalInterface->sendPacket(packet);
-						if(rpcRequest->conditionVariable.wait_for(conditionVariableGuard, std::chrono::milliseconds(resendTimeout)) == std::cv_status::no_timeout || rpcRequest->abort) break;
-					}
-					{
-						std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
-						_rpcRequests.erase(rpcRequest->responseId);
-					}
-				}
-			}
-			else _physicalInterface->sendPacket(packet);
-			if(setRequest->delay > 0) std::this_thread::sleep_for(std::chrono::milliseconds(setRequest->delay));
+			sendPacket(packet, setRequest->responseId, setRequest->delay);
 		}
 
 		if(!valueKeys->empty())

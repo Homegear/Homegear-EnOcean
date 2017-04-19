@@ -179,6 +179,8 @@ protected:
 
 	virtual PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type);
 
+	void sendPacket(PMyPacket packet, std::string responseId, int32_t delay);
+
 	// {{{ Hooks
 		/**
 		 * {@inheritDoc}
