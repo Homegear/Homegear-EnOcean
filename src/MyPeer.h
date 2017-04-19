@@ -116,9 +116,12 @@ protected:
 	class RpcRequest
 	{
 	public:
+		std::atomic_bool abort;
 		std::mutex conditionVariableMutex;
 		std::condition_variable conditionVariable;
 		std::string responseId;
+
+		RpcRequest() : abort(false) {}
 	};
 	typedef std::shared_ptr<RpcRequest> PRpcRequest;
 

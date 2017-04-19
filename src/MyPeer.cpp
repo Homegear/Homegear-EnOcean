@@ -1494,13 +1494,15 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 					rpcRequest->responseId = setRequest->responseId;
 					{
 						std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+						auto requestIterator = _rpcRequests.find(rpcRequest->responseId);
+						if(requestIterator != _rpcRequests.end()) requestIterator->second->abort = true;
 						_rpcRequests.emplace(rpcRequest->responseId, rpcRequest);
 					}
 					for(int32_t i = 0; i < resends + 1; i++)
 					{
 						std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
 						_physicalInterface->sendPacket(packet);
-						if(rpcRequest->conditionVariable.wait_for(conditionVariableGuard, std::chrono::milliseconds(resendTimeout)) == std::cv_status::no_timeout) break;
+						if(rpcRequest->conditionVariable.wait_for(conditionVariableGuard, std::chrono::milliseconds(resendTimeout)) == std::cv_status::no_timeout || rpcRequest->abort) break;
 					}
 					{
 						std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
