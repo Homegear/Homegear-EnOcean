@@ -1418,11 +1418,14 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 							{
 								int32_t newPosition = valueKey == "UP" ? 10000 : 0;
 								int32_t positionDifference = newPosition - _blindPosition;
-								_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000;
-								int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
-								_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
-								_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
-								_blindUp = valueKey == "UP";
+								if(positionDifference != 0) //Prevent division by 0
+								{
+									_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000;
+									int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
+									_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
+									_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
+									_blindUp = valueKey == "UP";
+								}
 							}
 						}
 					}
@@ -1439,7 +1442,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 					{
 						int32_t positionDifference = newPosition - _blindPosition;
 
-						if(positionDifference != 0)
+						if(positionDifference != 0) //Prevent division by 0
 						{
 							channelIterator = configCentral.find(0);
 							if(channelIterator != configCentral.end())
