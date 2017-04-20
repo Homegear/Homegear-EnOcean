@@ -688,7 +688,7 @@ void MyPeer::setRfChannel(int32_t channel, int32_t rfChannel)
 					_rfChannels[channel] = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
 				}
 
-				if(_bl->debugLevel >= 4) GD::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterIterator->second.data) + ".");
+				if(_bl->debugLevel >= 4 && !GD::bl->booting) GD::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterIterator->second.data) + ".");
 			}
 			else GD::out.printError("Error: Parameter RF_CHANNEL not found.");
 		}
@@ -1408,7 +1408,25 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 				{
 					if(value->booleanValue)
 					{
-						setValue(clientInfo, channel, valueKey == "UP" ? "DOWN" : "UP", std::make_shared<BaseLib::Variable>(false), false);
+						channelIterator = valuesCentral.find(1);
+						if(channelIterator != valuesCentral.end())
+						{
+							std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find(valueKey == "UP" ? "DOWN" : "UP");
+							if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+							{
+								BaseLib::PVariable falseValue = std::make_shared<BaseLib::Variable>(false);
+								parameterIterator->second.rpcParameter->convertToPacket(falseValue, parameterIterator->second.data);
+								if(parameterIterator->second.databaseID > 0) saveParameter(parameterIterator->second.databaseID, parameterIterator->second.data);
+								else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey == "UP" ? "DOWN" : "UP", parameterIterator->second.data);
+								valueKeys->push_back(valueKey == "UP" ? "DOWN" : "UP");
+								values->push_back(falseValue);
+							}
+
+							PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+							std::vector<uint8_t> data{ 0 };
+							packet->setPosition(8, 8, data);
+							sendPacket(packet, "STATE_INFO", 0);
+						}
 
 						channelIterator = configCentral.find(0);
 						if(channelIterator != configCentral.end())
@@ -1429,13 +1447,29 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 							}
 						}
 					}
-					else _blindStateResetTime = -1;
+					else
+					{
+						_blindStateResetTime = -1;
+						channelIterator = valuesCentral.find(1);
+						if(channelIterator != valuesCentral.end())
+						{
+							std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find(valueKey == "UP" ? "DOWN" : "UP");
+							if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+							{
+								BaseLib::PVariable falseValue = std::make_shared<BaseLib::Variable>(false);
+								parameterIterator->second.rpcParameter->convertToPacket(falseValue, parameterIterator->second.data);
+								if(parameterIterator->second.databaseID > 0) saveParameter(parameterIterator->second.databaseID, parameterIterator->second.data);
+								else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey == "UP" ? "DOWN" : "UP", parameterIterator->second.data);
+								valueKeys->push_back(valueKey == "UP" ? "DOWN" : "UP");
+								values->push_back(falseValue);
+							}
+						}
+					}
 				}
 				else if(valueKey == "LEVEL")
 				{
 					if(value->integerValue > 10) value->integerValue = 10;
 					else if(value->integerValue < 0) value->integerValue = 0;
-					setValue(clientInfo, channel, valueKey == "UP" ? "DOWN" : "UP", std::make_shared<BaseLib::Variable>(false), false);
 
 					int32_t newPosition = value->integerValue * 1000;
 					if(newPosition != _blindPosition)
@@ -1444,6 +1478,8 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 
 						if(positionDifference != 0) //Prevent division by 0
 						{
+							setValue(clientInfo, channel, positionDifference > 0 ? "DOWN" : "UP", std::make_shared<BaseLib::Variable>(false), false);
+
 							channelIterator = configCentral.find(0);
 							if(channelIterator != configCentral.end())
 							{
@@ -1460,6 +1496,21 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 									std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
 									packet->setPosition(8, 8, data);
 									sendPacket(packet, "STATE_INFO", 0);
+
+									channelIterator = valuesCentral.find(1);
+									if(channelIterator != valuesCentral.end())
+									{
+										std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find(_blindUp ? "UP" : "DOWN");
+										if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+										{
+											BaseLib::PVariable trueValue = std::make_shared<BaseLib::Variable>(true);
+											parameterIterator->second.rpcParameter->convertToPacket(trueValue, parameterIterator->second.data);
+											if(parameterIterator->second.databaseID > 0) saveParameter(parameterIterator->second.databaseID, parameterIterator->second.data);
+											else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, _blindUp ? "UP" : "DOWN", parameterIterator->second.data);
+											valueKeys->push_back(_blindUp ? "UP" : "DOWN");
+											values->push_back(trueValue);
+										}
+									}
 								}
 							}
 						}
