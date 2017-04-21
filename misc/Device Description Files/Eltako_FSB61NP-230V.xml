@@ -125,6 +125,34 @@
 					<operationType>config</operationType>
 				</physicalNone>
 			</parameter>
+			<parameter id="RESEND_TIMEOUT">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>10000</maximumValue>
+					<defaultValue>500</defaultValue>
+				</logicalInteger>
+				<physicalNone>
+					<operationType>config</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="RESENDS_WHEN_NO_ACK">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>12</maximumValue>
+					<defaultValue>0</defaultValue>
+				</logicalInteger>
+				<physicalNone>
+					<operationType>config</operationType>
+				</physicalNone>
+			</parameter>
 		</configParameters>
 		<variables id="maint_ch_values">
 			<parameter id="UNREACH">
@@ -241,11 +269,13 @@
 					</packet>
 					<packet id="UP_ON">
 						<type>set</type>
+						<responseId>STATE_INFO</responseId>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
 					<packet id="UP_OFF">
 						<type>set</type>
+						<responseId>STATE_INFO</responseId>
 						<conditionOperator>e</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
@@ -266,11 +296,13 @@
 					</packet>
 					<packet id="DOWN_ON">
 						<type>set</type>
+						<responseId>STATE_INFO</responseId>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
 					<packet id="DOWN_OFF">
 						<type>set</type>
+						<responseId>STATE_INFO</responseId>
 						<conditionOperator>e</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
