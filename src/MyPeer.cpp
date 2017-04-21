@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -92,7 +92,6 @@ void MyPeer::init()
 {
 	try
 	{
-		_security.reset(new Security(GD::bl));
 	}
 	catch(const std::exception& ex)
 	{
@@ -125,13 +124,20 @@ void MyPeer::worker()
 			_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
 			if(_blindPosition < 0) _blindPosition = 0;
 			else if(_blindPosition > 10000) _blindPosition = 10000;
+			bool updatePosition = false;
 			if(BaseLib::HelperFunctions::getTime() >= _blindStateResetTime)
 			{
 				setValue(BaseLib::PRpcClientInfo(), 1, _blindUp ? "UP" : "DOWN", std::make_shared<BaseLib::Variable>(false), false);
+				updatePosition = true;
 			}
-			if(BaseLib::HelperFunctions::getTime() - _lastRpcBlindPositionUpdate > 5000)
+			if(BaseLib::HelperFunctions::getTime() - _lastRpcBlindPositionUpdate >= 1000)
 			{
 				_lastRpcBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
+				updatePosition = true;
+			}
+
+			if(updatePosition)
+			{
 				auto channelIterator = valuesCentral.find(1);
 				if(channelIterator != valuesCentral.end())
 				{
@@ -543,6 +549,36 @@ bool MyPeer::load(BaseLib::Systems::ICentral* central)
     return false;
 }
 
+void MyPeer::initializeCentralConfig()
+{
+	try
+	{
+		Peer::initializeCentralConfig();
+
+		for(auto channelIterator : valuesCentral)
+		{
+			std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator.second.find("RF_CHANNEL");
+			if(parameterIterator != channelIterator.second.end() && parameterIterator->second.rpcParameter)
+			{
+				if(channelIterator.first == 0) _globalRfChannel = true;
+				setRfChannel(channelIterator.first, parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue);
+			}
+		}
+	}
+	catch(const std::exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(BaseLib::Exception& ex)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+	}
+	catch(...)
+	{
+		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+	}
+}
+
 void MyPeer::setRssiDevice(uint8_t rssi)
 {
 	try
@@ -652,7 +688,7 @@ void MyPeer::setRfChannel(int32_t channel, int32_t rfChannel)
 					_rfChannels[channel] = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
 				}
 
-				if(_bl->debugLevel >= 4) GD::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterIterator->second.data) + ".");
+				if(_bl->debugLevel >= 4 && !GD::bl->booting) GD::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterIterator->second.data) + ".");
 			}
 			else GD::out.printError("Error: Parameter RF_CHANNEL not found.");
 		}
@@ -885,6 +921,8 @@ void MyPeer::packetReceived(PMyPacket& packet)
 				GD::out.printError("Error: Encrypted packet received, but Homegear never received the encryption teach-in packets. Plaise activate \"encryption teach-in\" on your device.");
 				return;
 			}
+			// Create object here to avoid unnecessary allocation of secure memory
+			if(!_security) _security.reset(new Security(GD::bl));
 			std::vector<char> data = packet->getData();
 			if(_security->checkCmac(_aesKey, data, packet->getDataSize() - _cmacSize - 5, _rollingCode, _rollingCodeSize, _cmacSize))
 			{
@@ -930,6 +968,13 @@ void MyPeer::packetReceived(PMyPacket& packet)
 		{
 			PPacket frame;
 			if(!a->frameID.empty()) frame = _rpcDevice->packetsById.at(a->frameID);
+			if(!frame) continue;
+
+			{
+				std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+				auto rpcRequestIterator = _rpcRequests.find(a->frameID);
+				if(rpcRequestIterator != _rpcRequests.end()) rpcRequestIterator->second->conditionVariable.notify_all();
+			}
 
 			for(std::map<std::string, FrameValue>::iterator i = a->values.begin(); i != a->values.end(); ++i)
 			{
@@ -1203,6 +1248,72 @@ PVariable MyPeer::setInterface(BaseLib::PRpcClientInfo clientInfo, std::string i
     return Variable::createError(-32500, "Unknown application error.");
 }
 
+void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay)
+{
+	try
+	{
+		if(!responseId.empty())
+		{
+			int32_t resends = 0;
+			int32_t resendTimeout = 500;
+			auto channelIterator = configCentral.find(0);
+			if(channelIterator != configCentral.end())
+			{
+				std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("RESENDS_WHEN_NO_ACK");
+				if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+				{
+					resends = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
+					if(resends < 0) resends = 0;
+					else if(resends > 12) resends = 12;
+				}
+				parameterIterator = channelIterator->second.find("RESEND_TIMEOUT");
+				if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+				{
+					resendTimeout = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue;
+					if(resends < 10) resends = 10;
+					else if(resends > 10000) resends = 10000;
+				}
+			}
+			if(resends == 0) _physicalInterface->sendPacket(packet);
+			else
+			{
+				PRpcRequest rpcRequest = std::make_shared<RpcRequest>();
+				rpcRequest->responseId = responseId;
+				{
+					std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+					auto requestIterator = _rpcRequests.find(rpcRequest->responseId);
+					if(requestIterator != _rpcRequests.end()) requestIterator->second->abort = true;
+					_rpcRequests.emplace(rpcRequest->responseId, rpcRequest);
+				}
+				for(int32_t i = 0; i < resends + 1; i++)
+				{
+					std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
+					_physicalInterface->sendPacket(packet);
+					if(rpcRequest->conditionVariable.wait_for(conditionVariableGuard, std::chrono::milliseconds(resendTimeout)) == std::cv_status::no_timeout || rpcRequest->abort) break;
+				}
+				{
+					std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+					_rpcRequests.erase(rpcRequest->responseId);
+				}
+			}
+		}
+		else _physicalInterface->sendPacket(packet);
+		if(delay > 0) std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+	}
+	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait)
 {
 	try
@@ -1283,6 +1394,8 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 					else saveParameter(0, ParameterGroup::Type::Enum::variables, _globalRfChannel ? 0 : channel, "RF_CHANNEL", parameterIterator->second.data);
 					setRfChannel(_globalRfChannel ? 0 : channel, parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue);
 					if(_bl->debugLevel >= 4) GD::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterIterator->second.data) + ".");
+					valueKeys->push_back("RF_CHANNEL");
+					values->push_back(value);
 				}
 				else return Variable::createError(-5, "Parameter RF_CHANNEL not found.");
 			}
@@ -1295,7 +1408,25 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 				{
 					if(value->booleanValue)
 					{
-						setValue(clientInfo, channel, valueKey == "UP" ? "DOWN" : "UP", std::make_shared<BaseLib::Variable>(false), false);
+						channelIterator = valuesCentral.find(1);
+						if(channelIterator != valuesCentral.end())
+						{
+							std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find(valueKey == "UP" ? "DOWN" : "UP");
+							if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+							{
+								BaseLib::PVariable falseValue = std::make_shared<BaseLib::Variable>(false);
+								parameterIterator->second.rpcParameter->convertToPacket(falseValue, parameterIterator->second.data);
+								if(parameterIterator->second.databaseID > 0) saveParameter(parameterIterator->second.databaseID, parameterIterator->second.data);
+								else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey == "UP" ? "DOWN" : "UP", parameterIterator->second.data);
+								valueKeys->push_back(valueKey == "UP" ? "DOWN" : "UP");
+								values->push_back(falseValue);
+							}
+
+							PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+							std::vector<uint8_t> data{ 0 };
+							packet->setPosition(8, 8, data);
+							sendPacket(packet, "STATE_INFO", 0);
+						}
 
 						channelIterator = configCentral.find(0);
 						if(channelIterator != configCentral.end())
@@ -1303,40 +1434,84 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 							std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("SIGNAL_DURATION");
 							if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
 							{
-								_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000;
-								_blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindSignalDuration;
-								_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
-								_blindUp = valueKey == "UP";
+								int32_t newPosition = valueKey == "UP" ? 10000 : 0;
+								int32_t positionDifference = newPosition - _blindPosition;
+								if(positionDifference != 0) //Prevent division by 0
+								{
+									_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000;
+									int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
+									_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
+									_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
+									_blindUp = valueKey == "UP";
+								}
 							}
 						}
 					}
-					else _blindStateResetTime = -1;
+					else
+					{
+						_blindStateResetTime = -1;
+						channelIterator = valuesCentral.find(1);
+						if(channelIterator != valuesCentral.end())
+						{
+							std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find(valueKey == "UP" ? "DOWN" : "UP");
+							if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+							{
+								BaseLib::PVariable falseValue = std::make_shared<BaseLib::Variable>(false);
+								parameterIterator->second.rpcParameter->convertToPacket(falseValue, parameterIterator->second.data);
+								if(parameterIterator->second.databaseID > 0) saveParameter(parameterIterator->second.databaseID, parameterIterator->second.data);
+								else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey == "UP" ? "DOWN" : "UP", parameterIterator->second.data);
+								valueKeys->push_back(valueKey == "UP" ? "DOWN" : "UP");
+								values->push_back(falseValue);
+							}
+						}
+					}
 				}
 				else if(valueKey == "LEVEL")
 				{
-					setValue(clientInfo, channel, valueKey == "UP" ? "DOWN" : "UP", std::make_shared<BaseLib::Variable>(false), false);
+					if(value->integerValue > 10) value->integerValue = 10;
+					else if(value->integerValue < 0) value->integerValue = 0;
 
 					int32_t newPosition = value->integerValue * 1000;
 					if(newPosition != _blindPosition)
 					{
 						int32_t positionDifference = newPosition - _blindPosition;
 
-						channelIterator = configCentral.find(0);
-						if(channelIterator != configCentral.end())
+						if(positionDifference != 0) //Prevent division by 0
 						{
-							std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("SIGNAL_DURATION");
-							if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
-							{
-								_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000;
-								int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
-								_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
-								_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
-								_blindUp = positionDifference > 0;
+							setValue(clientInfo, channel, positionDifference > 0 ? "DOWN" : "UP", std::make_shared<BaseLib::Variable>(false), false);
 
-								PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
-								std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
-								packet->setPosition(8, 8, data);
-								_physicalInterface->sendPacket(packet);
+							channelIterator = configCentral.find(0);
+							if(channelIterator != configCentral.end())
+							{
+								std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("SIGNAL_DURATION");
+								if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+								{
+									_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterIterator->second.data)->integerValue * 1000;
+									int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
+									_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
+									_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
+									_blindUp = positionDifference > 0;
+
+									PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+									std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
+									packet->setPosition(8, 8, data);
+									sendPacket(packet, "STATE_INFO", 0);
+
+									channelIterator = valuesCentral.find(1);
+									if(channelIterator != valuesCentral.end())
+									{
+										std::unordered_map<std::string, BaseLib::Systems::RPCConfigurationParameter>::iterator parameterIterator = channelIterator->second.find(_blindUp ? "UP" : "DOWN");
+										if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+										{
+											BaseLib::PVariable trueValue = std::make_shared<BaseLib::Variable>(true);
+											parameterIterator->second.rpcParameter->convertToPacket(trueValue, parameterIterator->second.data);
+											if(parameterIterator->second.databaseID > 0) saveParameter(parameterIterator->second.databaseID, parameterIterator->second.data);
+											else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, _blindUp ? "UP" : "DOWN", parameterIterator->second.data);
+											valueKeys->push_back(_blindUp ? "UP" : "DOWN");
+											values->push_back(trueValue);
+										}
+									}
+								}
 							}
 						}
 					}
@@ -1413,8 +1588,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 				}
 			}
 
-			_physicalInterface->sendPacket(packet);
-			if(setRequest->delay > 0) std::this_thread::sleep_for(std::chrono::milliseconds(setRequest->delay));
+			sendPacket(packet, setRequest->responseId, setRequest->delay);
 		}
 
 		if(!valueKeys->empty())

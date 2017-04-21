@@ -1,4 +1,4 @@
-/* Copyright 2013-2016 Sathya Laufer
+/* Copyright 2013-2017 Sathya Laufer
  *
  * Homegear is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,6 +72,7 @@ public:
 
 	virtual bool load(BaseLib::Systems::ICentral* central);
     virtual void savePeers() {}
+    virtual void initializeCentralConfig();
 
 	virtual int32_t getChannelGroupedWith(int32_t channel) { return -1; }
 	virtual int32_t getNewFirmwareVersion() { return 0; }
@@ -112,6 +113,18 @@ protected:
 		std::map<std::string, FrameValue> values;
 	};
 
+	class RpcRequest
+	{
+	public:
+		std::atomic_bool abort;
+		std::mutex conditionVariableMutex;
+		std::condition_variable conditionVariable;
+		std::string responseId;
+
+		RpcRequest() : abort(false) {}
+	};
+	typedef std::shared_ptr<RpcRequest> PRpcRequest;
+
 	//In table variables:
 	std::string _physicalInterfaceId;
 	int32_t _rollingCode = -1;
@@ -132,6 +145,11 @@ protected:
 	bool _forceEncryption = false;
 	PSecurity _security;
 	std::vector<char> _aesKeyPart1;
+
+	// {{{ Variables for getting RPC responses to requests
+		std::mutex _rpcRequestsMutex;
+		std::unordered_map<std::string, PRpcRequest> _rpcRequests;
+	// }}}
 
 	// {{{ Variables for blinds
 		int32_t _blindSignalDuration = -1;
@@ -160,6 +178,8 @@ protected:
 	void getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& frameValue);
 
 	virtual PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type);
+
+	void sendPacket(PMyPacket packet, std::string responseId, int32_t delay);
 
 	// {{{ Hooks
 		/**
