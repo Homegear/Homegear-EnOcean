@@ -52,6 +52,18 @@
 				</element>
 			</binaryPayload>
 		</packet>
+		<packet id="STATE_INFO_2">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>CURRENT_STATE_2</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
 		<packet id="UP_ON">
 			<direction>fromCentral</direction>
 			<type>0xF6</type>
@@ -60,7 +72,7 @@
 					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
 					<constValueInteger>0x30</constValueInteger>
-				</element>				
+				</element>
 			</binaryPayload>
 		</packet>
 		<packet id="UP_OFF">
@@ -71,7 +83,7 @@
 					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
-				</element>				
+				</element>
 			</binaryPayload>
 		</packet>
 		<packet id="DOWN_ON">
@@ -82,7 +94,7 @@
 					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
 					<constValueInteger>0x10</constValueInteger>
-				</element>				
+				</element>
 			</binaryPayload>
 		</packet>
 		<packet id="DOWN_OFF">
@@ -93,7 +105,7 @@
 					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
 					<constValueInteger>0</constValueInteger>
-				</element>				
+				</element>
 			</binaryPayload>
 		</packet>
 	</packets>
@@ -133,7 +145,7 @@
 				<logicalInteger>
 					<minimumValue>0</minimumValue>
 					<maximumValue>10000</maximumValue>
-					<defaultValue>500</defaultValue>
+					<defaultValue>1000</defaultValue>
 				</logicalInteger>
 				<physicalNone>
 					<operationType>config</operationType>
@@ -254,6 +266,25 @@
 					</packet>
 				</packets>
 			</parameter>
+			<parameter id="CURRENT_STATE_2">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>255</maximumValue>
+					<defaultValue>0</defaultValue>
+				</logicalInteger>
+				<physicalNone groupId="CURRENT_STATE_2">
+					<operationType>command</operationType>
+				</physicalNone>
+				<packets>
+					<packet id="STATE_INFO_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
 			<parameter id="UP">
 				<properties>
 					<readable>true</readable>
@@ -269,13 +300,13 @@
 					</packet>
 					<packet id="UP_ON">
 						<type>set</type>
-						<responseId>STATE_INFO</responseId>
+						<responseId>ANY</responseId>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
 					<packet id="UP_OFF">
 						<type>set</type>
-						<responseId>STATE_INFO</responseId>
+						<responseId>ANY</responseId>
 						<conditionOperator>e</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
@@ -296,13 +327,13 @@
 					</packet>
 					<packet id="DOWN_ON">
 						<type>set</type>
-						<responseId>STATE_INFO</responseId>
+						<responseId>ANY</responseId>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
 					<packet id="DOWN_OFF">
 						<type>set</type>
-						<responseId>STATE_INFO</responseId>
+						<responseId>ANY</responseId>
 						<conditionOperator>e</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
