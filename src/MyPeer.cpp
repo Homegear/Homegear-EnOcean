@@ -163,6 +163,7 @@ void MyPeer::worker()
 				}
 			}
 		}
+		serviceMessages->checkUnreach(_rpcDevice->timeout, getLastPacketReceived());
 	}
 	catch(const std::exception& ex)
 	{
@@ -1334,6 +1335,7 @@ void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay)
 					std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
 					_physicalInterface->sendPacket(packet);
 					if(rpcRequest->conditionVariable.wait_for(conditionVariableGuard, std::chrono::milliseconds(resendTimeout)) == std::cv_status::no_timeout || rpcRequest->abort) break;
+					if(i == resends) serviceMessages->setUnreach(true, false);
 				}
 				{
 					std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
