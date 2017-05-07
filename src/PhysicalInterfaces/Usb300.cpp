@@ -424,6 +424,7 @@ void Usb300::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			else _out.printError("Unknown error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
 			return;
 		}
+		_lastPacketSent = BaseLib::HelperFunctions::getTime();
 	}
 	catch(const std::exception& ex)
     {
