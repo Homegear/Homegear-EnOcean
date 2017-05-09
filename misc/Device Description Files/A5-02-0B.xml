@@ -6,6 +6,9 @@
 			<typeNumber>0xA5020B</typeNumber>
 		</device>
 	</supportedDevices>
+	<properties>
+		<timeout>7200</timeout>
+	</properties>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
 		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="0" type="MAINTENANCE">
 			<properties>
