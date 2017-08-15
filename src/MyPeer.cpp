@@ -1343,7 +1343,6 @@ void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay,
 				{
 					std::vector<uint8_t> parameterData = parameterIterator->second.getBinaryData();
 					resends = parameterIterator->second.rpcParameter->convertFromPacket(parameterData)->integerValue;
-					_bl->out.printInfo("Moin1 " + std::to_string(resends) + " " + std::to_string(resendTimeout));
 					if(resends < 0) resends = 0;
 					else if(resends > 12) resends = 12;
 				}
@@ -1352,7 +1351,6 @@ void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay,
 				{
 					std::vector<uint8_t> parameterData = parameterIterator->second.getBinaryData();
 					resendTimeout = parameterIterator->second.rpcParameter->convertFromPacket(parameterData)->integerValue;
-					_bl->out.printInfo("Moin2 " + std::to_string(resends) + " " + std::to_string(resendTimeout));
 					if(resendTimeout < 10) resendTimeout = 10;
 					else if(resendTimeout > 10000) resendTimeout = 10000;
 				}
@@ -1360,7 +1358,6 @@ void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay,
 			if(resends == 0) _physicalInterface->sendPacket(packet);
 			else
 			{
-				_bl->out.printInfo("Moin3 " + std::to_string(resends) + " " + std::to_string(resendTimeout));
 				PRpcRequest rpcRequest = std::make_shared<RpcRequest>();
 				rpcRequest->responseId = responseId;
 				rpcRequest->wait = wait;
