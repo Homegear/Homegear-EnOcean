@@ -164,6 +164,34 @@
 					<operationType>config</operationType>
 				</physicalBoolean>
 			</parameter>
+			<parameter id="RESEND_TIMEOUT">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>10000</maximumValue>
+					<defaultValue>1000</defaultValue>
+				</logicalInteger>
+				<physicalNone>
+					<operationType>config</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="RESENDS_WHEN_NO_ACK">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>12</maximumValue>
+					<defaultValue>0</defaultValue>
+				</logicalInteger>
+				<physicalNone>
+					<operationType>config</operationType>
+				</physicalNone>
+			</parameter>
 		</configParameters>
 		<variables id="maint_ch_values">
 			<parameter id="UNREACH">
@@ -232,11 +260,13 @@
 					</packet>
 					<packet id="LEVEL_SET_ON">
 						<type>set</type>
+						<responseId>ANY</responseId>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
 					<packet id="LEVEL_SET_OFF">
 						<type>set</type>
+						<responseId>ANY</responseId>
 						<conditionOperator>e</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
@@ -271,11 +301,13 @@
 					</packet>
 					<packet id="STATE_SET_ON">
 						<type>set</type>
+						<responseId>ANY</responseId>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
 					<packet id="LEVEL_SET_OFF">
 						<type>set</type>
+						<responseId>ANY</responseId>
 						<conditionOperator>e</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>

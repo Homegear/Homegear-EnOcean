@@ -121,7 +121,14 @@ protected:
 		std::condition_variable conditionVariable;
 		std::string responseId;
 
-		RpcRequest() : abort(false) {}
+		std::atomic_bool wait;
+		PMyPacket packet;
+		uint32_t maxResends = 0;
+		uint32_t resends = 0;
+		uint32_t resendTimeout = 0;
+		int64_t lastResend = 0;
+
+		RpcRequest() : abort(false), wait(true) {}
 	};
 	typedef std::shared_ptr<RpcRequest> PRpcRequest;
 
@@ -179,7 +186,7 @@ protected:
 
 	virtual PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type);
 
-	void sendPacket(PMyPacket packet, std::string responseId, int32_t delay);
+	void sendPacket(PMyPacket packet, std::string responseId, int32_t delay, bool wait);
 
 	// {{{ Hooks
 		/**
