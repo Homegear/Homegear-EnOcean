@@ -14,7 +14,7 @@ override_dh_auto_install:
 	chmod 644 $(CURDIR)/debian/homegear-enocean/etc/homegear/devices/15/*
 
 override_dh_strip:
-	dh_strip --dbg-package=homegear-enocean
+	dh_strip
 
 %:
 	dh $@ --parallel
