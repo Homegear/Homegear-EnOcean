@@ -22,6 +22,50 @@
 		</function>
 	</functions>
 	<packets>
+		<packet id="STATE_INFO_1">
+			<direction>toCentral</direction>
+			<type>0xD2</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
+					<constValueInteger>4</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>19</bitIndex>
+					<bitSize>5</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>25</bitIndex>
+					<bitSize>7</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="STATE_INFO_2">
+			<direction>toCentral</direction>
+			<type>0xD2</type>
+			<channel>2</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>8</bitSize>
+					<constValueInteger>4</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>19</bitIndex>
+					<bitSize>5</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>25</bitIndex>
+					<bitSize>7</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
 		<packet id="STATE_SET_1">
 			<direction>fromCentral</direction>
 			<type>0xD2</type>
@@ -68,7 +112,36 @@
 		</packet>
 	</packets>
 	<parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<configParameters id="EnOceanConfig" />
+		<configParameters id="EnOceanConfig">
+			<parameter id="RESEND_TIMEOUT">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>10000</maximumValue>
+					<defaultValue>1000</defaultValue>
+				</logicalInteger>
+				<physicalNone>
+					<operationType>config</operationType>
+				</physicalNone>
+			</parameter>
+			<parameter id="RESENDS_WHEN_NO_ACK">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>12</maximumValue>
+					<defaultValue>0</defaultValue>
+				</logicalInteger>
+				<physicalNone>
+					<operationType>config</operationType>
+				</physicalNone>
+			</parameter>
+		</configParameters>
 		<variables id="maint_ch_values">
 			<parameter id="UNREACH">
 				<properties>
@@ -135,8 +208,12 @@
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
+					<packet id="STATE_INFO_1">
+						<type>event</type>
+					</packet>
 					<packet id="STATE_SET_1">
 						<type>set</type>
+						<responseId>ANY</responseId>
 					</packet>
 				</packets>
 			</parameter>
@@ -160,8 +237,12 @@
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
+					<packet id="STATE_INFO_2">
+						<type>event</type>
+					</packet>
 					<packet id="STATE_SET_2">
 						<type>set</type>
+						<responseId>ANY</responseId>
 					</packet>
 				</packets>
 			</parameter>

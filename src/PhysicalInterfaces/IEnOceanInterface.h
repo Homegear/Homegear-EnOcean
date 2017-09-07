@@ -41,6 +41,7 @@ public:
 	IEnOceanInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
 	virtual ~IEnOceanInterface();
 
+	int32_t getAddress() { return _baseAddress; }
 	uint32_t getBaseAddress() { return _baseAddress; }
 
 	virtual void startListening() {}

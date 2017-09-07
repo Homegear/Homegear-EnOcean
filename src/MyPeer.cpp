@@ -125,6 +125,7 @@ void MyPeer::worker()
 			{
 				for(auto request : _rpcRequests)
 				{
+					if(request.second->maxResends == 0) continue; //Synchronous
 					if(BaseLib::HelperFunctions::getTime() - request.second->lastResend < request.second->resendTimeout) continue;
 					if(request.second->resends == request.second->maxResends)
 					{
@@ -158,7 +159,7 @@ void MyPeer::worker()
 				setValue(BaseLib::PRpcClientInfo(), 1, _blindUp ? "UP" : "DOWN", std::make_shared<BaseLib::Variable>(false), false);
 				updatePosition = true;
 			}
-			if(BaseLib::HelperFunctions::getTime() - _lastRpcBlindPositionUpdate >= 1000)
+			if(BaseLib::HelperFunctions::getTime() - _lastRpcBlindPositionUpdate >= 5000)
 			{
 				_lastRpcBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
 				updatePosition = true;
@@ -191,7 +192,7 @@ void MyPeer::worker()
 				}
 			}
 		}
-		serviceMessages->checkUnreach(_rpcDevice->timeout, getLastPacketReceived());
+		if(!serviceMessages->getUnreach()) serviceMessages->checkUnreach(_rpcDevice->timeout, getLastPacketReceived());
 	}
 	catch(const std::exception& ex)
 	{
@@ -1017,6 +1018,18 @@ void MyPeer::packetReceived(PMyPacket& packet)
 		getValuesFromPacket(packet, frameValues);
 		std::map<uint32_t, std::shared_ptr<std::vector<std::string>>> valueKeys;
 		std::map<uint32_t, std::shared_ptr<std::vector<PVariable>>> rpcValues;
+
+		if(frameValues.empty())
+		{
+			std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+			auto rpcRequestIterator = _rpcRequests.find("ANY");
+			if(rpcRequestIterator != _rpcRequests.end())
+			{
+				if(rpcRequestIterator->second->wait) rpcRequestIterator->second->conditionVariable.notify_all();
+				else _rpcRequests.erase(rpcRequestIterator);
+			}
+		}
+
 		//Loop through all matching frames
 		for(std::vector<FrameValues>::iterator a = frameValues.begin(); a != frameValues.end(); ++a)
 		{
@@ -1233,6 +1246,32 @@ bool MyPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter, u
     return false;
 }
 
+PVariable MyPeer::getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields)
+{
+	try
+	{
+		PVariable info(Peer::getDeviceInfo(clientInfo, fields));
+		if(info->errorStruct) return info;
+
+		if(fields.empty() || fields.find("INTERFACE") != fields.end()) info->structValue->insert(StructElement("INTERFACE", PVariable(new Variable(_physicalInterface->getID()))));
+
+		return info;
+	}
+	catch(const std::exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return PVariable();
+}
+
 PVariable MyPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool onlyPushing)
 {
 	try
@@ -1365,7 +1404,7 @@ void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay,
 				{
 					rpcRequest->packet = packet;
 					rpcRequest->resends = 1;
-					rpcRequest->maxResends = resends;
+					rpcRequest->maxResends = resends; //Also used as an identifier for asynchronous requests
 					rpcRequest->resendTimeout = resendTimeout;
 					rpcRequest->lastResend = BaseLib::HelperFunctions::getTime();
 				}
@@ -1381,9 +1420,9 @@ void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay,
 				}
 				if(wait)
 				{
+					std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
 					for(int32_t i = 0; i < resends + 1; i++)
 					{
-						std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
 						_physicalInterface->sendPacket(packet);
 						if(rpcRequest->conditionVariable.wait_for(conditionVariableGuard, std::chrono::milliseconds(resendTimeout)) == std::cv_status::no_timeout || rpcRequest->abort) break;
 						if(i == resends) serviceMessages->setUnreach(true, false);

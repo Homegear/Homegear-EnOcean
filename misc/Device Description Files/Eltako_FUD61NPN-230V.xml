@@ -260,13 +260,13 @@
 					</packet>
 					<packet id="LEVEL_SET_ON">
 						<type>set</type>
-						<responseId>ANY</responseId>
+						<responseId>LEVEL_INFO</responseId>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
 					<packet id="LEVEL_SET_OFF">
 						<type>set</type>
-						<responseId>ANY</responseId>
+						<responseId>LEVEL_INFO</responseId>
 						<conditionOperator>e</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
@@ -301,13 +301,13 @@
 					</packet>
 					<packet id="STATE_SET_ON">
 						<type>set</type>
-						<responseId>ANY</responseId>
+						<responseId>LEVEL_INFO</responseId>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
 					<packet id="LEVEL_SET_OFF">
 						<type>set</type>
-						<responseId>ANY</responseId>
+						<responseId>LEVEL_INFO</responseId>
 						<conditionOperator>e</conditionOperator>
 						<conditionValue>0</conditionValue>
 					</packet>
