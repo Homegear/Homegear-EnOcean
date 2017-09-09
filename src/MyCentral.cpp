@@ -661,7 +661,19 @@ void MyCentral::deletePeer(uint64_t id)
 		if(peer->getRpcDevice()->addressSize == 25)
 		{
 			std::lock_guard<std::mutex> wildcardPeersGuard(_wildcardPeersMutex);
-			_wildcardPeers.erase(peer->getAddress());
+			auto peerIterator = _wildcardPeers.find(peer->getAddress());
+			if(peerIterator != _wildcardPeers.end())
+			{
+				for(std::list<PMyPeer>::iterator element = peerIterator->second.begin(); element != peerIterator->second.end(); ++element)
+				{
+					if((*element)->getID() == peer->getID())
+					{
+						peerIterator->second.erase(element);
+						break;
+					}
+				}
+				if(peerIterator->second.empty()) _wildcardPeers.erase(peerIterator);
+			}
 		}
 
 		_peersMutex.lock();
