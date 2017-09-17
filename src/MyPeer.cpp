@@ -998,6 +998,8 @@ void MyPeer::packetReceived(PMyPacket& packet)
 			auto rpcRequestIterator = _rpcRequests.find("ANY");
 			if(rpcRequestIterator != _rpcRequests.end())
 			{
+				std::unique_lock<std::mutex> conditionVariableGuard(rpcRequestIterator->second->conditionVariableMutex);
+				conditionVariableGuard.unlock();
 				if(rpcRequestIterator->second->wait) rpcRequestIterator->second->conditionVariable.notify_all();
 				else _rpcRequests.erase(rpcRequestIterator);
 			}
@@ -1015,6 +1017,8 @@ void MyPeer::packetReceived(PMyPacket& packet)
 				auto rpcRequestIterator = _rpcRequests.find(a->frameID);
 				if(rpcRequestIterator != _rpcRequests.end())
 				{
+					std::unique_lock<std::mutex> conditionVariableGuard(rpcRequestIterator->second->conditionVariableMutex);
+					conditionVariableGuard.unlock();
 					if(rpcRequestIterator->second->wait) rpcRequestIterator->second->conditionVariable.notify_all();
 					else _rpcRequests.erase(rpcRequestIterator);
 				}
@@ -1023,6 +1027,8 @@ void MyPeer::packetReceived(PMyPacket& packet)
 					rpcRequestIterator = _rpcRequests.find("ANY");
 					if(rpcRequestIterator != _rpcRequests.end())
 					{
+						std::unique_lock<std::mutex> conditionVariableGuard(rpcRequestIterator->second->conditionVariableMutex);
+						conditionVariableGuard.unlock();
 						if(rpcRequestIterator->second->wait) rpcRequestIterator->second->conditionVariable.notify_all();
 						else _rpcRequests.erase(rpcRequestIterator);
 					}
