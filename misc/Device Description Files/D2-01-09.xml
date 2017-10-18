@@ -196,6 +196,53 @@
 				</element>				
 			</binaryPayload>
 		</packet>
+		<packet id="MEASUREMENT_RESET">
+			<direction>fromCentral</direction>
+			<type>0xD2</type>
+			<subtype>1</subtype>
+			<binaryPayload>
+				<element>
+					<bitIndex>12</bitIndex>
+					<bitSize>4</bitSize>
+					<constValueInteger>5</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>16</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>MEASUREMENT_AUTO_REPORTING</parameterId>
+				</element>
+				<element>
+					<bitIndex>17</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>18</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>MEASUREMENT_MODE</parameterId>
+				</element>
+				<element>
+					<bitIndex>19</bitIndex>
+					<bitSize>5</bitSize>
+					<constValueInteger>0x1E</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>29</bitIndex>
+					<bitSize>3</bitSize>
+					<parameterId>MEASUREMENT_UNIT</parameterId>
+				</element>
+				<element>
+					<bitIndex>40</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>MEASUREMENT_INTERVAL</parameterId>
+				</element>
+				<element>
+					<bitIndex>48</bitIndex>
+					<bitSize>8</bitSize>
+					<constValueInteger>10</constValueInteger>
+				</element>				
+			</binaryPayload>
+		</packet>
 		<packet id="MEASUREMENT_ENERGY_GET">
 			<direction>fromCentral</direction>
 			<type>0xD2</type>
@@ -525,6 +572,22 @@
 					</packet>
 					<packet id="MEASUREMENT_INFO">
 						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="MEASUREMENT_RESET">
+				<properties>
+					<readable>false</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalAction/>
+				<physicalNone>
+					<operationType>command</operationType>
+				</physicalNone>
+				<packets>
+					<packet id="MEASUREMENT_RESET">
+						<type>set</type>
+						<responseId>ANY</responseId>
 					</packet>
 				</packets>
 			</parameter>
