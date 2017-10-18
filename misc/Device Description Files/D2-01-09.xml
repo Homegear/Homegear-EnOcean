@@ -523,6 +523,9 @@
 					<packet id="MEASUREMENT_SET">
 						<type>set</type>
 					</packet>
+					<packet id="MEASUREMENT_INFO">
+						<type>event</type>
+					</packet>
 				</packets>
 			</parameter>
 			<parameter id="UPDATE_POWER">
