@@ -379,13 +379,16 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 		}
 
 		bool result = false;
+		bool unpaired = true;
 		for(auto& peer : peers)
 		{
 			if(senderId != peer->getPhysicalInterfaceId()) continue;
+			if((peer->getDeviceType() >> 16) == myPacket->getRorg()) unpaired = false;
 
 			peer->packetReceived(myPacket);
 			result = true;
 		}
+		if(unpaired && _pairing) return handlePairingRequest(senderId, myPacket);
 		return result;
 	}
 	catch(const std::exception& ex)
@@ -732,14 +735,15 @@ std::string MyCentral::handleCliCommand(std::string command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "pairing on (pon)    Enables pairing mode" << std::endl;
-			stringStream << "pairing off (pof)   Disables pairing mode" << std::endl;
-			stringStream << "peers create (pc)   Creates a new peer" << std::endl;
-			stringStream << "peers list (ls)     List all peers" << std::endl;
-			stringStream << "peers remove (pr)   Remove a peer" << std::endl;
-			stringStream << "peers select (ps)   Select a peer" << std::endl;
-			stringStream << "peers setname (pn)  Name a peer" << std::endl;
-			stringStream << "unselect (u)        Unselect this device" << std::endl;
+			stringStream << "pairing on (pon)           Enables pairing mode" << std::endl;
+			stringStream << "pairing off (pof)          Disables pairing mode" << std::endl;
+			stringStream << "peers create (pc)          Creates a new peer" << std::endl;
+			stringStream << "peers list (ls)            List all peers" << std::endl;
+			stringStream << "peers remove (pr)          Remove a peer" << std::endl;
+			stringStream << "peers select (ps)          Select a peer" << std::endl;
+			stringStream << "peers setname (pn)         Name a peer" << std::endl;
+			stringStream << "interface setaddress (ia)  Set the base address of an EnOcean interface" << std::endl;
+			stringStream << "unselect (u)               Unselect this device" << std::endl;
 			return stringStream.str();
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "pairing on", "pon", "", 0, arguments, showHelp))
@@ -1062,6 +1066,29 @@ std::string MyCentral::handleCliCommand(std::string command)
 				peer->setName(name);
 				stringStream << "Name set to \"" << name << "\"." << std::endl;
 			}
+			return stringStream.str();
+		}
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "interface setaddress", "ia", "", 2, arguments, showHelp))
+		{
+			if(showHelp)
+			{
+				stringStream << "Description: This command sets the base address of an EnOcean interface. This can only be done 10 times!" << std::endl;
+				stringStream << "Usage: peers create INTERFACE ADDRESS" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  INTERFACE: The id of the interface to set the address for." << std::endl;
+				stringStream << "  ADDRESS:   The new 4 byte address/ID starting with 0xFF the 7 least significant bits can't be set. Example: 0xFF422E80" << std::endl;
+				return stringStream.str();
+			}
+
+			std::string interfaceId = arguments.at(0);
+			if(GD::physicalInterfaces.find(interfaceId) == GD::physicalInterfaces.end()) return "Unknown physical interface.\n";
+			uint32_t address = BaseLib::Math::getUnsignedNumber(arguments.at(1), true) & 0xFFFFFF80;
+
+			int32_t result = GD::physicalInterfaces.at(interfaceId)->setBaseAddress(address);
+
+			if(result == -1) stringStream << "Error setting base address. See error log for more details." << std::endl;
+			else stringStream << "Base address set to 0x" << BaseLib::HelperFunctions::getHexString(address) << ". Remaining changes: " << result << std::endl;
+
 			return stringStream.str();
 		}
 		else if(command.compare(0, 12, "peers select") == 0 || command.compare(0, 2, "ps") == 0)

@@ -20,6 +20,8 @@ public:
 	virtual void stopListening();
 	virtual void setup(int32_t userID, int32_t groupID, bool setPermissions);
 
+	virtual int32_t setBaseAddress(uint32_t value);
+
 	virtual bool isOpen() { return _serial && _serial->isOpen() && !_stopped; }
 
 	virtual void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);

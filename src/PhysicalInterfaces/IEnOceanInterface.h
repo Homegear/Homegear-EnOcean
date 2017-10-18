@@ -16,6 +16,7 @@ public:
 
 	int32_t getAddress() { return _baseAddress; }
 	uint32_t getBaseAddress() { return _baseAddress; }
+	virtual int32_t setBaseAddress(uint32_t value)  { return -1; };
 
 	virtual void startListening() {}
 	virtual void stopListening() {}

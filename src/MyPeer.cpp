@@ -757,7 +757,8 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 			int32_t channelIndex = frame->channelIndex;
 			int32_t channel = -1;
 			if(channelIndex >= 0 && channelIndex < (signed)erpPacket.size()) channel = erpPacket.at(channelIndex);
-			if(channel > -1 && frame->channelSize < 1.0) channel &= (0xFF >> (8 - std::lround(frame->channelSize * 10) % 10));
+			if(channel > -1 && frame->channelSize < 8.0) channel &= (0xFF >> (8 - std::lround(frame->channelSize)));
+			channel += frame->channelIndexOffset;
 			if(frame->channel > -1) channel = frame->channel;
 			if(channel == -1) continue;
 			currentFrameValues.frameID = frame->id;

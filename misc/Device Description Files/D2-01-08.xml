@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="D2-01-09">
+		<device id="D2-01-08">
 			<description>Switch with local control</description>
-			<typeNumber>0xD20109</typeNumber>
+			<typeNumber>0xD20108</typeNumber>
 		</device>
 	</supportedDevices>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
@@ -43,30 +43,6 @@
 					<bitIndex>25</bitIndex>
 					<bitSize>7</bitSize>
 					<parameterId>LEVEL</parameterId>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="MEASUREMENT_INFO">
-			<direction>toCentral</direction>
-			<type>0xD2</type>
-			<channelIndex>2</channelIndex>
-			<channelSize>5</channelSize>
-			<channelIndexOffset>1</channelIndexOffset>
-			<binaryPayload>
-				<element>
-					<bitIndex>12</bitIndex>
-					<bitSize>4</bitSize>
-					<constValueInteger>7</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>16</bitIndex>
-					<bitSize>3</bitSize>
-					<parameterId>MEASUREMENT_UNIT</parameterId>
-				</element>
-				<element>
-					<bitIndex>24</bitIndex>
-					<bitSize>32</bitSize>
-					<parameterId>MEASUREMENT_VALUE</parameterId>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -151,92 +127,6 @@
 				<element>
 					<parameterId>LEVEL</parameterId>
 					<constValueInteger>0x64</constValueInteger>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="MEASUREMENT_SET">
-			<direction>fromCentral</direction>
-			<type>0xD2</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<bitIndex>12</bitIndex>
-					<bitSize>4</bitSize>
-					<constValueInteger>5</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>16</bitIndex>
-					<bitSize>1</bitSize>
-					<parameterId>MEASUREMENT_AUTO_REPORTING</parameterId>
-				</element>
-				<element>
-					<bitIndex>18</bitIndex>
-					<bitSize>1</bitSize>
-					<parameterId>MEASUREMENT_MODE</parameterId>
-				</element>
-				<element>
-					<bitIndex>19</bitIndex>
-					<bitSize>5</bitSize>
-					<constValueInteger>0x1E</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>29</bitIndex>
-					<bitSize>3</bitSize>
-					<parameterId>MEASUREMENT_UNIT</parameterId>
-				</element>
-				<element>
-					<bitIndex>40</bitIndex>
-					<bitSize>8</bitSize>
-					<parameterId>MEASUREMENT_INTERVAL</parameterId>
-				</element>
-				<element>
-					<bitIndex>48</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>10</constValueInteger>
-				</element>				
-			</binaryPayload>
-		</packet>
-		<packet id="MEASUREMENT_ENERGY_GET">
-			<direction>fromCentral</direction>
-			<type>0xD2</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<bitIndex>4</bitIndex>
-					<bitSize>4</bitSize>
-					<constValueInteger>6</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>18</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>19</bitIndex>
-					<bitSize>5</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="MEASUREMENT_POWER_GET">
-			<direction>fromCentral</direction>
-			<type>0xD2</type>
-			<subtype>1</subtype>
-			<binaryPayload>
-				<element>
-					<bitIndex>8</bitIndex>
-					<bitSize>8</bitSize>
-					<constValueInteger>6</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>18</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>19</bitIndex>
-					<bitSize>5</bitSize>
-					<constValueInteger>0</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -423,154 +313,6 @@
 					<packet id="LEVEL_SET">
 						<type>set</type>
 						<responseId>STATE_INFO</responseId>
-					</packet>
-				</packets>
-			</parameter>
-			<parameter id="MEASUREMENT_AUTO_REPORTING">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalBoolean>
-					<defaultValue>true</defaultValue>
-				</logicalBoolean>
-				<physicalInteger groupId="MEASUREMENT_AUTO_REPORTING">
-					<operationType>command</operationType>
-				</physicalInteger>
-				<packets>
-					<packet id="MEASUREMENT_SET">
-						<type>set</type>
-					</packet>
-				</packets>
-			</parameter>
-			<parameter id="MEASUREMENT_INTERVAL">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-					<unit>10s</unit>
-				</properties>
-				<logicalInteger>
-					<minimumValue>1</minimumValue>
-					<maximumValue>255</maximumValue>
-					<defaultValue>6</defaultValue>
-				</logicalInteger>
-				<physicalInteger groupId="MEASUREMENT_INTERVAL">
-					<operationType>command</operationType>
-				</physicalInteger>
-				<packets>
-					<packet id="MEASUREMENT_SET">
-						<type>set</type>
-					</packet>
-				</packets>
-			</parameter>
-			<parameter id="MEASUREMENT_MODE">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalEnumeration>
-					<defaultValue>0</defaultValue>
-					<value>
-						<id>Energy</id>
-						<index>0</index>
-					</value>
-					<value>
-						<id>Power</id>
-						<index>1</index>
-					</value>
-				</logicalEnumeration>
-				<physicalInteger groupId="MEASUREMENT_MODE">
-					<operationType>command</operationType>
-				</physicalInteger>
-				<packets>
-					<packet id="MEASUREMENT_SET">
-						<type>set</type>
-					</packet>
-				</packets>
-			</parameter>
-			<parameter id="MEASUREMENT_UNIT">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalEnumeration>
-					<defaultValue>2</defaultValue>
-					<value>
-						<id>Energy [Ws]</id>
-						<index>0</index>
-					</value>
-					<value>
-						<id>Energy [Wh]</id>
-						<index>1</index>
-					</value>
-					<value>
-						<id>Energy [KWh]</id>
-						<index>2</index>
-					</value>
-					<value>
-						<id>Power [W]</id>
-						<index>3</index>
-					</value>
-					<value>
-						<id>Power [KW]</id>
-						<index>4</index>
-					</value>
-				</logicalEnumeration>
-				<physicalInteger groupId="MEASUREMENT_UNIT">
-					<operationType>command</operationType>
-				</physicalInteger>
-				<packets>
-					<packet id="MEASUREMENT_SET">
-						<type>set</type>
-					</packet>
-				</packets>
-			</parameter>
-			<parameter id="UPDATE_POWER">
-				<properties>
-					<readable>false</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalAction/>
-				<physicalNone>
-					<operationType>command</operationType>
-				</physicalNone>
-				<packets>
-					<packet id="MEASUREMENT_POWER_GET">
-						<type>set</type>
-						<responseId>ANY</responseId>
-					</packet>
-				</packets>
-			</parameter>
-			<parameter id="UPDATE_ENERGY">
-				<properties>
-					<readable>false</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalAction/>
-				<physicalNone>
-					<operationType>command</operationType>
-				</physicalNone>
-				<packets>
-					<packet id="MEASUREMENT_ENERGY_GET">
-						<type>set</type>
-						<responseId>ANY</responseId>
-					</packet>
-				</packets>
-			</parameter>
-			<parameter id="MEASUREMENT_VALUE">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-				</properties>
-				<logicalInteger>
-					<minimumValue>0</minimumValue>
-				</logicalInteger>
-				<physicalInteger groupId="MEASUREMENT_VALUE">
-					<operationType>command</operationType>
-				</physicalInteger>
-				<packets>
-					<packet id="MEASUREMENT_INFO">
-						<type>event</type>
 					</packet>
 				</packets>
 			</parameter>
