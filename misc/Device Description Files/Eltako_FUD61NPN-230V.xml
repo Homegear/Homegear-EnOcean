@@ -86,7 +86,7 @@
 				<element>
 					<bitIndex>24</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
+					<parameterId>DIM_SPEED</parameterId>
 				</element>
 				<element>
 					<bitIndex>32</bitIndex>
@@ -271,6 +271,20 @@
 						<conditionValue>0</conditionValue>
 					</packet>
 				</packets>
+			</parameter>
+			<parameter id="DIM_SPEED">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>255</maximumValue>
+					<defaultValue>0</defaultValue>
+				</logicalInteger>
+				<physicalInteger groupId="DIM_SPEED">
+					<operationType>store</operationType>
+				</physicalInteger>
 			</parameter>
 			<parameter id="STATE_LEVEL">
 				<properties>
