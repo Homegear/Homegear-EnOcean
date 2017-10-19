@@ -1,31 +1,4 @@
-/* Copyright 2013-2017 Sathya Laufer
- *
- * Homegear is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Homegear is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Homegear.  If not, see <http://www.gnu.org/licenses/>.
- *
- * In addition, as a special exception, the copyright holders give
- * permission to link the code of portions of this program with the
- * OpenSSL library under certain conditions as described in each
- * individual source file, and distribute linked combinations
- * including the two.
- * You must obey the GNU General Public License in all respects
- * for all of the code used other than OpenSSL.  If you modify
- * file(s) with this exception, you may extend this exception to your
- * version of the file(s), but you are not obligated to do so.  If you
- * do not wish to do so, delete this exception statement from your
- * version.  If you delete this exception statement from all source
- * files in the program, then also delete it here.
- */
+/* Copyright 2013-2017 Homegear UG (haftungsbeschränkt) */
 
 #include "MyCentral.h"
 #include "GD.h"
@@ -212,11 +185,11 @@ void MyCentral::loadPeers()
 			std::lock_guard<std::mutex> peersGuard(_peersMutex);
 			if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 			_peersById[peerID] = peer;
-			_peers[peer->getAddress()] = peer;
+			_peers[peer->getAddress()].push_back(peer);
 			if(peer->getRpcDevice()->addressSize == 25)
 			{
 				std::lock_guard<std::mutex> wildcardPeersGuard(_wildcardPeersMutex);
-				_wildcardPeers[peer->getAddress()] = peer;
+				_wildcardPeers[peer->getAddress()].push_back(peer);
 			}
 		}
 	}
@@ -260,15 +233,15 @@ std::shared_ptr<MyPeer> MyCentral::getPeer(uint64_t id)
     return std::shared_ptr<MyPeer>();
 }
 
-std::shared_ptr<MyPeer> MyCentral::getPeer(int32_t address)
+std::list<PMyPeer> MyCentral::getPeer(int32_t address)
 {
 	try
 	{
 		std::lock_guard<std::mutex> peersGuard(_peersMutex);
-		if(_peers.find(address) != _peers.end())
+		auto peersIterator = _peers.find(address);
+		if(peersIterator != _peers.end())
 		{
-			std::shared_ptr<MyPeer> peer(std::dynamic_pointer_cast<MyPeer>(_peers.at(address)));
-			return peer;
+			return peersIterator->second;
 		}
 	}
 	catch(const std::exception& ex)
@@ -283,7 +256,7 @@ std::shared_ptr<MyPeer> MyCentral::getPeer(int32_t address)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::shared_ptr<MyPeer>();
+    return std::list<PMyPeer>();
 }
 
 std::shared_ptr<MyPeer> MyCentral::getPeer(std::string serialNumber)
@@ -310,6 +283,26 @@ std::shared_ptr<MyPeer> MyCentral::getPeer(std::string serialNumber)
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<MyPeer>();
+}
+
+bool MyCentral::peerExists(uint64_t id)
+{
+	return ICentral::peerExists(id);
+}
+
+bool MyCentral::peerExists(std::string serialNumber)
+{
+	return ICentral::peerExists(serialNumber);
+}
+
+bool MyCentral::peerExists(int32_t address, int32_t eep)
+{
+	std::list<PMyPeer> peers = getPeer(address);
+	for(auto& peer : peers)
+	{
+		if(peer->getDeviceType() == (uint32_t)eep) return true;
+	}
+	return false;
 }
 
 int32_t MyCentral::getFreeRfChannel(std::string& interfaceId)
@@ -357,14 +350,14 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 
 		if(_bl->debugLevel >= 4) std::cout << BaseLib::HelperFunctions::getTimeString(myPacket->timeReceived()) << " EnOcean packet received (" << senderId << std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" << "): " << BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) << " - Sender address: 0x" << BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8) << std::endl;
 
-		PMyPeer peer = getPeer(myPacket->senderAddress());
-		if(!peer)
+		std::list<PMyPeer> peers = getPeer(myPacket->senderAddress());
+		if(peers.empty())
 		{
 			std::lock_guard<std::mutex> wildcardPeersGuard(_wildcardPeersMutex);
 			auto wildcardPeersIterator = _wildcardPeers.find(myPacket->senderAddress() & 0xFFFFFF80);
-			if(wildcardPeersIterator != _wildcardPeers.end()) peer = wildcardPeersIterator->second;
+			if(wildcardPeersIterator != _wildcardPeers.end()) peers = wildcardPeersIterator->second;
 		}
-		if(!peer)
+		if(peers.empty())
 		{
 			if(_sniff)
 			{
@@ -384,10 +377,19 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 			if(_pairing) return handlePairingRequest(senderId, myPacket);
 			return false;
 		}
-		if(senderId != peer->getPhysicalInterfaceId()) return false;
 
-		peer->packetReceived(myPacket);
-		return true;
+		bool result = false;
+		bool unpaired = true;
+		for(auto& peer : peers)
+		{
+			if(senderId != peer->getPhysicalInterfaceId()) continue;
+			if((peer->getDeviceType() >> 16) == myPacket->getRorg()) unpaired = false;
+
+			peer->packetReceived(myPacket);
+			result = true;
+		}
+		if(unpaired && _pairing) return handlePairingRequest(senderId, myPacket);
+		return result;
 	}
 	catch(const std::exception& ex)
     {
@@ -402,6 +404,18 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
+}
+
+std::string MyCentral::getFreeSerialNumber(int32_t address)
+{
+	std::string serial;
+	int32_t i = 0;
+	do
+	{
+		serial = "EOD" + BaseLib::HelperFunctions::getHexString(address + i, 8);
+		i++;
+	} while(peerExists(serial));
+	return serial;
 }
 
 bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
@@ -419,7 +433,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 			if(payload.size() < 8) return false;
 
 			int32_t eep = ((int32_t)(uint8_t)payload.at(7) << 16) | (((int32_t)(uint8_t)payload.at(6)) << 8) | ((uint8_t)payload.at(5));
-			std::string serial = "EOD" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 8);
+			std::string serial = getFreeSerialNumber(packet->senderAddress());
 
 			uint8_t byte1 = payload.at(1);
 			if((byte1 & 0x0F) != 0) return false; //Command 0 => teach-in request
@@ -436,7 +450,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 			}
 
 			int32_t rfChannel = 0;
-			if(!peerExists(serial) && !peerExists(packet->senderAddress()))
+			if(!peerExists(packet->senderAddress(), eep))
 			{
 				rfChannel = getFreeRfChannel(interfaceId);
 				if(rfChannel == -1)
@@ -457,7 +471,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 					peer->setPhysicalInterfaceId(interfaceId);
 					peer->setRfChannel(0, rfChannel);
 					peersGuard.lock();
-					_peers[peer->getAddress()] = peer;
+					_peers[peer->getAddress()].push_back(peer);
 					_peersById[peer->getID()] = peer;
 					peersGuard.unlock();
 				}
@@ -481,9 +495,16 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 			}
 			else
 			{
-				std::shared_ptr<MyPeer> peer = getPeer(packet->senderAddress());
-				if(!peer) return false;
-				rfChannel = peer->getRfChannel(0);
+				std::list<PMyPeer> peers = getPeer(packet->senderAddress());
+				if(peers.empty()) return false;
+				for(auto& peer : peers)
+				{
+					if(peer->getDeviceType() == (uint32_t)eep)
+					{
+						rfChannel = peer->getRfChannel(0);
+						break;
+					}
+				}
 			}
 
 			if(responseExpected)
@@ -501,9 +522,9 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 		{
 			if(payload.size() < 4) return false;
 			int32_t eep = ((int32_t)(uint8_t)payload.at(0) << 16) | (((int32_t)(uint8_t)payload.at(1) >> 2) << 8) | (((uint8_t)payload.at(1) & 3) << 5) | ((uint8_t)payload.at(2) >> 3);
-			std::string serial = "EOD" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 8);
+			std::string serial = getFreeSerialNumber(packet->senderAddress());
 
-			if(!peerExists(serial) && !peerExists(packet->senderAddress()))
+			if(!peerExists(packet->senderAddress(), eep))
 			{
 				int32_t rfChannel = getFreeRfChannel(interfaceId);
 				if(rfChannel == -1)
@@ -524,7 +545,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 					peer->setPhysicalInterfaceId(interfaceId);
 					peer->setRfChannel(0, rfChannel);
 					peersGuard.lock();
-					_peers[peer->getAddress()] = peer;
+					_peers[peer->getAddress()].push_back(peer);
 					_peersById[peer->getID()] = peer;
 					peersGuard.unlock();
 				}
@@ -555,9 +576,18 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 			}
 			else
 			{
-				std::shared_ptr<MyPeer> peer = getPeer(packet->senderAddress());
-				if(!peer) return false;
-				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0), 0xFFFFFFFF));
+				int32_t rfChannel = 0;
+				std::list<PMyPeer> peers = getPeer(packet->senderAddress());
+				if(peers.empty()) return false;
+				for(auto& peer : peers)
+				{
+					if(peer->getDeviceType() == (uint32_t)eep)
+					{
+						rfChannel = peer->getRfChannel(0);
+						break;
+					}
+				}
+				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, 0xFFFFFFFF));
 				std::vector<char> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
 				responsePayload.back() = 0xF0;
@@ -634,14 +664,37 @@ void MyCentral::deletePeer(uint64_t id)
 		if(peer->getRpcDevice()->addressSize == 25)
 		{
 			std::lock_guard<std::mutex> wildcardPeersGuard(_wildcardPeersMutex);
-			_wildcardPeers.erase(peer->getAddress());
+			auto peerIterator = _wildcardPeers.find(peer->getAddress());
+			if(peerIterator != _wildcardPeers.end())
+			{
+				for(std::list<PMyPeer>::iterator element = peerIterator->second.begin(); element != peerIterator->second.end(); ++element)
+				{
+					if((*element)->getID() == peer->getID())
+					{
+						peerIterator->second.erase(element);
+						break;
+					}
+				}
+				if(peerIterator->second.empty()) _wildcardPeers.erase(peerIterator);
+			}
 		}
 
 		_peersMutex.lock();
 		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
 		if(_peersById.find(id) != _peersById.end()) _peersById.erase(id);
-		std::unordered_map<int32_t, std::shared_ptr<BaseLib::Systems::Peer>>::iterator peerIterator = _peers.find(peer->getAddress());
-		if(peerIterator != _peers.end() && peerIterator->second->getID() == id) _peers.erase(peerIterator);
+		auto peerIterator = _peers.find(peer->getAddress());
+		if(peerIterator != _peers.end())
+		{
+			for(std::list<PMyPeer>::iterator element = peerIterator->second.begin(); element != peerIterator->second.end(); ++element)
+			{
+				if((*element)->getID() == peer->getID())
+				{
+					peerIterator->second.erase(element);
+					break;
+				}
+			}
+			if(peerIterator->second.empty()) _peers.erase(peerIterator);
+		}
 		_peersMutex.unlock();
 		GD::out.printMessage("Removed EnOcean peer " + std::to_string(peer->getID()));
 	}
@@ -682,14 +735,15 @@ std::string MyCentral::handleCliCommand(std::string command)
 		{
 			stringStream << "List of commands:" << std::endl << std::endl;
 			stringStream << "For more information about the individual command type: COMMAND help" << std::endl << std::endl;
-			stringStream << "pairing on (pon)    Enables pairing mode" << std::endl;
-			stringStream << "pairing off (pof)   Disables pairing mode" << std::endl;
-			stringStream << "peers create (pc)   Creates a new peer" << std::endl;
-			stringStream << "peers list (ls)     List all peers" << std::endl;
-			stringStream << "peers remove (pr)   Remove a peer" << std::endl;
-			stringStream << "peers select (ps)   Select a peer" << std::endl;
-			stringStream << "peers setname (pn)  Name a peer" << std::endl;
-			stringStream << "unselect (u)        Unselect this device" << std::endl;
+			stringStream << "pairing on (pon)           Enables pairing mode" << std::endl;
+			stringStream << "pairing off (pof)          Disables pairing mode" << std::endl;
+			stringStream << "peers create (pc)          Creates a new peer" << std::endl;
+			stringStream << "peers list (ls)            List all peers" << std::endl;
+			stringStream << "peers remove (pr)          Remove a peer" << std::endl;
+			stringStream << "peers select (ps)          Select a peer" << std::endl;
+			stringStream << "peers setname (pn)         Name a peer" << std::endl;
+			stringStream << "interface setaddress (ia)  Set the base address of an EnOcean interface" << std::endl;
+			stringStream << "unselect (u)               Unselect this device" << std::endl;
 			return stringStream.str();
 		}
 		else if(BaseLib::HelperFunctions::checkCliCommand(command, "pairing on", "pon", "", 0, arguments, showHelp))
@@ -747,9 +801,9 @@ std::string MyCentral::handleCliCommand(std::string command)
 			int32_t deviceType = BaseLib::Math::getNumber(arguments.at(1), true);
 			if(deviceType == 0) return "Invalid device type. Device type has to be provided in hexadecimal format.\n";
 			int32_t address = BaseLib::Math::getNumber(arguments.at(2), true);
-			std::string serial = "EOD" + BaseLib::HelperFunctions::getHexString(address, 8);
+			std::string serial = getFreeSerialNumber(address);
 
-			if(peerExists(serial) || peerExists(address)) stringStream << "A peer with this address is already paired to this central." << std::endl;
+			if(peerExists(address, deviceType)) stringStream << "A peer with this address and EEP is already paired to this central." << std::endl;
 			else
 			{
 				std::shared_ptr<MyPeer> peer = createPeer(deviceType, address, serial, false);
@@ -764,13 +818,13 @@ std::string MyCentral::handleCliCommand(std::string command)
 					peer->initializeCentralConfig();
 					peer->setPhysicalInterfaceId(interfaceId);
 					_peersMutex.lock();
-					_peers[peer->getAddress()] = peer;
+					_peers[peer->getAddress()].push_back(peer);
 					_peersById[peer->getID()] = peer;
 					_peersMutex.unlock();
 					if(peer->getRpcDevice()->addressSize == 25)
 					{
 						std::lock_guard<std::mutex> wildcardPeersGuard(_wildcardPeersMutex);
-						_wildcardPeers[peer->getAddress()] = peer;
+						_wildcardPeers[peer->getAddress()].push_back(peer);
 					}
 				}
 				catch(const std::exception& ex)
@@ -1014,6 +1068,29 @@ std::string MyCentral::handleCliCommand(std::string command)
 			}
 			return stringStream.str();
 		}
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "interface setaddress", "ia", "", 2, arguments, showHelp))
+		{
+			if(showHelp)
+			{
+				stringStream << "Description: This command sets the base address of an EnOcean interface. This can only be done 10 times!" << std::endl;
+				stringStream << "Usage: peers create INTERFACE ADDRESS" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  INTERFACE: The id of the interface to set the address for." << std::endl;
+				stringStream << "  ADDRESS:   The new 4 byte address/ID starting with 0xFF the 7 least significant bits can't be set. Example: 0xFF422E80" << std::endl;
+				return stringStream.str();
+			}
+
+			std::string interfaceId = arguments.at(0);
+			if(GD::physicalInterfaces.find(interfaceId) == GD::physicalInterfaces.end()) return "Unknown physical interface.\n";
+			uint32_t address = BaseLib::Math::getUnsignedNumber(arguments.at(1), true) & 0xFFFFFF80;
+
+			int32_t result = GD::physicalInterfaces.at(interfaceId)->setBaseAddress(address);
+
+			if(result == -1) stringStream << "Error setting base address. See error log for more details." << std::endl;
+			else stringStream << "Base address set to 0x" << BaseLib::HelperFunctions::getHexString(address) << ". Remaining changes: " << result << std::endl;
+
+			return stringStream.str();
+		}
 		else if(command.compare(0, 12, "peers select") == 0 || command.compare(0, 2, "ps") == 0)
 		{
 			uint64_t id = 0;
@@ -1104,8 +1181,8 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 {
 	try
 	{
-		std::string serial = "EOD" + BaseLib::HelperFunctions::getHexString(address, 8);
-		if(peerExists(serial)) return Variable::createError(-5, "This peer is already paired to this central.");
+		std::string serial = getFreeSerialNumber(address);
+		if(peerExists(deviceType, address)) return Variable::createError(-5, "This peer is already paired to this central.");
 
 		std::shared_ptr<MyPeer> peer = createPeer(deviceType, address, serial, false);
 		if(!peer || !peer->getRpcDevice()) return Variable::createError(-6, "Unknown device type.");
@@ -1117,14 +1194,14 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 			peer->initializeCentralConfig();
 			peer->setPhysicalInterfaceId(interfaceId);
 			_peersMutex.lock();
-			_peers[peer->getAddress()] = peer;
+			_peers[peer->getAddress()].push_back(peer);
 			_peersById[peer->getID()] = peer;
 			_peersBySerial[peer->getSerialNumber()] = peer;
 			_peersMutex.unlock();
 			if(peer->getRpcDevice()->addressSize == 25)
 			{
 				std::lock_guard<std::mutex> wildcardPeersGuard(_wildcardPeersMutex);
-				_wildcardPeers[peer->getAddress()] = peer;
+				_wildcardPeers[peer->getAddress()].push_back(peer);
 			}
 		}
 		catch(const std::exception& ex)

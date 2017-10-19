@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="A5-38-02">
-			<description>Dimmer</description>
-			<typeNumber>0xA53802</typeNumber>
+		<device id="02-A5-38-02">
+			<description>Eltako FUD61NPN-230V</description>
+			<typeNumber>0x02A53802</typeNumber>
 		</device>
 	</supportedDevices>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
@@ -27,22 +27,22 @@
 				<element>
 					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>2</constValueInteger>
+					<constValueInteger>0xE0</constValueInteger>
 				</element>
 				<element>
 					<bitIndex>16</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
+					<constValueInteger>0x40</constValueInteger>
 				</element>
 				<element>
 					<bitIndex>24</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
+					<constValueInteger>0x0D</constValueInteger>
 				</element>
 				<element>
 					<bitIndex>32</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
+					<constValueInteger>0x80</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -86,7 +86,7 @@
 				<element>
 					<bitIndex>24</bitIndex>
 					<bitSize>8</bitSize>
-					<parameterId>RAMPING_TIME</parameterId>
+					<parameterId>DIM_SPEED</parameterId>
 				</element>
 				<element>
 					<bitIndex>32</bitIndex>
@@ -113,7 +113,7 @@
 				<element>
 					<bitIndex>24</bitIndex>
 					<bitSize>8</bitSize>
-					<parameterId>RAMPING_TIME</parameterId>
+					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
 					<bitIndex>32</bitIndex>
@@ -140,7 +140,7 @@
 				<element>
 					<bitIndex>24</bitIndex>
 					<bitSize>8</bitSize>
-					<parameterId>RAMPING_TIME</parameterId>
+					<constValueInteger>0</constValueInteger>
 				</element>
 				<element>
 					<bitIndex>32</bitIndex>
@@ -245,12 +245,6 @@
 				<properties>
 					<readable>true</readable>
 					<writeable>true</writeable>
-					<casts>
-						<integerIntegerScale>
-							<operation>multiplication</operation>
-							<factor>2.55</factor>
-						</integerIntegerScale>
-					</casts>
 				</properties>
 				<logicalInteger>
 					<minimumValue>0</minimumValue>
@@ -266,23 +260,31 @@
 					</packet>
 					<packet id="LEVEL_SET_ON">
 						<type>set</type>
-						<responseId>LEVEL_INFO</responseId>
+						<responseId>ANY</responseId>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
-						<autoReset>
-							<parameterId>RAMPING_TIME</parameterId>
-						</autoReset>
 					</packet>
 					<packet id="LEVEL_SET_OFF">
 						<type>set</type>
-						<responseId>LEVEL_INFO</responseId>
+						<responseId>ANY</responseId>
 						<conditionOperator>e</conditionOperator>
 						<conditionValue>0</conditionValue>
-						<autoReset>
-							<parameterId>RAMPING_TIME</parameterId>
-						</autoReset>
 					</packet>
 				</packets>
+			</parameter>
+			<parameter id="DIM_SPEED">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>255</maximumValue>
+					<defaultValue>0</defaultValue>
+				</logicalInteger>
+				<physicalInteger groupId="DIM_SPEED">
+					<operationType>store</operationType>
+				</physicalInteger>
 			</parameter>
 			<parameter id="STATE_LEVEL">
 				<properties>
@@ -292,7 +294,7 @@
 				<logicalInteger>
 					<minimumValue>0</minimumValue>
 					<maximumValue>100</maximumValue>
-					<defaultValue>100</defaultValue>
+					<defaultValue>0</defaultValue>
 				</logicalInteger>
 				<physicalInteger groupId="STATE_LEVEL">
 					<operationType>store</operationType>
@@ -313,37 +315,17 @@
 					</packet>
 					<packet id="STATE_SET_ON">
 						<type>set</type>
-						<responseId>LEVEL_INFO</responseId>
+						<responseId>ANY</responseId>
 						<conditionOperator>g</conditionOperator>
 						<conditionValue>0</conditionValue>
-						<autoReset>
-							<parameterId>RAMPING_TIME</parameterId>
-						</autoReset>
 					</packet>
 					<packet id="LEVEL_SET_OFF">
 						<type>set</type>
-						<responseId>LEVEL_INFO</responseId>
+						<responseId>ANY</responseId>
 						<conditionOperator>e</conditionOperator>
 						<conditionValue>0</conditionValue>
-						<autoReset>
-							<parameterId>RAMPING_TIME</parameterId>
-						</autoReset>
 					</packet>
 				</packets>
-			</parameter>
-			<parameter id="RAMPING_TIME">
-				<properties>
-					<readable>false</readable>
-					<unit>s</unit>
-				</properties>
-				<logicalInteger>
-					<minimumValue>0</minimumValue>
-					<maximumValue>255</maximumValue>
-					<defaultValue>0</defaultValue>
-				</logicalInteger>
-				<physicalInteger groupId="RAMPING_TIME">
-					<operationType>store</operationType>
-				</physicalInteger>
 			</parameter>
 			<parameter id="PAIRING">
 				<properties>

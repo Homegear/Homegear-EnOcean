@@ -1,31 +1,4 @@
-/* Copyright 2013-2017 Sathya Laufer
- *
- * Homegear is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Homegear is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Homegear.  If not, see <http://www.gnu.org/licenses/>.
- *
- * In addition, as a special exception, the copyright holders give
- * permission to link the code of portions of this program with the
- * OpenSSL library under certain conditions as described in each
- * individual source file, and distribute linked combinations
- * including the two.
- * You must obey the GNU General Public License in all respects
- * for all of the code used other than OpenSSL.  If you modify
- * file(s) with this exception, you may extend this exception to your
- * version of the file(s), but you are not obligated to do so.  If you
- * do not wish to do so, delete this exception statement from your
- * version.  If you delete this exception statement from all source
- * files in the program, then also delete it here.
- */
+/* Copyright 2013-2017 Homegear UG (haftungsbeschränkt) */
 
 #ifndef MYPEER_H_
 #define MYPEER_H_
@@ -92,6 +65,7 @@ public:
     virtual void homegearShuttingDown();
 
 	//RPC methods
+    virtual PVariable getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields);
 	virtual PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool onlyPushing = false);
 	PVariable setInterface(BaseLib::PRpcClientInfo clientInfo, std::string interfaceId);
 	virtual PVariable setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait);
@@ -121,7 +95,14 @@ protected:
 		std::condition_variable conditionVariable;
 		std::string responseId;
 
-		RpcRequest() : abort(false) {}
+		std::atomic_bool wait;
+		PMyPacket packet;
+		uint32_t maxResends = 0;
+		uint32_t resends = 0;
+		uint32_t resendTimeout = 0;
+		int64_t lastResend = 0;
+
+		RpcRequest() : abort(false), wait(true) {}
 	};
 	typedef std::shared_ptr<RpcRequest> PRpcRequest;
 
@@ -179,7 +160,7 @@ protected:
 
 	virtual PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type);
 
-	void sendPacket(PMyPacket packet, std::string responseId, int32_t delay);
+	void sendPacket(PMyPacket packet, std::string responseId, int32_t delay, bool wait);
 
 	// {{{ Hooks
 		/**

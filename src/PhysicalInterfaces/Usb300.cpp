@@ -1,31 +1,4 @@
-/* Copyright 2013-2017 Sathya Laufer
- *
- * Homegear is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Homegear is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Homegear.  If not, see <http://www.gnu.org/licenses/>.
- *
- * In addition, as a special exception, the copyright holders give
- * permission to link the code of portions of this program with the
- * OpenSSL library under certain conditions as described in each
- * individual source file, and distribute linked combinations
- * including the two.
- * You must obey the GNU General Public License in all respects
- * for all of the code used other than OpenSSL.  If you modify
- * file(s) with this exception, you may extend this exception to your
- * version of the file(s), but you are not obligated to do so.  If you
- * do not wish to do so, delete this exception statement from your
- * version.  If you delete this exception statement from all source
- * files in the program, then also delete it here.
- */
+/* Copyright 2013-2017 Homegear UG (haftungsbeschränkt) */
 
 #include "../GD.h"
 #include "Usb300.h"
@@ -142,23 +115,75 @@ void Usb300::stopListening()
     }
 }
 
+int32_t Usb300::setBaseAddress(uint32_t value)
+{
+	try
+    {
+		if(!_initComplete)
+		{
+			_out.printError("Error: Could not set base address. Init is not complete.");
+			return -1;
+		}
+		if((value & 0xFF000000) != 0xFF000000)
+		{
+			_out.printError("Error: Could not set base address. Address must start with 0xFF.");
+			return -1;
+		}
+
+		std::vector<char> response;
+
+		{
+			// Set address - only possible 10 times, Must start with "0xFF"
+			std::vector<char> data{ 0x55, 0x00, 0x05, 0x00, 0x05, 0x00, 0x07, (char)(uint8_t)(value >> 24), (char)(uint8_t)((value >> 16) & 0xFF), (char)(uint8_t)((value >> 8) & 0xFF), (char)(uint8_t)(value & 0xFF), 0x00 };
+			addCrc8(data);
+			getResponse(0x02, data, response);
+			if(response.size() != 8 || response[1] != 0 || response[2] != 1 || response[3] != 0 || response[4] != 2 || response[6] != 0)
+			{
+				_out.printError("Error setting address on device: " + BaseLib::HelperFunctions::getHexString(data));
+				_stopped = true;
+				return -1;
+			}
+		}
+
+		for(int32_t i = 0; i < 10; i++)
+		{
+			std::vector<char> data{ 0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x08, 0x00 };
+			addCrc8(data);
+			getResponse(0x02, data, response);
+			if(response.size() != 13 || response[1] != 0 || response[2] != 5 || response[3] != 1 || response[6] != 0)
+			{
+				if(i < 9) continue;
+				_out.printError("Error reading address from device: " + BaseLib::HelperFunctions::getHexString(data));
+				_stopped = true;
+				return -1;
+			}
+			_baseAddress = ((int32_t)(uint8_t)response[7] << 24) | ((int32_t)(uint8_t)response[8] << 16) | ((int32_t)(uint8_t)response[9] << 8) | (uint8_t)response[10];
+			break;
+		}
+
+		_out.printInfo("Info: Base address set to 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + ". Remaining changes: " + std::to_string(response[11]));
+
+		return response[11];
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return -1;
+}
+
 void Usb300::init()
 {
 	try
     {
-		// Set address - only possible 10 times, Must start with "0xFF"
-		/*std::vector<char> data2{ 0x55, 0x00, 0x05, 0x00, 0x05, 0x00, 0x07, (char)(uint8_t)0xFF, (char)(uint8_t)0xA0, (char)(uint8_t)0xA0, (char)(uint8_t)0xA0, 0x00 };
-		addCrc8(data2);
-		std::vector<char> response2;
-		getResponse(0x02, data2, response2);
-		std::cerr << "Moin " << BaseLib::HelperFunctions::getHexString(data2) << std::endl;
-		if(response2.size() != 8 || response2[1] != 0 || response2[2] != 1 || response2[3] != 0 || response2[4] != 2 || response2[6] != 0)
-		{
-			_out.printError("Error setting address on device: " + BaseLib::HelperFunctions::getHexString(data2));
-			_stopped = true;
-			return;
-		}*/
-
 		std::vector<char> response;
 		for(int32_t i = 0; i < 10; i++)
 		{
