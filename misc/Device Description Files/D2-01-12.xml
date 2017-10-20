@@ -134,7 +134,7 @@
 				</properties>
 				<logicalInteger>
 					<minimumValue>0</minimumValue>
-					<maximumValue>12</maximumValue>
+					<maximumValue>20</maximumValue>
 					<defaultValue>0</defaultValue>
 				</logicalInteger>
 				<physicalNone>

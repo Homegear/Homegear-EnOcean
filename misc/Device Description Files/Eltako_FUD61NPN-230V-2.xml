@@ -272,6 +272,35 @@
 					</packet>
 				</packets>
 			</parameter>
+			<parameter id="LEVEL_FAST">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
+					<defaultValue>0</defaultValue>
+				</logicalInteger>
+				<physicalInteger groupId="LEVEL">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="LEVEL_INFO">
+						<type>event</type>
+					</packet>
+					<packet id="LEVEL_SET_ON">
+						<type>set</type>
+						<conditionOperator>g</conditionOperator>
+						<conditionValue>0</conditionValue>
+					</packet>
+					<packet id="LEVEL_SET_OFF">
+						<type>set</type>
+						<conditionOperator>e</conditionOperator>
+						<conditionValue>0</conditionValue>
+					</packet>
+				</packets>
+			</parameter>
 			<parameter id="DIM_SPEED">
 				<properties>
 					<readable>true</readable>
