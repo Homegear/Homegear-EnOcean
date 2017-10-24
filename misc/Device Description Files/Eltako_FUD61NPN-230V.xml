@@ -27,22 +27,22 @@
 				<element>
 					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>2</constValueInteger>
+					<constValueInteger>0xE0</constValueInteger>
 				</element>
 				<element>
 					<bitIndex>16</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
+					<constValueInteger>0x40</constValueInteger>
 				</element>
 				<element>
 					<bitIndex>24</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
+					<constValueInteger>0x0D</constValueInteger>
 				</element>
 				<element>
 					<bitIndex>32</bitIndex>
 					<bitSize>8</bitSize>
-					<constValueInteger>0</constValueInteger>
+					<constValueInteger>0x80</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
