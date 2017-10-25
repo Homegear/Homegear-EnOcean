@@ -50,7 +50,8 @@
 		<packet id="STATE_INFO">
 			<direction>toCentral</direction>
 			<type>0xA5</type>
-			<channelIndex>8:0.7</channelIndex>
+			<channelIndex>8</channelIndex>
+			<channelSize>7</channelSize>
 			<binaryPayload>
 				<element>
 					<bitIndex>39</bitIndex>
