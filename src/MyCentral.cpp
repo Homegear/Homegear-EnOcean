@@ -1184,6 +1184,8 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 		std::string serial = getFreeSerialNumber(address);
 		if(peerExists(deviceType, address)) return Variable::createError(-5, "This peer is already paired to this central.");
 
+		if(GD::physicalInterfaces.find(interfaceId) == GD::physicalInterfaces.end()) return Variable::createError(-6, "Unknown physical interface.");
+
 		std::shared_ptr<MyPeer> peer = createPeer(deviceType, address, serial, false);
 		if(!peer || !peer->getRpcDevice()) return Variable::createError(-6, "Unknown device type.");
 
