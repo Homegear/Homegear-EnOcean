@@ -788,7 +788,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 			if(showHelp)
 			{
 				stringStream << "Description: This command creates a new peer." << std::endl;
-				stringStream << "Usage: peers create INTERFACE TYPE ADDRESS" << std::endl << std::endl;
+				stringStream << "Usage: interface setaddress INTERFACE TYPE ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  INTERFACE: The id of the interface to associate the new device to as defined in the familie's configuration file." << std::endl;
 				stringStream << "  TYPE:      The 3 or 4 byte hexadecimal device type (for most devices the EEP number). Example: 0xF60201" << std::endl;
