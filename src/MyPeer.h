@@ -109,7 +109,7 @@ protected:
 	//In table variables:
 	std::string _physicalInterfaceId;
 	int32_t _rollingCode = -1;
-	std::vector<char> _aesKey;
+	std::vector<uint8_t> _aesKey;
 	int32_t _encryptionType = -1;
 	int32_t _cmacSize = -1;
 	bool _rollingCodeInTx = false;
@@ -125,7 +125,7 @@ protected:
 
 	bool _forceEncryption = false;
 	PSecurity _security;
-	std::vector<char> _aesKeyPart1;
+	std::vector<uint8_t> _aesKeyPart1;
 
 	// {{{ Variables for getting RPC responses to requests
 		std::mutex _rpcRequestsMutex;
@@ -145,7 +145,7 @@ protected:
     virtual void saveVariables();
 
     void setRollingCode(int32_t value) { _rollingCode = value; saveVariable(20, value); }
-    void setAesKey(std::vector<char>& value) { _aesKey = value; saveVariable(21, value); }
+    void setAesKey(std::vector<uint8_t>& value) { _aesKey = value; saveVariable(21, value); }
     void setEncryptionType(int32_t value) { _encryptionType = value; saveVariable(22, value); }
     void setCmacSize(int32_t value) { _cmacSize = value; saveVariable(23, value); }
     void setRollingCodeInTx(bool value) { _rollingCodeInTx = value; saveVariable(24, value); }

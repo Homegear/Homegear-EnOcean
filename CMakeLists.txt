@@ -24,7 +24,7 @@ set(SOURCE_FILES
         src/MyPeer.h
         src/Security.cpp
         src/Security.h
-        config.h)
+        config.h src/PhysicalInterfaces/HomegearGateway.cpp src/PhysicalInterfaces/HomegearGateway.h)
 
 add_custom_target(homegear COMMAND ../../makeAll.sh SOURCES ${SOURCE_FILES})
 

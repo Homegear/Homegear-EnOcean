@@ -10,7 +10,7 @@ MyPacket::MyPacket()
 {
 }
 
-MyPacket::MyPacket(std::vector<char>& espPacket) : _packet(espPacket)
+MyPacket::MyPacket(std::vector<uint8_t>& espPacket) : _packet(espPacket)
 {
 	_timeReceived = BaseLib::HelperFunctions::getTime();
 	if(espPacket.size() < 6) return;
@@ -42,9 +42,9 @@ MyPacket::MyPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t desti
 	_destinationAddress = destinationAddress;
 	_appendAddressAndStatus = true;
 	_data.reserve(20);
-	_data.push_back((char)rorg);
-	if(type == Type::RADIO_ERP1) _optionalData = std::vector<char>{ 3, (char)(uint8_t)((destinationAddress >> 24) & 0xFF), (char)(uint8_t)((destinationAddress >> 16) & 0xFF), (char)(uint8_t)((destinationAddress >> 8) & 0xFF), (char)(uint8_t)(destinationAddress & 0xFF), 0, 0 };
-	else if(type == Type::RADIO_ERP2) _optionalData = std::vector<char>{ 3, (char)(uint8_t)0xFF };
+	_data.push_back(rorg);
+	if(type == Type::RADIO_ERP1) _optionalData = std::vector<uint8_t>{ 3, (uint8_t)((destinationAddress >> 24) & 0xFF), (uint8_t)((destinationAddress >> 16) & 0xFF), (uint8_t)((destinationAddress >> 8) & 0xFF), (uint8_t)(destinationAddress & 0xFF), 0, 0 };
+	else if(type == Type::RADIO_ERP2) _optionalData = std::vector<uint8_t>{ 3, (uint8_t)0xFF };
 }
 
 MyPacket::~MyPacket()
@@ -54,26 +54,26 @@ MyPacket::~MyPacket()
 	_optionalData.clear();
 }
 
-std::vector<char> MyPacket::getBinary()
+std::vector<uint8_t> MyPacket::getBinary()
 {
 	try
 	{
 		if(!_packet.empty()) return _packet;
 		if(_appendAddressAndStatus)
 		{
-			_data.push_back((char)(uint8_t)(_senderAddress >> 24));
-			_data.push_back((char)(uint8_t)((_senderAddress >> 16) & 0xFF));
-			_data.push_back((char)(uint8_t)((_senderAddress >> 8) & 0xFF));
-			_data.push_back((char)(uint8_t)(_senderAddress & 0xFF));
+			_data.push_back((uint8_t)(_senderAddress >> 24));
+			_data.push_back((uint8_t)((_senderAddress >> 16) & 0xFF));
+			_data.push_back((uint8_t)((_senderAddress >> 8) & 0xFF));
+			_data.push_back((uint8_t)(_senderAddress & 0xFF));
 			_data.push_back(0);
 		}
-		if(_data.empty() && _optionalData.empty()) return std::vector<char>();
+		if(_data.empty() && _optionalData.empty()) return std::vector<uint8_t>();
 		_packet.reserve(7 + _data.size() + _optionalData.size());
 		_packet.push_back(0x55);
-		_packet.push_back((char)(uint8_t)(_data.size() >> 8));
-		_packet.push_back((char)(uint8_t)(_data.size() & 0xFF));
-		_packet.push_back((char)(uint8_t)_optionalData.size());
-		_packet.push_back((char)_type);
+		_packet.push_back((uint8_t)(_data.size() >> 8));
+		_packet.push_back((uint8_t)(_data.size() & 0xFF));
+		_packet.push_back((uint8_t)_optionalData.size());
+		_packet.push_back((uint8_t)_type);
 		_packet.push_back(0);
 		_packet.insert(_packet.end(), _data.begin(), _data.end());
 		_packet.insert(_packet.end(), _optionalData.begin(), _optionalData.end());
@@ -92,7 +92,7 @@ std::vector<char> MyPacket::getBinary()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::vector<char>();
+    return std::vector<uint8_t>();
 }
 
 std::vector<uint8_t> MyPacket::getPosition(uint32_t position, uint32_t size)

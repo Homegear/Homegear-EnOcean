@@ -33,8 +33,8 @@ protected:
 	void init();
 	void reconnect();
 	void listen();
-	virtual void rawSend(const std::vector<char>& packet);
-	void processPacket(std::vector<char>& data);
+	virtual void rawSend(std::vector<uint8_t>& packet);
+	void processPacket(std::vector<uint8_t>& data);
 };
 
 }

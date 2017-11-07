@@ -32,7 +32,7 @@ IEnOceanInterface::~IEnOceanInterface()
 
 }
 
-void IEnOceanInterface::getResponse(uint8_t packetType, const std::vector<char>& requestPacket, std::vector<char>& responsePacket)
+void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t>& requestPacket, std::vector<uint8_t>& responsePacket)
 {
 	try
     {
@@ -85,7 +85,7 @@ void IEnOceanInterface::getResponse(uint8_t packetType, const std::vector<char>&
     }
 }
 
-void IEnOceanInterface::addCrc8(std::vector<char>& packet)
+void IEnOceanInterface::addCrc8(std::vector<uint8_t>& packet)
 {
 	try
 	{

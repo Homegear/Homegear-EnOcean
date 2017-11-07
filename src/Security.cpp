@@ -28,37 +28,37 @@ Security::~Security()
 	_encryptHandle = nullptr;
 }
 
-std::vector<char> Security::encryptRollingCode(const std::vector<char>& deviceAesKey, int32_t rollingCode, int32_t rollingCodeSize)
+std::vector<uint8_t> Security::encryptRollingCode(const std::vector<uint8_t>& deviceAesKey, int32_t rollingCode, int32_t rollingCodeSize)
 {
 	try
 	{
-		std::vector<char> plain{ 0x34, 0x10, (char)(uint8_t)0xde, (char)(uint8_t)0x8f, 0x1a, (char)(uint8_t)0xba, 0x3e, (char)(uint8_t)0xff, (char)(uint8_t)0x9f, 0x5a, 0x11, 0x71, 0x72, (char)(uint8_t)0xea, (char)(uint8_t)0xca, (char)(uint8_t)0xbd };
+		std::vector<uint8_t> plain{ 0x34, 0x10, (uint8_t)0xde, (uint8_t)0x8f, 0x1a, (uint8_t)0xba, 0x3e, (uint8_t)0xff, (uint8_t)0x9f, 0x5a, 0x11, 0x71, 0x72, (uint8_t)0xea, (uint8_t)0xca, (uint8_t)0xbd };
 		if(rollingCodeSize == 3)
 		{
-			plain[0] ^= (char)(uint8_t)(rollingCode >> 16);
-			plain[1] ^= (char)(uint8_t)((rollingCode >> 8) & 0xFF);
-			plain[2] ^= (char)(uint8_t)(rollingCode & 0xFF);
+			plain[0] ^= (uint8_t)(rollingCode >> 16);
+			plain[1] ^= (uint8_t)((rollingCode >> 8) & 0xFF);
+			plain[2] ^= (uint8_t)(rollingCode & 0xFF);
 		}
 		else
 		{
-			plain[0] ^= (char)(uint8_t)(rollingCode >> 8);
-			plain[1] ^= (char)(uint8_t)(rollingCode & 0xFF);
+			plain[0] ^= (uint8_t)(rollingCode >> 8);
+			plain[1] ^= (uint8_t)(rollingCode & 0xFF);
 		}
 
-		std::vector<char> encryptedRollingCode(16);
+		std::vector<uint8_t> encryptedRollingCode(16);
 		{
 			int32_t result = 0;
 			std::lock_guard<std::mutex> encryptGuard(_encryptMutex);
 			if((result = gcry_cipher_setkey(_encryptHandle, &deviceAesKey.at(0), deviceAesKey.size())) != GPG_ERR_NO_ERROR)
 			{
 				GD::out.printError("Error: Could not set key for encryption: " + BaseLib::Security::Gcrypt::getError(result));
-				return std::vector<char>();
+				return std::vector<uint8_t>();
 			}
 
 			if((result = gcry_cipher_encrypt(_encryptHandle, &encryptedRollingCode.at(0), encryptedRollingCode.size(), &plain.at(0), plain.size())) != GPG_ERR_NO_ERROR)
 			{
 				GD::out.printError("Error encrypting data: " + BaseLib::Security::Gcrypt::getError(result));
-				return std::vector<char>();
+				return std::vector<uint8_t>();
 			}
 		}
 
@@ -76,14 +76,14 @@ std::vector<char> Security::encryptRollingCode(const std::vector<char>& deviceAe
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::vector<char>();
+    return std::vector<uint8_t>();
 }
 
-bool Security::decrypt(const std::vector<char>& deviceAesKey, std::vector<char>& data, int32_t dataSize, int32_t rollingCode, int32_t rollingCodeSize)
+bool Security::decrypt(const std::vector<uint8_t>& deviceAesKey, std::vector<uint8_t>& data, int32_t dataSize, int32_t rollingCode, int32_t rollingCodeSize)
 {
 	try
 	{
-		std::vector<char> encryptedRollingCode = encryptRollingCode(deviceAesKey, rollingCode, rollingCodeSize);
+		std::vector<uint8_t> encryptedRollingCode = encryptRollingCode(deviceAesKey, rollingCode, rollingCodeSize);
 		if(encryptedRollingCode.empty()) return false;
 
 		for(int32_t i = 1; i < dataSize && i - 1 < (signed)encryptedRollingCode.size(); i++)
@@ -110,15 +110,15 @@ bool Security::decrypt(const std::vector<char>& deviceAesKey, std::vector<char>&
     return false;
 }
 
-bool Security::checkCmac(const std::vector<char>& deviceAesKey, const std::vector<char>& encryptedData, int32_t dataSize, int32_t& rollingCode, int32_t rollingCodeSize, int32_t cmacSize)
+bool Security::checkCmac(const std::vector<uint8_t>& deviceAesKey, const std::vector<uint8_t>& encryptedData, int32_t dataSize, int32_t& rollingCode, int32_t rollingCodeSize, int32_t cmacSize)
 {
 	try
 	{
 		if((signed)encryptedData.size() < dataSize + cmacSize) return false;
 		for(int32_t currentRollingCode = rollingCode; currentRollingCode < rollingCode + 128; currentRollingCode++)
 		{
-			std::vector<char> cmacInPacket(&encryptedData.at(dataSize), &encryptedData.at(dataSize) + cmacSize);
-			std::vector<char> calculatedCmac = getCmac(deviceAesKey, encryptedData, dataSize, currentRollingCode, rollingCodeSize, cmacSize);
+			std::vector<uint8_t> cmacInPacket(&encryptedData.at(dataSize), &encryptedData.at(dataSize) + cmacSize);
+			std::vector<uint8_t> calculatedCmac = getCmac(deviceAesKey, encryptedData, dataSize, currentRollingCode, rollingCodeSize, cmacSize);
 			if(cmacInPacket.empty() || calculatedCmac.empty()) return false;
 
 			if(cmacInPacket.size() == calculatedCmac.size() && std::equal(cmacInPacket.begin(), cmacInPacket.end(), calculatedCmac.begin()))
@@ -145,50 +145,50 @@ bool Security::checkCmac(const std::vector<char>& deviceAesKey, const std::vecto
     return false;
 }
 
-std::vector<char> Security::getCmac(const std::vector<char>& deviceAesKey, const std::vector<char>& encryptedData, int32_t dataSize, int32_t rollingCode, int32_t rollingCodeSize, int32_t cmacSize)
+std::vector<uint8_t> Security::getCmac(const std::vector<uint8_t>& deviceAesKey, const std::vector<uint8_t>& encryptedData, int32_t dataSize, int32_t rollingCode, int32_t rollingCodeSize, int32_t cmacSize)
 {
 	try
 	{
-		std::vector<char> plain;
+		std::vector<uint8_t> plain;
 		plain.reserve(16);
 		plain.insert(plain.end(), encryptedData.begin(), encryptedData.begin() + dataSize);
 		if(rollingCodeSize == 3)
 		{
-			plain.push_back((char)(uint8_t)(rollingCode >> 16));
-			plain.push_back((char)(uint8_t)((rollingCode >> 8) & 0xFF));
-			plain.push_back((char)(uint8_t)(rollingCode & 0xFF));
+			plain.push_back((uint8_t)(rollingCode >> 16));
+			plain.push_back((uint8_t)((rollingCode >> 8) & 0xFF));
+			plain.push_back((uint8_t)(rollingCode & 0xFF));
 		}
 		else
 		{
-			plain.push_back((char)(uint8_t)(rollingCode >> 8));
-			plain.push_back((char)(uint8_t)(rollingCode & 0xFF));
+			plain.push_back((uint8_t)(rollingCode >> 8));
+			plain.push_back((uint8_t)(rollingCode & 0xFF));
 		}
 		bool greaterThan15Bytes = plain.size() > 15;
 		if(plain.size() < 16) plain.push_back(0x80);
 		while(plain.size() < 16) plain.push_back(0);
 
-		std::vector<char> subkey = getSubkey(deviceAesKey, greaterThan15Bytes);
-		if(subkey.size() != 16) return std::vector<char>();
+		std::vector<uint8_t> subkey = getSubkey(deviceAesKey, greaterThan15Bytes);
+		if(subkey.size() != 16) return std::vector<uint8_t>();
 
 		for(int32_t i = 0; i < 16; i++)
 		{
 			plain[i] ^= subkey[i];
 		}
 
-		std::vector<char> cmac(16);
+		std::vector<uint8_t> cmac(16);
 		{
 			int32_t result = 0;
 			std::lock_guard<std::mutex> encryptGuard(_encryptMutex);
 			if((result = gcry_cipher_setkey(_encryptHandle, &deviceAesKey.at(0), deviceAesKey.size())) != GPG_ERR_NO_ERROR)
 			{
 				GD::out.printError("Error: Could not set key for encryption: " + BaseLib::Security::Gcrypt::getError(result));
-				return std::vector<char>();
+				return std::vector<uint8_t>();
 			}
 
 			if((result = gcry_cipher_encrypt(_encryptHandle, &cmac.at(0), cmac.size(), &plain.at(0), plain.size())) != GPG_ERR_NO_ERROR)
 			{
 				GD::out.printError("Error encrypting data: " + BaseLib::Security::Gcrypt::getError(result));
-				return std::vector<char>();
+				return std::vector<uint8_t>();
 			}
 		}
 
@@ -207,10 +207,10 @@ std::vector<char> Security::getCmac(const std::vector<char>& deviceAesKey, const
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::vector<char>();
+    return std::vector<uint8_t>();
 }
 
-void Security::leftShiftVector(std::vector<char>& data)
+void Security::leftShiftVector(std::vector<uint8_t>& data)
 {
 	try
 	{
@@ -238,11 +238,11 @@ void Security::leftShiftVector(std::vector<char>& data)
     }
 }
 
-std::vector<char> Security::getSubkey(const std::vector<char>& deviceAesKey, bool sizeGreater15Bytes)
+std::vector<uint8_t> Security::getSubkey(const std::vector<uint8_t>& deviceAesKey, bool sizeGreater15Bytes)
 {
 	try
 	{
-		std::vector<char> subkey(16);
+		std::vector<uint8_t> subkey(16);
 		int32_t result = 0;
 
 		{
@@ -250,23 +250,23 @@ std::vector<char> Security::getSubkey(const std::vector<char>& deviceAesKey, boo
 			if((result = gcry_cipher_setkey(_encryptHandle, &deviceAesKey.at(0), deviceAesKey.size())) != GPG_ERR_NO_ERROR)
 			{
 				GD::out.printError("Error: Could not set key for encryption: " + BaseLib::Security::Gcrypt::getError(result));
-				return std::vector<char>();
+				return std::vector<uint8_t>();
 			}
 
 			if((result = gcry_cipher_encrypt(_encryptHandle, &subkey.at(0), subkey.size(), (void*)_subkeyInput, 16)) != GPG_ERR_NO_ERROR)
 			{
 				GD::out.printError("Error encrypting data: " + BaseLib::Security::Gcrypt::getError(result));
-				return std::vector<char>();
+				return std::vector<uint8_t>();
 			}
 		}
 
 		leftShiftVector(subkey);
-		if(subkey[0] != 0 && subkey[0] != 1) subkey[15] ^= (char)(uint8_t)0x87;
+		if(subkey[0] != 0 && subkey[0] != 1) subkey[15] ^= (uint8_t)0x87;
 
 		if(sizeGreater15Bytes) return subkey; //K1
 
 		leftShiftVector(subkey);
-		if(subkey[0] != 0 && subkey[0] != 1) subkey[15] ^= (char)(uint8_t)0x87;
+		if(subkey[0] != 0 && subkey[0] != 1) subkey[15] ^= (uint8_t)0x87;
 
 		return subkey; //K2
 	}
@@ -282,7 +282,7 @@ std::vector<char> Security::getSubkey(const std::vector<char>& deviceAesKey, boo
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
-    return std::vector<char>();
+    return std::vector<uint8_t>();
 }
 
 }

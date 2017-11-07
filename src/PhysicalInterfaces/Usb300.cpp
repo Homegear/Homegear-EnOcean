@@ -130,11 +130,11 @@ int32_t Usb300::setBaseAddress(uint32_t value)
 			return -1;
 		}
 
-		std::vector<char> response;
+		std::vector<uint8_t> response;
 
 		{
 			// Set address - only possible 10 times, Must start with "0xFF"
-			std::vector<char> data{ 0x55, 0x00, 0x05, 0x00, 0x05, 0x00, 0x07, (char)(uint8_t)(value >> 24), (char)(uint8_t)((value >> 16) & 0xFF), (char)(uint8_t)((value >> 8) & 0xFF), (char)(uint8_t)(value & 0xFF), 0x00 };
+			std::vector<uint8_t> data{ 0x55, 0x00, 0x05, 0x00, 0x05, 0x00, 0x07, (uint8_t)(value >> 24), (uint8_t)((value >> 16) & 0xFF), (uint8_t)((value >> 8) & 0xFF), (uint8_t)(value & 0xFF), 0x00 };
 			addCrc8(data);
 			getResponse(0x02, data, response);
 			if(response.size() != 8 || response[1] != 0 || response[2] != 1 || response[3] != 0 || response[4] != 2 || response[6] != 0)
@@ -147,7 +147,7 @@ int32_t Usb300::setBaseAddress(uint32_t value)
 
 		for(int32_t i = 0; i < 10; i++)
 		{
-			std::vector<char> data{ 0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x08, 0x00 };
+			std::vector<uint8_t> data{ 0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x08, 0x00 };
 			addCrc8(data);
 			getResponse(0x02, data, response);
 			if(response.size() != 13 || response[1] != 0 || response[2] != 5 || response[3] != 1 || response[6] != 0)
@@ -184,10 +184,10 @@ void Usb300::init()
 {
 	try
     {
-		std::vector<char> response;
+		std::vector<uint8_t> response;
 		for(int32_t i = 0; i < 10; i++)
 		{
-			std::vector<char> data{ 0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x08, 0x00 };
+			std::vector<uint8_t> data{ 0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x08, 0x00 };
 			addCrc8(data);
 			getResponse(0x02, data, response);
 			if(response.size() != 13 || response[1] != 0 || response[2] != 5 || response[3] != 1 || response[6] != 0)
@@ -254,7 +254,7 @@ void Usb300::listen()
 {
     try
     {
-    	std::vector<char> data;
+    	std::vector<uint8_t> data;
     	data.reserve(100);
     	char byte = 0;
     	int32_t result = 0;
@@ -292,7 +292,7 @@ void Usb300::listen()
 				}
 
 				if(data.empty() && byte != 0x55) continue;
-				data.push_back(byte);
+				data.push_back((uint8_t)byte);
 
 				if(size == 0 && data.size() == 6)
 				{
@@ -301,7 +301,7 @@ void Usb300::listen()
 					{
 						crc8 = _crc8Table[crc8 ^ (uint8_t)data[i]];
 					}
-					if((char)crc8 != data[5])
+					if(crc8 != data[5])
 					{
 						_out.printError("Error: CRC (0x" + BaseLib::HelperFunctions::getHexString(crc8, 2) + ") failed for header: " + BaseLib::HelperFunctions::getHexString(data));
 						size = 0;
@@ -325,7 +325,7 @@ void Usb300::listen()
 					{
 						crc8 = _crc8Table[crc8 ^ (uint8_t)data[i]];
 					}
-					if((char)crc8 != data.back())
+					if(crc8 != data.back())
 					{
 						_out.printError("Error: CRC failed for packet: " + BaseLib::HelperFunctions::getHexString(data));
 						size = 0;
@@ -368,7 +368,7 @@ void Usb300::listen()
     }
 }
 
-void Usb300::processPacket(std::vector<char>& data)
+void Usb300::processPacket(std::vector<uint8_t>& data)
 {
 	try
 	{
@@ -434,15 +434,15 @@ void Usb300::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 			}
 		}
 
-		std::vector<char> data = std::move(myPacket->getBinary());
+		std::vector<uint8_t> data = std::move(myPacket->getBinary());
 		addCrc8(data);
-		std::vector<char> response;
+		std::vector<uint8_t> response;
 		getResponse(0x02, data, response);
 		if(response.size() != 8 || (response.size() >= 7 && response[6] != 0))
 		{
 			if(response.size() >= 7 && response[6] != 0)
 			{
-				std::map<char, std::string>::iterator statusIterator = _responseStatusCodes.find(response[6]);
+				std::map<uint8_t, std::string>::iterator statusIterator = _responseStatusCodes.find(response[6]);
 				if(statusIterator != _responseStatusCodes.end()) _out.printError("Error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\": " + statusIterator->second);
 				else _out.printError("Unknown error (" + std::to_string(response[6]) + ") sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
 			}
@@ -465,7 +465,7 @@ void Usb300::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
     }
 }
 
-void Usb300::rawSend(const std::vector<char>& packet)
+void Usb300::rawSend(std::vector<uint8_t>& packet)
 {
 	try
 	{

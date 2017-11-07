@@ -427,7 +427,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 		std::shared_ptr<IEnOceanInterface> physicalInterface = physicalInterfaceIterator->second;
 		if(!physicalInterface) return false;
 
-		std::vector<char> payload = packet->getData();
+		std::vector<uint8_t> payload = packet->getData();
 		if(packet->getRorg() == 0xD4) //UTE
 		{
 			if(payload.size() < 8) return false;
@@ -511,7 +511,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, packet->senderAddress()));
-				std::vector<char> responsePayload;
+				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 8);
 				responsePayload.at(1) = (responsePayload.at(1) & 0x80) | 0x11; // Command 1 => teach-in response
 				response->setData(responsePayload);
@@ -563,7 +563,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				}
 
 				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0), 0xFFFFFFFF));
-				std::vector<char> responsePayload;
+				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
 				responsePayload.back() = 0xF0;
 				response->setData(responsePayload);
@@ -588,7 +588,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 					}
 				}
 				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, 0xFFFFFFFF));
-				std::vector<char> responsePayload;
+				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
 				responsePayload.back() = 0xF0;
 				response->setData(responsePayload);

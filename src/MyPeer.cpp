@@ -439,7 +439,8 @@ void MyPeer::loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<
 				_rollingCode = row->second.at(3)->intValue;
 				break;
 			case 21:
-				_aesKey = *row->second.at(5)->binaryValue;
+				_aesKey.clear();
+				_aesKey.insert(_aesKey.end(), row->second.at(5)->binaryValue->begin(), row->second.at(5)->binaryValue->end());
 				break;
 			case 22:
 				_encryptionType = row->second.at(3)->intValue;
@@ -751,7 +752,7 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 			FrameValues currentFrameValues;
 			PPacket frame(i->second);
 			if(!frame) continue;
-			std::vector<char> erpPacket = packet->getData();
+			std::vector<uint8_t> erpPacket = packet->getData();
 			if(erpPacket.empty()) break;
 			uint32_t erpPacketBitSize = erpPacket.size() * 8;
 			int32_t channelIndex = frame->channelIndex;
@@ -876,7 +877,7 @@ void MyPeer::packetReceived(PMyPacket& packet)
 
 		if(packet->getRorg() == 0x35) // Encryption teach-in
 		{
-			std::vector<char> data = packet->getData();
+			std::vector<uint8_t> data = packet->getData();
 			if(data.size() == 15 && (data[1] & 0xC0) == 0) // First packet
 			{
 				if((data[1] & 0x30) != 0x20) // IDX === 0 only => Number of packets
@@ -952,7 +953,7 @@ void MyPeer::packetReceived(PMyPacket& packet)
 			}
 			// Create object here to avoid unnecessary allocation of secure memory
 			if(!_security) _security.reset(new Security(GD::bl));
-			std::vector<char> data = packet->getData();
+			std::vector<uint8_t> data = packet->getData();
 			if(_security->checkCmac(_aesKey, data, packet->getDataSize() - _cmacSize - 5, _rollingCode, _rollingCodeSize, _cmacSize))
 			{
 				if(_bl->debugLevel >= 5) GD::out.printDebug("Debug: CMAC verified.");
