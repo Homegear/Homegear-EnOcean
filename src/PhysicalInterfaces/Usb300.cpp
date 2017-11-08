@@ -8,6 +8,8 @@ namespace MyFamily
 
 Usb300::Usb300(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IEnOceanInterface(settings)
 {
+	_initComplete = false;
+
 	_settings = settings;
 	_out.init(GD::bl);
 	_out.setPrefix(GD::out.getPrefix() + "EnOcean USB 300 \"" + settings->id + "\": ");

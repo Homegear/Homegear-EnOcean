@@ -27,7 +27,7 @@ public:
 	virtual void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
 protected:
 	std::unique_ptr<BaseLib::SerialReaderWriter> _serial;
-	bool _initComplete = false;
+    std::atomic_bool _initComplete;
 	std::thread _initThread;
 
 	void init();

@@ -30,6 +30,7 @@ protected:
     std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
     std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 
+    std::thread _initThread;
     std::mutex _invokeMutex;
     std::mutex _requestMutex;
     std::atomic_bool _waitForResponse;
@@ -40,6 +41,7 @@ protected:
     virtual void rawSend(std::vector<uint8_t>& packet);
     PVariable invoke(std::string methodName, PArray& parameters);
     void processPacket(std::vector<uint8_t>& data);
+    void init();
 };
 
 }

@@ -36,52 +36,49 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t>& re
 {
 	try
     {
-		if(_stopped) return;
-		responsePacket.clear();
+        if(_stopped) return;
+        responsePacket.clear();
 
-		std::lock_guard<std::mutex> sendPacketGuard(_sendPacketMutex);
-		std::lock_guard<std::mutex> getResponseGuard(_getResponseMutex);
-		std::shared_ptr<Request> request(new Request());
-		_requestsMutex.lock();
-		_requests[packetType] = request;
-		_requestsMutex.unlock();
-		std::unique_lock<std::mutex> lock(request->mutex);
+        std::lock_guard<std::mutex> sendPacketGuard(_sendPacketMutex);
+        std::lock_guard<std::mutex> getResponseGuard(_getResponseMutex);
+        std::shared_ptr<Request> request(new Request());
+        std::unique_lock<std::mutex> requestsGuard(_requestsMutex);
+        _requests[packetType] = request;
+        requestsGuard.unlock();
+        std::unique_lock<std::mutex> lock(request->mutex);
 
-		try
-		{
-			_out.printInfo("Info: Sending packet " + BaseLib::HelperFunctions::getHexString(requestPacket));
-			rawSend(requestPacket);
-		}
-		catch(BaseLib::SocketOperationException ex)
-		{
-			_out.printError("Error sending packet: " + ex.what());
-			return;
-		}
+        try
+        {
+            GD::out.printInfo("Info: Sending packet " + BaseLib::HelperFunctions::getHexString(requestPacket));
+            rawSend(requestPacket);
+        }
+        catch(BaseLib::SocketOperationException ex)
+        {
+            _out.printError("Error sending packet: " + ex.what());
+            return;
+        }
 
-		if(!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(10000), [&] { return request->mutexReady; }))
-		{
-			_out.printError("Error: No response received to packet: " + BaseLib::HelperFunctions::getHexString(requestPacket));
-		}
-		responsePacket = request->response;
+        if(!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(10000), [&] { return request->mutexReady; }))
+        {
+            _out.printError("Error: No response received to packet: " + BaseLib::HelperFunctions::getHexString(requestPacket));
+        }
+        responsePacket = request->response;
 
-		_requestsMutex.lock();
-		_requests.erase(packetType);
-		_requestsMutex.unlock();
+        requestsGuard.lock();
+        _requests.erase(packetType);
+        requestsGuard.unlock();
 	}
 	catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        _requestsMutex.unlock();
     }
     catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        _requestsMutex.unlock();
     }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-        _requestsMutex.unlock();
     }
 }
 
