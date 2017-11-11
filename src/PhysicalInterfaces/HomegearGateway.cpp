@@ -107,7 +107,7 @@ int32_t HomegearGateway::setBaseAddress(uint32_t value)
         {
             _out.printError(result->structValue->at("faultString")->stringValue);
         }
-        else _out.printInfo("Info: Base address set to 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + ". Remaining changes: " + std::to_string(result->integerValue64));
+        else _out.printInfo("Info: Base address set to 0x" + BaseLib::HelperFunctions::getHexString(value, 8) + ". Remaining changes: " + std::to_string(result->integerValue64));
 
         return result->integerValue64;
     }
