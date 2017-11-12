@@ -30,6 +30,18 @@
 		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="4" type="EnOceanRocker">
 			<variables>EnOceanVariables4</variables>
 		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="5" type="EnOceanRocker">
+			<variables>EnOceanVariables5</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="6" type="EnOceanRocker">
+			<variables>EnOceanVariables6</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="7" type="EnOceanRocker">
+			<variables>EnOceanVariables7</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="8" type="EnOceanRocker">
+			<variables>EnOceanVariables8</variables>
+		</function>
 	</functions>
 	<packets>
 		<packet id="A0_0">
@@ -52,36 +64,14 @@
 					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="A0_1">
-			<direction>toCentral</direction>
-			<type>0xF6</type>
-			<channel>1</channel>
-			<binaryPayload>
-				<element>
-					<bitIndex>51</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
 				<element>
 					<bitIndex>15</bitIndex>
 					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>12</bitIndex>
-					<bitSize>3</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>11</bitIndex>
-					<bitSize>1</bitSize>
-					<parameterId>STATE</parameterId>
+					<constValueInteger>0</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
-		<packet id="A0_2">
+		<packet id="A0_1">
 			<direction>toCentral</direction>
 			<type>0xF6</type>
 			<channel>1</channel>
@@ -101,9 +91,14 @@
 					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
 			</binaryPayload>
 		</packet>
-		<packet id="A0_3">
+		<packet id="A0_2">
 			<direction>toCentral</direction>
 			<type>0xF6</type>
 			<channel>1</channel>
@@ -220,36 +215,14 @@
 					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="A1_1">
-			<direction>toCentral</direction>
-			<type>0xF6</type>
-			<channel>2</channel>
-			<binaryPayload>
-				<element>
-					<bitIndex>51</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
 				<element>
 					<bitIndex>15</bitIndex>
 					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>12</bitIndex>
-					<bitSize>3</bitSize>
 					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>11</bitIndex>
-					<bitSize>1</bitSize>
-					<parameterId>STATE</parameterId>
 				</element>
 			</binaryPayload>
 		</packet>
-		<packet id="A1_2">
+		<packet id="A1_1">
 			<direction>toCentral</direction>
 			<type>0xF6</type>
 			<channel>2</channel>
@@ -269,9 +242,14 @@
 					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
 			</binaryPayload>
 		</packet>
-		<packet id="A1_3">
+		<packet id="A1_2">
 			<direction>toCentral</direction>
 			<type>0xF6</type>
 			<channel>2</channel>
@@ -388,36 +366,14 @@
 					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="B0_1">
-			<direction>toCentral</direction>
-			<type>0xF6</type>
-			<channel>3</channel>
-			<binaryPayload>
-				<element>
-					<bitIndex>51</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
 				<element>
 					<bitIndex>15</bitIndex>
 					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>12</bitIndex>
-					<bitSize>3</bitSize>
-					<constValueInteger>3</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>11</bitIndex>
-					<bitSize>1</bitSize>
-					<parameterId>STATE</parameterId>
+					<constValueInteger>0</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
-		<packet id="B0_2">
+		<packet id="B0_1">
 			<direction>toCentral</direction>
 			<type>0xF6</type>
 			<channel>3</channel>
@@ -437,9 +393,14 @@
 					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
 			</binaryPayload>
 		</packet>
-		<packet id="B0_3">
+		<packet id="B0_2">
 			<direction>toCentral</direction>
 			<type>0xF6</type>
 			<channel>3</channel>
@@ -556,36 +517,14 @@
 					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
-			</binaryPayload>
-		</packet>
-		<packet id="B1_1">
-			<direction>toCentral</direction>
-			<type>0xF6</type>
-			<channel>4</channel>
-			<binaryPayload>
-				<element>
-					<bitIndex>51</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
 				<element>
 					<bitIndex>15</bitIndex>
 					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>12</bitIndex>
-					<bitSize>3</bitSize>
-					<constValueInteger>2</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>11</bitIndex>
-					<bitSize>1</bitSize>
-					<parameterId>STATE</parameterId>
+					<constValueInteger>0</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
-		<packet id="B1_2">
+		<packet id="B1_1">
 			<direction>toCentral</direction>
 			<type>0xF6</type>
 			<channel>4</channel>
@@ -605,9 +544,14 @@
 					<bitSize>1</bitSize>
 					<parameterId>STATE</parameterId>
 				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
 			</binaryPayload>
 		</packet>
-		<packet id="B1_3">
+		<packet id="B1_2">
 			<direction>toCentral</direction>
 			<type>0xF6</type>
 			<channel>4</channel>
@@ -704,6 +648,330 @@
 				</element>
 			</binaryPayload>
 		</packet>
+		<packet id="A0B0_0">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>5</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>3</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="A0B0_1">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>5</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>3</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="A0B0_2">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>5</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="A1B1_0">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>6</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>2</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="A1B1_1">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>6</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>2</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="A1B1_2">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>6</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="A0B1_0">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>7</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>2</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="A0B1_1">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>7</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>2</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="A0B1_2">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>7</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="A1B0_0">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>8</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>3</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="A1B0_1">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>8</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>51</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>15</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>8</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>12</bitIndex>
+					<bitSize>3</bitSize>
+					<constValueInteger>3</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="A1B0_2">
+			<direction>toCentral</direction>
+			<type>0xF6</type>
+			<channel>8</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>0</constValueInteger>
+				</element>
+				<element>
+					<bitIndex>11</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>STATE</parameterId>
+				</element>
+			</binaryPayload>
+		</packet>
 	</packets>
 	<parameterGroups xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
 		<configParameters id="EnOceanConfig">
@@ -776,9 +1044,6 @@
 					<packet id="A0_2">
 						<type>event</type>
 					</packet>
-					<packet id="A0_3">
-						<type>event</type>
-					</packet>
 				</packets>
 			</parameter>
 		</variables>
@@ -802,9 +1067,6 @@
 						<type>event</type>
 					</packet>
 					<packet id="A1_2">
-						<type>event</type>
-					</packet>
-					<packet id="A1_3">
 						<type>event</type>
 					</packet>
 				</packets>
@@ -832,9 +1094,6 @@
 					<packet id="B0_2">
 						<type>event</type>
 					</packet>
-					<packet id="B0_3">
-						<type>event</type>
-					</packet>
 				</packets>
 			</parameter>
 		</variables>
@@ -860,7 +1119,104 @@
 					<packet id="B1_2">
 						<type>event</type>
 					</packet>
-					<packet id="B1_3">
+				</packets>
+			</parameter>
+		</variables>
+		<variables id="EnOceanVariables5">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+				</properties>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
+				<physicalInteger groupId="STATE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="A0B0_0">
+						<type>event</type>
+					</packet>
+					<packet id="A0B0_1">
+						<type>event</type>
+					</packet>
+					<packet id="A0B0_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+		</variables>
+		<variables id="EnOceanVariables6">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+				</properties>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
+				<physicalInteger groupId="STATE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="A1B1_0">
+						<type>event</type>
+					</packet>
+					<packet id="A1B1_1">
+						<type>event</type>
+					</packet>
+					<packet id="A1B1_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+		</variables>
+		<variables id="EnOceanVariables7">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+				</properties>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
+				<physicalInteger groupId="STATE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="A0B1_0">
+						<type>event</type>
+					</packet>
+					<packet id="A0B1_1">
+						<type>event</type>
+					</packet>
+					<packet id="A0B1_2">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+		</variables>
+		<variables id="EnOceanVariables8">
+			<parameter id="STATE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+				</properties>
+				<logicalBoolean>
+					<defaultValue>false</defaultValue>
+				</logicalBoolean>
+				<physicalInteger groupId="STATE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="A1B0_0">
+						<type>event</type>
+					</packet>
+					<packet id="A1B0_1">
+						<type>event</type>
+					</packet>
+					<packet id="A1B0_2">
 						<type>event</type>
 					</packet>
 				</packets>
