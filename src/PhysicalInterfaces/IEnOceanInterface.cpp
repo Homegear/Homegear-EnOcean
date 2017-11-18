@@ -116,4 +116,70 @@ void IEnOceanInterface::addCrc8(std::vector<uint8_t>& packet)
     }
 }
 
+void IEnOceanInterface::raisePacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+{
+    try
+    {
+        PMyPacket myPacket(std::dynamic_pointer_cast<MyPacket>(packet));
+        if(!myPacket) return;
+
+        if(myPacket->senderAddress() != (int32_t)_baseAddress)
+        {
+            std::lock_guard<std::mutex> rssiGuard(_rssiMutex);
+            if(_rssi.size() > 10000 || _wildcardRssi.size() > 10000)
+            {
+                _out.printWarning("Warning: More than 10000 RSSI values are stored. Clearing them...");
+                _rssi.clear();
+                _wildcardRssi.clear();
+            }
+            _rssi[myPacket->senderAddress()] = myPacket->getRssi();
+            _wildcardRssi[myPacket->senderAddress() & 0xFFFFFF80] = myPacket->getRssi();
+        }
+
+        BaseLib::Systems::IPhysicalInterface::raisePacketReceived(packet);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+int32_t IEnOceanInterface::getRssi(int32_t address, bool wildcardPeer)
+{
+    try
+    {
+        std::lock_guard<std::mutex> rssiGuard(_rssiMutex);
+        if(wildcardPeer)
+        {
+            auto rssiIterator = _wildcardRssi.find(address & 0xFFFFFF80);
+            if(rssiIterator != _wildcardRssi.end()) return rssiIterator->second;
+        }
+        else
+        {
+            auto rssiIterator = _rssi.find(address);
+            if(rssiIterator != _rssi.end()) return rssiIterator->second;
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return 0;
+}
 }

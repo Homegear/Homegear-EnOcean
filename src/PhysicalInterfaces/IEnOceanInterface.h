@@ -16,6 +16,7 @@ public:
 
 	int32_t getAddress() { return _baseAddress; }
 	uint32_t getBaseAddress() { return _baseAddress; }
+    int32_t getRssi(int32_t address, bool wildcardPeer);
 	virtual int32_t setBaseAddress(uint32_t value)  { return -1; };
 
 	virtual void startListening() {}
@@ -82,10 +83,15 @@ protected:
 
 	std::mutex _requestsMutex;
 	std::map<uint8_t, std::shared_ptr<Request>> _requests;
+    std::mutex _rssiMutex;
+    std::unordered_map<int32_t, int32_t> _wildcardRssi;
+	std::unordered_map<int32_t, int32_t> _rssi;
 
 	void getResponse(uint8_t packetType, std::vector<uint8_t>& requestPacket, std::vector<uint8_t>& responsePacket);
 	virtual void rawSend(std::vector<uint8_t>& packet) {}
 	void addCrc8(std::vector<uint8_t>& packet);
+
+	virtual void raisePacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
 };
 
 }

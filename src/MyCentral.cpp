@@ -382,7 +382,12 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 		bool unpaired = true;
 		for(auto& peer : peers)
 		{
-			if(senderId != peer->getPhysicalInterfaceId()) continue;
+            std::string settingName = "roaming";
+			if(GD::family->getFamilySetting(settingName)->integerValue && senderId != peer->getPhysicalInterfaceId() && peer->getPhysicalInterface()->getBaseAddress() == GD::physicalInterfaces.at(senderId)->getBaseAddress() && myPacket->getRssi() > peer->getPhysicalInterface()->getRssi(peer->getAddress(), peer->isWildcardPeer()) + 6)
+			{
+                GD::out.printInfo("Info: Setting physical interface of peer " + std::to_string(peer->getID()) + " to " + senderId + ", because the RSSI is better.");
+                peer->setPhysicalInterfaceId(senderId);
+			}
 			if((peer->getDeviceType() >> 16) == myPacket->getRorg()) unpaired = false;
 
 			peer->packetReceived(myPacket);
