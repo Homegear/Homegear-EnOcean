@@ -383,7 +383,9 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 		for(auto& peer : peers)
 		{
             std::string settingName = "roaming";
-			if(GD::family->getFamilySetting(settingName)->integerValue && senderId != peer->getPhysicalInterfaceId() && peer->getPhysicalInterface()->getBaseAddress() == GD::physicalInterfaces.at(senderId)->getBaseAddress() && myPacket->getRssi() > peer->getPhysicalInterface()->getRssi(peer->getAddress(), peer->isWildcardPeer()) + 6)
+            auto roamingSetting = GD::family->getFamilySetting(settingName);
+            bool roaming = roamingSetting ? roamingSetting->integerValue : true;
+			if(roaming && senderId != peer->getPhysicalInterfaceId() && peer->getPhysicalInterface()->getBaseAddress() == GD::physicalInterfaces.at(senderId)->getBaseAddress() && myPacket->getRssi() > peer->getPhysicalInterface()->getRssi(peer->getAddress(), peer->isWildcardPeer()) + 6)
 			{
                 GD::out.printInfo("Info: Setting physical interface of peer " + std::to_string(peer->getID()) + " to " + senderId + ", because the RSSI is better.");
                 peer->setPhysicalInterfaceId(senderId);

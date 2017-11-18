@@ -424,7 +424,8 @@ void MyPeer::setBestInterface()
     {
         if(_physicalInterface->isOpen()) return; //Only change interface, when the current one is unavailable. If it is available it is switched in onPacketReceived of myCentral.
         std::string settingName = "roaming";
-        if(!GD::family->getFamilySetting(settingName)->integerValue) return;
+        auto roamingSetting = GD::family->getFamilySetting(settingName);
+        if(roamingSetting && !roamingSetting->integerValue) return;
         std::shared_ptr<IEnOceanInterface> bestInterface = GD::defaultPhysicalInterface->isOpen() ? GD::defaultPhysicalInterface : std::shared_ptr<IEnOceanInterface>();
         for(auto& interface : GD::physicalInterfaces)
         {
