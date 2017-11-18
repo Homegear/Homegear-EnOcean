@@ -49,13 +49,13 @@ std::vector<uint8_t> Security::encryptRollingCode(const std::vector<uint8_t>& de
 		{
 			int32_t result = 0;
 			std::lock_guard<std::mutex> encryptGuard(_encryptMutex);
-			if((result = gcry_cipher_setkey(_encryptHandle, &deviceAesKey.at(0), deviceAesKey.size())) != GPG_ERR_NO_ERROR)
+			if((result = gcry_cipher_setkey(_encryptHandle, deviceAesKey.data(), deviceAesKey.size())) != GPG_ERR_NO_ERROR)
 			{
 				GD::out.printError("Error: Could not set key for encryption: " + BaseLib::Security::Gcrypt::getError(result));
 				return std::vector<uint8_t>();
 			}
 
-			if((result = gcry_cipher_encrypt(_encryptHandle, &encryptedRollingCode.at(0), encryptedRollingCode.size(), &plain.at(0), plain.size())) != GPG_ERR_NO_ERROR)
+			if((result = gcry_cipher_encrypt(_encryptHandle, encryptedRollingCode.data(), encryptedRollingCode.size(), plain.data(), plain.size())) != GPG_ERR_NO_ERROR)
 			{
 				GD::out.printError("Error encrypting data: " + BaseLib::Security::Gcrypt::getError(result));
 				return std::vector<uint8_t>();

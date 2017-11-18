@@ -802,7 +802,7 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 					else serviceMessages->set("LOWBAT", false);
 				}
 
-				for(std::vector<PParameter>::iterator k = frame->associatedVariables.begin(); k != frame->associatedVariables.end(); ++k)
+                for(std::vector<PParameter>::iterator k = frame->associatedVariables.begin(); k != frame->associatedVariables.end(); ++k)
 				{
 					if((*k)->physical->groupId != (*j)->parameterId) continue;
 					currentFrameValues.parameterSetType = (*k)->parent()->type();
@@ -964,6 +964,8 @@ void MyPeer::packetReceived(PMyPacket& packet)
 				}
 				packet->setData(data);
 				setRollingCode(_rollingCode + 1);
+
+                GD::out.printInfo("Decrypted packet: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
 
 				if(!_forceEncryption) GD::out.printWarning("Warning: Encrypted packet received for peer " + std::to_string(_peerID) + " but unencrypted packet still will be accepted. Please set the configuration parameter \"ENCRYPTION\" to \"true\" to enforce encryption and ignore unencrypted packets.");
 			}

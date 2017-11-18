@@ -779,6 +779,21 @@
 					<packet id="A0_3">
 						<type>event</type>
 					</packet>
+					<packet id="A0E_0">
+						<type>event</type>
+					</packet>
+					<packet id="A0E_1">
+						<type>event</type>
+					</packet>
+					<packet id="A0E_2">
+						<type>event</type>
+					</packet>
+					<packet id="A0E_3">
+						<type>event</type>
+					</packet>
+					<packet id="A0E_4">
+						<type>event</type>
+					</packet>
 				</packets>
 			</parameter>
 		</variables>
@@ -805,6 +820,21 @@
 						<type>event</type>
 					</packet>
 					<packet id="A1_3">
+						<type>event</type>
+					</packet>
+					<packet id="A1E_0">
+						<type>event</type>
+					</packet>
+					<packet id="A1E_1">
+						<type>event</type>
+					</packet>
+					<packet id="A1E_2">
+						<type>event</type>
+					</packet>
+					<packet id="A1E_3">
+						<type>event</type>
+					</packet>
+					<packet id="A1E_4">
 						<type>event</type>
 					</packet>
 				</packets>
@@ -835,6 +865,21 @@
 					<packet id="B0_3">
 						<type>event</type>
 					</packet>
+					<packet id="B0E_0">
+						<type>event</type>
+					</packet>
+					<packet id="B0E_1">
+						<type>event</type>
+					</packet>
+					<packet id="B0E_2">
+						<type>event</type>
+					</packet>
+					<packet id="B0E_3">
+						<type>event</type>
+					</packet>
+					<packet id="B0E_4">
+						<type>event</type>
+					</packet>
 				</packets>
 			</parameter>
 		</variables>
@@ -861,6 +906,21 @@
 						<type>event</type>
 					</packet>
 					<packet id="B1_3">
+						<type>event</type>
+					</packet>
+					<packet id="B1E_0">
+						<type>event</type>
+					</packet>
+					<packet id="B1E_1">
+						<type>event</type>
+					</packet>
+					<packet id="B1E_2">
+						<type>event</type>
+					</packet>
+					<packet id="B1E_3">
+						<type>event</type>
+					</packet>
+					<packet id="B1E_4">
 						<type>event</type>
 					</packet>
 				</packets>
