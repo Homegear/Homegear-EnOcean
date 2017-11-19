@@ -23,21 +23,78 @@
 		</function>
 	</functions>
 	<packets>
-		<packet id="INFO_2">
+		<packet id="INFO_SERVICE">
+			<direction>toCentral</direction>
+			<type>0xA5</type>
+			<channel>1</channel>
+			<binaryPayload>
+				<element>
+					<bitIndex>16</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>SERVICE_MODE</parameterId>
+				</element>
+				<element>
+					<bitIndex>17</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>ENERGY_INPUT</parameterId>
+				</element>
+				<element>
+					<bitIndex>18</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>ENERGY_INSUFFICIENT</parameterId>
+				</element>
+				<element>
+					<bitIndex>19</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>LOWBAT</parameterId>
+				</element>
+				<element>
+					<bitIndex>20</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>COVER_OPEN</parameterId>
+				</element>
+				<element>
+					<bitIndex>21</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>TEMPERATURE_OUT_OF_RANGE</parameterId>
+				</element>
+				<element>
+					<bitIndex>22</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>WINDOW_OPEN</parameterId>
+				</element>
+				<element>
+					<bitIndex>23</bitIndex>
+					<bitSize>1</bitSize>
+					<parameterId>ACTUATOR_OBSTRUCTED</parameterId>
+				</element>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
+				</element>
+			</binaryPayload>
+		</packet>
+		<packet id="INFO">
 			<direction>toCentral</direction>
 			<type>0xA5</type>
 			<responseTypeId>INFO_RESPONSE</responseTypeId>
 			<channel>1</channel>
 			<binaryPayload>
 				<element>
-					<bitIndex>36</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>1</constValueInteger>
-				</element>
-				<element>
 					<bitIndex>8</bitIndex>
 					<bitSize>8</bitSize>
 					<parameterId>CURRENT_VALVE_POSITION</parameterId>
+				</element>
+				<element>
+					<bitIndex>24</bitIndex>
+					<bitSize>8</bitSize>
+					<parameterId>TEMPERATURE</parameterId>
+				</element>
+				<element>
+					<bitIndex>36</bitIndex>
+					<bitSize>1</bitSize>
+					<constValueInteger>1</constValueInteger>
 				</element>
 			</binaryPayload>
 		</packet>
@@ -150,7 +207,7 @@
 					<operationType>internal</operationType>
 				</physicalInteger>
 				<packets>
-					<packet id="INFO_2">
+					<packet id="INFO_SERVICE">
 						<type>event</type>
 					</packet>
 				</packets>
@@ -186,7 +243,122 @@
 					<operationType>command</operationType>
 				</physicalInteger>
 				<packets>
-					<packet id="INFO_2">
+					<packet id="INFO">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="SERVICE_MODE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<service>true</service>
+				</properties>
+				<logicalBoolean/>
+				<physicalInteger groupId="SERVICE_MODE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_SERVICE">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="ENERGY_INSUFFICIENT">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<service>true</service>
+					<casts>
+						<booleanInteger>
+							<invert>true</invert>
+						</booleanInteger>
+					</casts>
+				</properties>
+				<logicalBoolean/>
+				<physicalInteger groupId="SERVICE_MODE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_SERVICE">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="COVER_OPEN">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<service>true</service>
+				</properties>
+				<logicalBoolean/>
+				<physicalInteger groupId="COVER_OPEN">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_SERVICE">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="TEMPERATURE_OUT_OF_RANGE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<service>true</service>
+				</properties>
+				<logicalBoolean/>
+				<physicalInteger groupId="TEMPERATURE_OUT_OF_RANGE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_SERVICE">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="ACTUATOR_OBSTRUCTED">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<service>true</service>
+				</properties>
+				<logicalBoolean/>
+				<physicalInteger groupId="ACTUATOR_OBSTRUCTED">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_SERVICE">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="ENERGY_INPUT">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalInteger groupId="ENERGY_INPUT">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_SERVICE">
+						<type>event</type>
+					</packet>
+				</packets>
+			</parameter>
+			<parameter id="WINDOW_OPEN">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+				</properties>
+				<logicalBoolean/>
+				<physicalInteger groupId="WINDOW_OPEN">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO_SERVICE">
 						<type>event</type>
 					</packet>
 				</packets>
@@ -206,6 +378,35 @@
 				<physicalInteger groupId="VALVE_POSITION">
 					<operationType>store</operationType>
 				</physicalInteger>
+			</parameter>
+			<parameter id="TEMPERATURE">
+				<properties>
+					<readable>true</readable>
+					<writeable>false</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>°C</unit>
+					<casts>
+						<round>
+							<decimalPlaces>1</decimalPlaces>
+						</round>
+						<decimalIntegerScale>
+							<factor>6.375</factor>
+						</decimalIntegerScale>
+					</casts>
+				</properties>
+				<logicalDecimal>
+					<minimumValue>0.0</minimumValue>
+					<maximumValue>40.0</maximumValue>
+				</logicalDecimal>
+				<physicalInteger groupId="TEMPERATURE">
+					<operationType>command</operationType>
+				</physicalInteger>
+				<packets>
+					<packet id="INFO">
+						<type>event</type>
+					</packet>
+				</packets>
 			</parameter>
 		</variables>
 	</parameterGroups>

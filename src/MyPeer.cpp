@@ -1105,7 +1105,7 @@ void MyPeer::packetReceived(PMyPacket& packet)
 							}
 							else if(parameter.rpcParameter->logical->type == ILogical::Type::Enum::tBoolean)
 							{
-								serviceMessages->set(i->first, (bool)i->second.value.at(0));
+								serviceMessages->set(i->first, parameter.rpcParameter->convertFromPacket(i->second.value, true)->booleanValue);
 							}
 						}
 

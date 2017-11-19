@@ -523,7 +523,6 @@
 					<service>true</service>
 					<!-- Physical type is not signed -->
 					<signed>false</signed>
-					<unit>°C</unit>
 				</properties>
 				<logicalEnumeration>
 					<defaultValue>0</defaultValue>
