@@ -52,6 +52,8 @@ public:
 	virtual std::string getFirmwareVersionString(int32_t firmwareVersion) { return "1.0"; }
     virtual bool firmwareUpdateAvailable() { return false; }
 
+    bool isWildcardPeer() { return _rpcDevice->addressSize == 25; }
+
     std::string printConfig();
 
     /**
@@ -123,6 +125,8 @@ protected:
 	std::mutex _rfChannelsMutex;
 	std::unordered_map<int32_t, int32_t> _rfChannels;
 
+	PMyPacket _lastPacket;
+
 	bool _forceEncryption = false;
 	PSecurity _security;
 	std::vector<uint8_t> _aesKeyPart1;
@@ -151,6 +155,7 @@ protected:
     void setRollingCodeInTx(bool value) { _rollingCodeInTx = value; saveVariable(24, value); }
     void setRollingCodeSize(int32_t value) { _rollingCodeSize = value; saveVariable(25, value); }
     virtual void setPhysicalInterface(std::shared_ptr<IEnOceanInterface> interface);
+    void setBestInterface();
 
     void setRssiDevice(uint8_t rssi);
 

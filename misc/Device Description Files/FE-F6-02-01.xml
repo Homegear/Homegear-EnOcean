@@ -2,13 +2,13 @@
 <!-- Thanks to @timo for implementing channels 5 to 8 -->
 <homegearDevice xmlns="https://homegear.eu/xmlNamespaces/HomegearDevice" version="1">
 	<supportedDevices xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
-		<device id="F6-02-01">
+		<device id="FE-F6-02-01">
 			<description>Rocker Switch, 2 Rocker; Light and Blind Control - Application Style 1</description>
-			<typeNumber>0xF60201</typeNumber>
+			<typeNumber>0xFEF60201</typeNumber>
 		</device>
-		<device id="F6-02-02">
+		<device id="FE-F6-02-02">
 			<description>Rocker Switch, 2 Rocker; Light and Blind Control - Application Style 2</description>
-			<typeNumber>0xF60202</typeNumber>
+			<typeNumber>0xFEF60202</typeNumber>
 		</device>
 	</supportedDevices>
 	<functions xmlns="https://homegear.eu/xmlNamespaces/DeviceType">
