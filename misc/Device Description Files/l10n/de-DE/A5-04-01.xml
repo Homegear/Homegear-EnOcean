@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <homegearDeviceTranslation lang="de-DE">
 	<supportedDevices>
-		<device id="A5-02-01">
+		<device id="A5-04-01">
 			<description>Temperatur- und Luftfeuchtesensor 0°C bis 40°C</description>
+			<longDescription>Die EEP "A5-04-01" spezifiert einen Temperatursensor mit einem Bereich zwischen 0°C und 40°C kombiniert mit einem Luftfeuchtesensor.</longDescription>
 		</device>
 	</supportedDevices>
 	<parameterGroups>

@@ -3,6 +3,7 @@
 	<supportedDevices>
 		<device id="A5-04-01">
 			<description>Temperature and Humidity Sensor 0°C to 40°C</description>
+			<longDescription>The EEP "A5-04-01" specifies a temperature sensor with a range between 0°C and 40°C combined with a humidity sensor.</longDescription>
 		</device>
 	</supportedDevices>
 	<parameterGroups>

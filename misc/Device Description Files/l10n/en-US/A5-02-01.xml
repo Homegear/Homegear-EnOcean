@@ -3,6 +3,7 @@
 	<supportedDevices>
 		<device id="A5-02-01">
 			<description>Temperature Sensor -40°C to 0°C</description>
+			<longDescription>The EEP "A5-02-01" specifies a temperature sensor with a range between -40°C and 0°C.</longDescription>
 		</device>
 	</supportedDevices>
 	<parameterGroups>
