@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDeviceTranslation lang="de-DE">
+	<supportedDevices>
+		<device id="A5-02-01">
+			<description>Temperatursensor -40°C bis 0°C</description>
+		</device>
+	</supportedDevices>
+	<parameterGroups>
+		<configParameters id="EnOceanConfig">
+			<parameter id="ENCRYPTION">
+				<label>Verschlüsselung</label>
+				<description>Wenn "true" forciert Homegear Verschlüsselung und verwirft unverschlüsselte Pakete vom Gerät.</description>
+			</parameter>
+		</configParameters>
+		<variables id="maint_ch_values">
+			<parameter id="UNREACH">
+				<label>Nicht erreichbar</label>
+				<description>Wird auf "true" gesetzt, wenn das Gerät nicht erreichbar ist.</description>
+			</parameter>
+			<parameter id="STICKY_UNREACH">
+				<label>Nicht-erreichbar-Flag</label>
+				<description>Wird auf "true" gesetzt, wenn das Gerät nicht erreichbar ist und bleibt "true", bis die Variable manuell zurückgesetzt wird.</description>
+			</parameter>
+			<parameter id="RSSI_DEVICE">
+				<label>RSSI</label>
+				<description>Der RSSI des Geräts in dBm.</description>
+			</parameter>
+		</variables>
+		<variables id="EnOceanVariables">
+			<parameter id="TEMPERATURE">
+				<label>Temperatur</label>
+				<description>Die gemessene Temperatur in °C.</description>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDeviceTranslation>

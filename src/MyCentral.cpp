@@ -1073,7 +1073,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 			if(showHelp)
 			{
 				stringStream << "Description: This command sets the base address of an EnOcean interface. This can only be done 10 times!" << std::endl;
-				stringStream << "Usage: peers create INTERFACE ADDRESS" << std::endl << std::endl;
+				stringStream << "Usage: interface setaddress INTERFACE ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  INTERFACE: The id of the interface to set the address for." << std::endl;
 				stringStream << "  ADDRESS:   The new 4 byte address/ID starting with 0xFF the 7 least significant bits can't be set. Example: 0xFF422E80" << std::endl;
