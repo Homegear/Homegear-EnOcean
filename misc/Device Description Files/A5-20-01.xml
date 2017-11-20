@@ -18,8 +18,11 @@
 			<configParameters>EnOceanConfig</configParameters>
 			<variables>maint_ch_values</variables>
 		</function>
-		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanValveDrive">
-			<variables>EnOceanVariables</variables>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="1" type="EnOceanValveDriveInfo">
+			<variables>EnOceanValveDriveInfo</variables>
+		</function>
+		<function xmlns="https://homegear.eu/xmlNamespaces/FunctionGroupType" channel="2" type="EnOceanValveDrive">
+			<variables>EnOceanValveDrive</variables>
 		</function>
 	</functions>
 	<packets>
@@ -102,7 +105,7 @@
 			<direction>fromCentral</direction>
 			<type>0xA5</type>
 			<subtype>1</subtype>
-			<channel>1</channel>
+			<channel>2</channel>
 			<binaryPayload>
 				<element>
 					<bitIndex>8</bitIndex>
@@ -116,43 +119,8 @@
 				</element>
 				<element>
 					<bitIndex>24</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>25</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>26</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>27</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>28</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>29</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>30</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>0</constValueInteger>
-				</element>
-				<element>
-					<bitIndex>31</bitIndex>
-					<bitSize>1</bitSize>
-					<constValueInteger>0</constValueInteger>
+					<bitSize>8</bitSize>
+					<parameterId>SERVICE_COMMAND</parameterId>
 				</element>
 				<element>
 					<bitIndex>36</bitIndex>
@@ -226,7 +194,7 @@
 				</physicalInteger>
 			</parameter>
 		</variables>
-		<variables id="EnOceanVariables">
+		<variables id="EnOceanValveDriveInfo">
 			<parameter id="CURRENT_VALVE_POSITION">
 				<properties>
 					<readable>true</readable>
@@ -363,22 +331,6 @@
 					</packet>
 				</packets>
 			</parameter>
-			<parameter id="VALVE_POSITION">
-				<properties>
-					<readable>true</readable>
-					<writeable>true</writeable>
-					<!-- Physical type is not signed -->
-					<signed>false</signed>
-					<unit>%</unit>
-				</properties>
-				<logicalInteger>
-					<minimumValue>0</minimumValue>
-					<maximumValue>100</maximumValue>
-				</logicalInteger>
-				<physicalInteger groupId="VALVE_POSITION">
-					<operationType>store</operationType>
-				</physicalInteger>
-			</parameter>
 			<parameter id="TEMPERATURE">
 				<properties>
 					<readable>true</readable>
@@ -407,6 +359,66 @@
 						<type>event</type>
 					</packet>
 				</packets>
+			</parameter>
+		</variables>
+		<variables id="EnOceanValveDrive">
+			<parameter id="VALVE_POSITION">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+					<unit>%</unit>
+				</properties>
+				<logicalInteger>
+					<minimumValue>0</minimumValue>
+					<maximumValue>100</maximumValue>
+				</logicalInteger>
+				<physicalInteger groupId="VALVE_POSITION">
+					<operationType>store</operationType>
+				</physicalInteger>
+			</parameter>
+			<parameter id="SERVICE_COMMAND">
+				<properties>
+					<readable>true</readable>
+					<writeable>true</writeable>
+					<!-- Physical type is not signed -->
+					<signed>false</signed>
+				</properties>
+				<logicalEnumeration>
+					<defaultValue>0</defaultValue>
+					<value>
+						<id>None</id>
+						<index>0</index>
+					</value>
+					<value>
+						<id>Service</id>
+						<index>1</index>
+					</value>
+					<value>
+						<id>SummerMode</id>
+						<index>8</index>
+					</value>
+					<value>
+						<id>CloseValve</id>
+						<index>16</index>
+					</value>
+					<value>
+						<id>OpenValve</id>
+						<index>32</index>
+					</value>
+					<value>
+						<id>LiftSet</id>
+						<index>64</index>
+					</value>
+					<value>
+						<id>InitSequence</id>
+						<index>128</index>
+					</value>
+				</logicalEnumeration>
+				<physicalInteger groupId="SERVICE_COMMAND">
+					<operationType>store</operationType>
+				</physicalInteger>
 			</parameter>
 		</variables>
 	</parameterGroups>

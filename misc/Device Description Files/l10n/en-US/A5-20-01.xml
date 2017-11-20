@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<homegearDeviceTranslation lang="en-US">
+	<supportedDevices>
+		<device id="A5-20-01">
+			<description>Heating Radiator Valve Drive</description>
+			<longDescription>The EEP "A5-20-01" specifies a heating readiator valve drive. Please note that you need a PID controller (e. g. the heating controller node in Node-BLUE) to use it. You should also note the "SERVICE_COMMAND" "SummerMode" which should always be set in summer to reduce energy consumption. It makes the actuator send packets and accept new input every few hours instead of every few minutes.</longDescription>
+		</device>
+	</supportedDevices>
+	<parameterGroups>
+		<variables id="maint_ch_values">
+			<parameter id="UNREACH">
+				<label>Unreachable</label>
+				<description>Set to "true" when the device is unreachable.</description>
+			</parameter>
+			<parameter id="STICKY_UNREACH">
+				<label>Sticky unreachable</label>
+				<description>Set to "true" when the device is unreachable. It stays "true" until reset manually.</description>
+			</parameter>
+			<parameter id="RSSI_DEVICE">
+				<label>RSSI</label>
+				<description>The RSSI of the device in dBm.</description>
+			</parameter>
+			<parameter id="LOWBAT">
+				<label>Low battery</label>
+				<description>Set to "true" when the battery or super capacitor is empty.</description>
+			</parameter>
+			<parameter id="RF_CHANNEL">
+				<label>RF channel</label>
+				<description>The channel of the communication interface to use. For this device it is automatically set to a free channel during the pairing process.</description>
+			</parameter>
+		</variables>
+		<variables id="EnOceanValveDriveInfo">
+			<parameter id="CURRENT_VALVE_POSITION">
+				<label>Current valve position</label>
+				<description>The current valve position returned by the device.</description>
+			</parameter>
+			<parameter id="SERVICE_MODE">
+				<label>Service mode</label>
+				<description>"true" when service mode is enabled.</description>
+			</parameter>
+			<parameter id="ENERGY_INSUFFICIENT">
+				<label>Energy insufficient</label>
+				<description>"true" when the energy storage is not sufficiently charged.</description>
+			</parameter>
+			<parameter id="COVER_OPEN">
+				<label>Cover open</label>
+				<description>"true" when the contact or cover is open.</description>
+			</parameter>
+			<parameter id="TEMPERATURE_OUT_OF_RANGE">
+				<label>Temperature out of range</label>
+				<description>"true" when the measured temperature is below 0°C or above 40°C.</description>
+			</parameter>
+			<parameter id="ACTUATOR_OBSTRUCTED">
+				<label>Actuator obstructed</label>
+				<description>"true" when the valve is obstructed.</description>
+			</parameter>
+			<parameter id="ENERGY_INPUT">
+				<label>Energy input</label>
+				<description>"true" when the battery is being charged.</description>
+			</parameter>
+			<parameter id="WINDOW_OPEN">
+				<label>Window open</label>
+				<description>"true" when the temperature drops fast.</description>
+			</parameter>
+			<parameter id="TEMPERATURE">
+				<label>Current temperature</label>
+				<description>The temperature measured by the valve drive.</description>
+			</parameter>
+		</variables>
+		<variables id="EnOceanValveDrive">
+			<parameter id="VALVE_POSITION">
+				<label>Valve position</label>
+				<description>The valve position to set.</description>
+			</parameter>
+			<parameter id="SERVICE_COMMAND">
+				<label>Service command</label>
+				<description>The service mode to set. The most important one is "SummerMode" to reduce the energy consumption in summer.</description>
+			</parameter>
+		</variables>
+	</parameterGroups>
+</homegearDeviceTranslation>
