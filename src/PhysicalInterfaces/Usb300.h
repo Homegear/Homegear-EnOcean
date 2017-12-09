@@ -27,14 +27,14 @@ public:
 	virtual void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
 protected:
 	std::unique_ptr<BaseLib::SerialReaderWriter> _serial;
-	bool _initComplete = false;
+    std::atomic_bool _initComplete;
 	std::thread _initThread;
 
 	void init();
 	void reconnect();
 	void listen();
-	virtual void rawSend(const std::vector<char>& packet);
-	void processPacket(std::vector<char>& data);
+	virtual void rawSend(std::vector<uint8_t>& packet);
+	void processPacket(std::vector<uint8_t>& data);
 };
 
 }

@@ -382,7 +382,14 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 		bool unpaired = true;
 		for(auto& peer : peers)
 		{
-			if(senderId != peer->getPhysicalInterfaceId()) continue;
+            std::string settingName = "roaming";
+            auto roamingSetting = GD::family->getFamilySetting(settingName);
+            bool roaming = roamingSetting ? roamingSetting->integerValue : true;
+			if(roaming && senderId != peer->getPhysicalInterfaceId() && peer->getPhysicalInterface()->getBaseAddress() == GD::physicalInterfaces.at(senderId)->getBaseAddress() && myPacket->getRssi() > peer->getPhysicalInterface()->getRssi(peer->getAddress(), peer->isWildcardPeer()) + 6)
+			{
+                GD::out.printInfo("Info: Setting physical interface of peer " + std::to_string(peer->getID()) + " to " + senderId + ", because the RSSI is better.");
+                peer->setPhysicalInterfaceId(senderId);
+			}
 			if((peer->getDeviceType() >> 16) == myPacket->getRorg()) unpaired = false;
 
 			peer->packetReceived(myPacket);
@@ -427,7 +434,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 		std::shared_ptr<IEnOceanInterface> physicalInterface = physicalInterfaceIterator->second;
 		if(!physicalInterface) return false;
 
-		std::vector<char> payload = packet->getData();
+		std::vector<uint8_t> payload = packet->getData();
 		if(packet->getRorg() == 0xD4) //UTE
 		{
 			if(payload.size() < 8) return false;
@@ -511,7 +518,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, packet->senderAddress()));
-				std::vector<char> responsePayload;
+				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 8);
 				responsePayload.at(1) = (responsePayload.at(1) & 0x80) | 0x11; // Command 1 => teach-in response
 				response->setData(responsePayload);
@@ -563,7 +570,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				}
 
 				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0), 0xFFFFFFFF));
-				std::vector<char> responsePayload;
+				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
 				responsePayload.back() = 0xF0;
 				response->setData(responsePayload);
@@ -588,7 +595,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 					}
 				}
 				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, 0xFFFFFFFF));
-				std::vector<char> responsePayload;
+				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
 				responsePayload.back() = 0xF0;
 				response->setData(responsePayload);
@@ -788,7 +795,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 			if(showHelp)
 			{
 				stringStream << "Description: This command creates a new peer." << std::endl;
-				stringStream << "Usage: peers create INTERFACE TYPE ADDRESS" << std::endl << std::endl;
+				stringStream << "Usage: interface setaddress INTERFACE TYPE ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  INTERFACE: The id of the interface to associate the new device to as defined in the familie's configuration file." << std::endl;
 				stringStream << "  TYPE:      The 3 or 4 byte hexadecimal device type (for most devices the EEP number). Example: 0xF60201" << std::endl;
@@ -994,7 +1001,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 							typeID += "...";
 						}
 						else typeID.resize(typeWidth2, ' ');
-						stringStream << std::setw(typeWidth2) << typeID;
+						stringStream << typeID << bar;
 					}
 					else stringStream << std::setw(typeWidth2);
 					stringStream << std::endl << std::dec;
@@ -1073,7 +1080,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 			if(showHelp)
 			{
 				stringStream << "Description: This command sets the base address of an EnOcean interface. This can only be done 10 times!" << std::endl;
-				stringStream << "Usage: peers create INTERFACE ADDRESS" << std::endl << std::endl;
+				stringStream << "Usage: interface setaddress INTERFACE ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  INTERFACE: The id of the interface to set the address for." << std::endl;
 				stringStream << "  ADDRESS:   The new 4 byte address/ID starting with 0xFF the 7 least significant bits can't be set. Example: 0xFF422E80" << std::endl;
@@ -1183,6 +1190,8 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 	{
 		std::string serial = getFreeSerialNumber(address);
 		if(peerExists(deviceType, address)) return Variable::createError(-5, "This peer is already paired to this central.");
+
+		if(GD::physicalInterfaces.find(interfaceId) == GD::physicalInterfaces.end()) return Variable::createError(-6, "Unknown physical interface.");
 
 		std::shared_ptr<MyPeer> peer = createPeer(deviceType, address, serial, false);
 		if(!peer || !peer->getRpcDevice()) return Variable::createError(-6, "Unknown device type.");

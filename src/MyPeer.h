@@ -52,6 +52,8 @@ public:
 	virtual std::string getFirmwareVersionString(int32_t firmwareVersion) { return "1.0"; }
     virtual bool firmwareUpdateAvailable() { return false; }
 
+    bool isWildcardPeer() { return _rpcDevice->addressSize == 25; }
+
     std::string printConfig();
 
     /**
@@ -109,7 +111,7 @@ protected:
 	//In table variables:
 	std::string _physicalInterfaceId;
 	int32_t _rollingCode = -1;
-	std::vector<char> _aesKey;
+	std::vector<uint8_t> _aesKey;
 	int32_t _encryptionType = -1;
 	int32_t _cmacSize = -1;
 	bool _rollingCodeInTx = false;
@@ -123,9 +125,11 @@ protected:
 	std::mutex _rfChannelsMutex;
 	std::unordered_map<int32_t, int32_t> _rfChannels;
 
+	PMyPacket _lastPacket;
+
 	bool _forceEncryption = false;
 	PSecurity _security;
-	std::vector<char> _aesKeyPart1;
+	std::vector<uint8_t> _aesKeyPart1;
 
 	// {{{ Variables for getting RPC responses to requests
 		std::mutex _rpcRequestsMutex;
@@ -145,12 +149,13 @@ protected:
     virtual void saveVariables();
 
     void setRollingCode(int32_t value) { _rollingCode = value; saveVariable(20, value); }
-    void setAesKey(std::vector<char>& value) { _aesKey = value; saveVariable(21, value); }
+    void setAesKey(std::vector<uint8_t>& value) { _aesKey = value; saveVariable(21, value); }
     void setEncryptionType(int32_t value) { _encryptionType = value; saveVariable(22, value); }
     void setCmacSize(int32_t value) { _cmacSize = value; saveVariable(23, value); }
     void setRollingCodeInTx(bool value) { _rollingCodeInTx = value; saveVariable(24, value); }
     void setRollingCodeSize(int32_t value) { _rollingCodeSize = value; saveVariable(25, value); }
     virtual void setPhysicalInterface(std::shared_ptr<IEnOceanInterface> interface);
+    void setBestInterface();
 
     void setRssiDevice(uint8_t rssi);
 

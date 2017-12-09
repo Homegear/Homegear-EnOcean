@@ -107,6 +107,7 @@ void MyPeer::worker()
 						continue;
 					}
 
+                    setBestInterface();
 					_physicalInterface->sendPacket(request.second->packet);
 					request.second->lastResend = BaseLib::HelperFunctions::getTime();
 					request.second->resends++;
@@ -417,6 +418,41 @@ void MyPeer::setPhysicalInterface(std::shared_ptr<IEnOceanInterface> interface)
     }
 }
 
+void MyPeer::setBestInterface()
+{
+    try
+    {
+        if(_physicalInterface->isOpen()) return; //Only change interface, when the current one is unavailable. If it is available it is switched in onPacketReceived of myCentral.
+        std::string settingName = "roaming";
+        auto roamingSetting = GD::family->getFamilySetting(settingName);
+        if(roamingSetting && !roamingSetting->integerValue) return;
+        std::shared_ptr<IEnOceanInterface> bestInterface = GD::defaultPhysicalInterface->isOpen() ? GD::defaultPhysicalInterface : std::shared_ptr<IEnOceanInterface>();
+        for(auto& interface : GD::physicalInterfaces)
+        {
+            if(interface.second->getBaseAddress() != _physicalInterface->getBaseAddress() || !interface.second->isOpen()) continue;
+            if(!bestInterface)
+            {
+                bestInterface = interface.second;
+                continue;
+            }
+            if(interface.second->getRssi(_address, isWildcardPeer()) > bestInterface->getRssi(_address, isWildcardPeer())) bestInterface = interface.second;
+        }
+        if(bestInterface) setPhysicalInterfaceId(bestInterface->getID());
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void MyPeer::loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows)
 {
 	try
@@ -439,7 +475,8 @@ void MyPeer::loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<
 				_rollingCode = row->second.at(3)->intValue;
 				break;
 			case 21:
-				_aesKey = *row->second.at(5)->binaryValue;
+				_aesKey.clear();
+				_aesKey.insert(_aesKey.end(), row->second.at(5)->binaryValue->begin(), row->second.at(5)->binaryValue->end());
 				break;
 			case 22:
 				_encryptionType = row->second.at(3)->intValue;
@@ -751,7 +788,7 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 			FrameValues currentFrameValues;
 			PPacket frame(i->second);
 			if(!frame) continue;
-			std::vector<char> erpPacket = packet->getData();
+			std::vector<uint8_t> erpPacket = packet->getData();
 			if(erpPacket.empty()) break;
 			uint32_t erpPacketBitSize = erpPacket.size() * 8;
 			int32_t channelIndex = frame->channelIndex;
@@ -801,7 +838,7 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 					else serviceMessages->set("LOWBAT", false);
 				}
 
-				for(std::vector<PParameter>::iterator k = frame->associatedVariables.begin(); k != frame->associatedVariables.end(); ++k)
+                for(std::vector<PParameter>::iterator k = frame->associatedVariables.begin(); k != frame->associatedVariables.end(); ++k)
 				{
 					if((*k)->physical->groupId != (*j)->parameterId) continue;
 					currentFrameValues.parameterSetType = (*k)->parent()->type();
@@ -866,17 +903,18 @@ void MyPeer::packetReceived(PMyPacket& packet)
 	try
 	{
 		if(_disposing || !packet || !_rpcDevice) return;
-		if(_rpcDevice->addressSize != 25 && packet->senderAddress() != _address) return;
-		else if(_rpcDevice->addressSize == 25 && (signed)(packet->senderAddress() & 0xFFFFFF80) != _address) return;
+		if(!isWildcardPeer() && packet->senderAddress() != _address) return;
+		else if(isWildcardPeer() && (signed)(packet->senderAddress() & 0xFFFFFF80) != _address) return;
 		std::shared_ptr<MyCentral> central = std::dynamic_pointer_cast<MyCentral>(getCentral());
 		if(!central) return;
 		setLastPacketReceived();
+        if(_lastPacket && BaseLib::HelperFunctions::getTime() - _lastPacket->timeReceived() < 1000 && _lastPacket->getBinary() == packet->getBinary()) return;
 		setRssiDevice(packet->getRssi() * -1);
 		serviceMessages->endUnreach();
 
 		if(packet->getRorg() == 0x35) // Encryption teach-in
 		{
-			std::vector<char> data = packet->getData();
+			std::vector<uint8_t> data = packet->getData();
 			if(data.size() == 15 && (data[1] & 0xC0) == 0) // First packet
 			{
 				if((data[1] & 0x30) != 0x20) // IDX === 0 only => Number of packets
@@ -952,7 +990,7 @@ void MyPeer::packetReceived(PMyPacket& packet)
 			}
 			// Create object here to avoid unnecessary allocation of secure memory
 			if(!_security) _security.reset(new Security(GD::bl));
-			std::vector<char> data = packet->getData();
+			std::vector<uint8_t> data = packet->getData();
 			if(_security->checkCmac(_aesKey, data, packet->getDataSize() - _cmacSize - 5, _rollingCode, _rollingCodeSize, _cmacSize))
 			{
 				if(_bl->debugLevel >= 5) GD::out.printDebug("Debug: CMAC verified.");
@@ -963,6 +1001,8 @@ void MyPeer::packetReceived(PMyPacket& packet)
 				}
 				packet->setData(data);
 				setRollingCode(_rollingCode + 1);
+
+                GD::out.printInfo("Decrypted packet: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
 
 				if(!_forceEncryption) GD::out.printWarning("Warning: Encrypted packet received for peer " + std::to_string(_peerID) + " but unencrypted packet still will be accepted. Please set the configuration parameter \"ENCRYPTION\" to \"true\" to enforce encryption and ignore unencrypted packets.");
 			}
@@ -1065,7 +1105,7 @@ void MyPeer::packetReceived(PMyPacket& packet)
 							}
 							else if(parameter.rpcParameter->logical->type == ILogical::Type::Enum::tBoolean)
 							{
-								serviceMessages->set(i->first, (bool)i->second.value.at(0));
+								serviceMessages->set(i->first, parameter.rpcParameter->convertFromPacket(i->second.value, true)->booleanValue);
 							}
 						}
 
@@ -1075,47 +1115,90 @@ void MyPeer::packetReceived(PMyPacket& packet)
 				}
 			}
 
-			if(!frame->responseTypeId.empty())
-			{
-				if(getRfChannel(0) == -1) GD::out.printError("Error: RF_CHANNEL is not set. Please pair the device.");
-				else
-				{
-					PacketsById::iterator packetIterator = _rpcDevice->packetsById.find(frame->responseTypeId);
-					if(packetIterator == _rpcDevice->packetsById.end()) GD::out.printError("Error: Response packet with ID \"" + frame->responseTypeId + "\" not found.");
-					else
-					{
-						PPacket responseFrame = packetIterator->second;
-						if(responseFrame->subtype == -1) responseFrame->subtype = 1;
-						PMyPacket packet(new MyPacket((MyPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | getRfChannel(0), _address));
+            if(!frame->responses.empty())
+            {
+                if(getRfChannel(0) == -1) GD::out.printError("Error: RF_CHANNEL is not set. Please pair the device.");
+                else
+                {
+                    PPacket responseFrame;
+                    for(auto& response : frame->responses)
+                    {
+                        if(response->conditionOperator == BaseLib::DeviceDescription::DevicePacketResponse::ConditionOperator::Enum::none)
+                        {
+                            auto packetIterator = _rpcDevice->packetsById.find(response->responseId);
+                            if(packetIterator == _rpcDevice->packetsById.end())
+                            {
+                                GD::out.printError("Error: Response packet with ID \"" + response->responseId + "\" not found.");
+                                continue;
+                            }
+                            responseFrame = packetIterator->second;
+                            break;
+                        }
+                        else
+                        {
+                            if(response->conditionParameterId.empty() || response->conditionChannel == -1)
+                            {
+                                GD::out.printError("Error: conditionParameterId or conditionChannel are unset.");
+                                continue;
+                            }
 
-						for(BinaryPayloads::iterator i = responseFrame->binaryPayloads.begin(); i != responseFrame->binaryPayloads.end(); ++i)
-						{
-							if((*i)->constValueInteger > -1)
-							{
-								std::vector<uint8_t> data;
-								_bl->hf.memcpyBigEndian(data, (*i)->constValueInteger);
-								packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
-								continue;
-							}
-							bool paramFound = false;
-							for(std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator j = valuesCentral[responseFrame->channel].begin(); j != valuesCentral[responseFrame->channel].end(); ++j)
-							{
-								//Only compare id. Till now looking for value_id was not necessary.
-								if((*i)->parameterId == j->second.rpcParameter->physical->groupId)
-								{
-									std::vector<uint8_t> data = j->second.getBinaryData();
-									packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
-									paramFound = true;
-									break;
-								}
-							}
-							if(!paramFound) GD::out.printError("Error constructing packet. param \"" + (*i)->parameterId + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + responseFrame->id);
-						}
+                            auto channelIterator = valuesCentral.find(response->conditionChannel);
+                            if(channelIterator != valuesCentral.end())
+                            {
+                                std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator parameterIterator = channelIterator->second.find(response->conditionParameterId);
+                                if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+                                {
+                                    std::vector<uint8_t> parameterData = parameterIterator->second.getBinaryData();
+                                    if(response->checkCondition(parameterIterator->second.rpcParameter->convertFromPacket(parameterData)->integerValue))
+                                    {
+                                        auto packetIterator = _rpcDevice->packetsById.find(response->responseId);
+                                        if(packetIterator == _rpcDevice->packetsById.end())
+                                        {
+                                            GD::out.printError("Error: Response packet with ID \"" + response->responseId + "\" not found.");
+                                            continue;
+                                        }
+                                        responseFrame = packetIterator->second;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if(responseFrame)
+                    {
+                        if(responseFrame->subtype == -1) responseFrame->subtype = 1;
+                        PMyPacket packet(new MyPacket((MyPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | getRfChannel(0), _address));
 
-						_physicalInterface->sendPacket(packet);
-					}
-				}
-			}
+                        for(BinaryPayloads::iterator i = responseFrame->binaryPayloads.begin(); i != responseFrame->binaryPayloads.end(); ++i)
+                        {
+                            if((*i)->constValueInteger > -1)
+                            {
+                                std::vector<uint8_t> data;
+                                _bl->hf.memcpyBigEndian(data, (*i)->constValueInteger);
+                                packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
+                                continue;
+                            }
+                            bool paramFound = false;
+                            int32_t channel = (*i)->parameterChannel;
+                            if(channel == -1) channel = responseFrame->channel;
+                            for(std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator j = valuesCentral[channel].begin(); j != valuesCentral[channel].end(); ++j)
+                            {
+                                //Only compare id. Till now looking for value_id was not necessary.
+                                if((*i)->parameterId == j->second.rpcParameter->physical->groupId)
+                                {
+                                    std::vector<uint8_t> data = j->second.getBinaryData();
+                                    packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
+                                    paramFound = true;
+                                    break;
+                                }
+                            }
+                            if(!paramFound) GD::out.printError("Error constructing packet. param \"" + (*i)->parameterId + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + responseFrame->id);
+                        }
+
+                        _physicalInterface->sendPacket(packet);
+                    }
+                }
+            }
 		}
 
 		//if(!rpcValues.empty() && !resendPacket)
@@ -1374,6 +1457,7 @@ void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay,
 					else if(resendTimeout > 10000) resendTimeout = 10000;
 				}
 			}
+            setBestInterface();
 			if(resends == 0) _physicalInterface->sendPacket(packet);
 			else
 			{
@@ -1678,7 +1762,9 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 				else
 				{
 					bool paramFound = false;
-					for(std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator j = valuesCentral[channel].begin(); j != valuesCentral[channel].end(); ++j)
+                    int32_t currentChannel = (*i)->parameterChannel;
+                    if(currentChannel == -1) currentChannel = channel;
+					for(std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator j = valuesCentral[currentChannel].begin(); j != valuesCentral[currentChannel].end(); ++j)
 					{
 						//Only compare id. Till now looking for value_id was not necessary.
 						if((*i)->parameterId == j->second.rpcParameter->physical->groupId)

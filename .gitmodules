@@ -1,0 +1,3 @@
+[submodule "misc/Device Description Files"]
+	path = misc/Device Description Files
+	url = https://github.com/Homegear/Homegear-EnOcean-XML

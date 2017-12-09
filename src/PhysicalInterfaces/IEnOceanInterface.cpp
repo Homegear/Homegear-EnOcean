@@ -32,60 +32,57 @@ IEnOceanInterface::~IEnOceanInterface()
 
 }
 
-void IEnOceanInterface::getResponse(uint8_t packetType, const std::vector<char>& requestPacket, std::vector<char>& responsePacket)
+void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t>& requestPacket, std::vector<uint8_t>& responsePacket)
 {
 	try
     {
-		if(_stopped) return;
-		responsePacket.clear();
+        if(_stopped) return;
+        responsePacket.clear();
 
-		std::lock_guard<std::mutex> sendPacketGuard(_sendPacketMutex);
-		std::lock_guard<std::mutex> getResponseGuard(_getResponseMutex);
-		std::shared_ptr<Request> request(new Request());
-		_requestsMutex.lock();
-		_requests[packetType] = request;
-		_requestsMutex.unlock();
-		std::unique_lock<std::mutex> lock(request->mutex);
+        std::lock_guard<std::mutex> sendPacketGuard(_sendPacketMutex);
+        std::lock_guard<std::mutex> getResponseGuard(_getResponseMutex);
+        std::shared_ptr<Request> request(new Request());
+        std::unique_lock<std::mutex> requestsGuard(_requestsMutex);
+        _requests[packetType] = request;
+        requestsGuard.unlock();
+        std::unique_lock<std::mutex> lock(request->mutex);
 
-		try
-		{
-			_out.printInfo("Info: Sending packet " + BaseLib::HelperFunctions::getHexString(requestPacket));
-			rawSend(requestPacket);
-		}
-		catch(BaseLib::SocketOperationException ex)
-		{
-			_out.printError("Error sending packet: " + ex.what());
-			return;
-		}
+        try
+        {
+            GD::out.printInfo("Info: Sending packet " + BaseLib::HelperFunctions::getHexString(requestPacket));
+            rawSend(requestPacket);
+        }
+        catch(BaseLib::SocketOperationException ex)
+        {
+            _out.printError("Error sending packet: " + ex.what());
+            return;
+        }
 
-		if(!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(10000), [&] { return request->mutexReady; }))
-		{
-			_out.printError("Error: No response received to packet: " + BaseLib::HelperFunctions::getHexString(requestPacket));
-		}
-		responsePacket = request->response;
+        if(!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(10000), [&] { return request->mutexReady; }))
+        {
+            _out.printError("Error: No response received to packet: " + BaseLib::HelperFunctions::getHexString(requestPacket));
+        }
+        responsePacket = request->response;
 
-		_requestsMutex.lock();
-		_requests.erase(packetType);
-		_requestsMutex.unlock();
+        requestsGuard.lock();
+        _requests.erase(packetType);
+        requestsGuard.unlock();
 	}
 	catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        _requestsMutex.unlock();
     }
     catch(BaseLib::Exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        _requestsMutex.unlock();
     }
     catch(...)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-        _requestsMutex.unlock();
     }
 }
 
-void IEnOceanInterface::addCrc8(std::vector<char>& packet)
+void IEnOceanInterface::addCrc8(std::vector<uint8_t>& packet)
 {
 	try
 	{
@@ -119,4 +116,70 @@ void IEnOceanInterface::addCrc8(std::vector<char>& packet)
     }
 }
 
+void IEnOceanInterface::raisePacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet)
+{
+    try
+    {
+        PMyPacket myPacket(std::dynamic_pointer_cast<MyPacket>(packet));
+        if(!myPacket) return;
+
+        if(myPacket->senderAddress() != (int32_t)_baseAddress)
+        {
+            std::lock_guard<std::mutex> rssiGuard(_rssiMutex);
+            if(_rssi.size() > 10000 || _wildcardRssi.size() > 10000)
+            {
+                _out.printWarning("Warning: More than 10000 RSSI values are stored. Clearing them...");
+                _rssi.clear();
+                _wildcardRssi.clear();
+            }
+            _rssi[myPacket->senderAddress()] = myPacket->getRssi();
+            _wildcardRssi[myPacket->senderAddress() & 0xFFFFFF80] = myPacket->getRssi();
+        }
+
+        BaseLib::Systems::IPhysicalInterface::raisePacketReceived(packet);
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
+int32_t IEnOceanInterface::getRssi(int32_t address, bool wildcardPeer)
+{
+    try
+    {
+        std::lock_guard<std::mutex> rssiGuard(_rssiMutex);
+        if(wildcardPeer)
+        {
+            auto rssiIterator = _wildcardRssi.find(address & 0xFFFFFF80);
+            if(rssiIterator != _wildcardRssi.end()) return rssiIterator->second;
+        }
+        else
+        {
+            auto rssiIterator = _rssi.find(address);
+            if(rssiIterator != _rssi.end()) return rssiIterator->second;
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return 0;
+}
 }

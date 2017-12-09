@@ -3,6 +3,7 @@
 #include "Interfaces.h"
 #include "GD.h"
 #include "PhysicalInterfaces/Usb300.h"
+#include "PhysicalInterfaces/HomegearGateway.h"
 
 namespace MyFamily
 {
@@ -25,7 +26,8 @@ void Interfaces::create()
 			std::shared_ptr<IEnOceanInterface> device;
 			if(!i->second) continue;
 			GD::out.printDebug("Debug: Creating physical device. Type defined in enocean.conf is: " + i->second->type);
-			if(i->second->type == "usb300") device.reset(new Usb300(i->second));
+			if(i->second->type == "usb300" || i->second->type == "tcm310") device.reset(new Usb300(i->second));
+			else if(i->second->type == "homegeargateway") device.reset(new HomegearGateway(i->second));
 			else GD::out.printError("Error: Unsupported physical device type: " + i->second->type);
 			if(device)
 			{

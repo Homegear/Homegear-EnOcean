@@ -9,7 +9,7 @@ override_dh_auto_install:
 	chmod 644 $(CURDIR)/debian/homegear-enocean/etc/homegear/families/*
 
 	mkdir -p $(CURDIR)/debian/homegear-enocean/etc/homegear/devices/15
-	cp $(CURDIR)/misc/Device\ Description\ Files/* $(CURDIR)/debian/homegear-enocean/etc/homegear/devices/15
+	cp -R $(CURDIR)/misc/Device\ Description\ Files/* $(CURDIR)/debian/homegear-enocean/etc/homegear/devices/15
 	chmod 755 $(CURDIR)/debian/homegear-enocean/etc/homegear/devices/15
 	chmod 644 $(CURDIR)/debian/homegear-enocean/etc/homegear/devices/15/*
 

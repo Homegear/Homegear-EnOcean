@@ -16,6 +16,7 @@ public:
 
 	int32_t getAddress() { return _baseAddress; }
 	uint32_t getBaseAddress() { return _baseAddress; }
+    int32_t getRssi(int32_t address, bool wildcardPeer);
 	virtual int32_t setBaseAddress(uint32_t value)  { return -1; };
 
 	virtual void startListening() {}
@@ -29,7 +30,7 @@ protected:
 		std::mutex mutex;
 		std::condition_variable conditionVariable;
 		bool mutexReady = false;
-		std::vector<char> response;
+		std::vector<uint8_t> response;
 
 		Request() {}
 		virtual ~Request() {}
@@ -71,7 +72,7 @@ protected:
 		0xe6, 0xe1, 0xe8, 0xef, 0xfa, 0xfd, 0xf4, 0xf3
 	};
 
-	std::map<char, std::string> _responseStatusCodes;
+	std::map<uint8_t, std::string> _responseStatusCodes;
 
 	BaseLib::SharedObjects* _bl = nullptr;
 	BaseLib::Output _out;
@@ -82,10 +83,15 @@ protected:
 
 	std::mutex _requestsMutex;
 	std::map<uint8_t, std::shared_ptr<Request>> _requests;
+    std::mutex _rssiMutex;
+    std::unordered_map<int32_t, int32_t> _wildcardRssi;
+	std::unordered_map<int32_t, int32_t> _rssi;
 
-	void getResponse(uint8_t packetType, const std::vector<char>& requestPacket, std::vector<char>& responsePacket);
-	virtual void rawSend(const std::vector<char>& packet) {}
-	void addCrc8(std::vector<char>& packet);
+	void getResponse(uint8_t packetType, std::vector<uint8_t>& requestPacket, std::vector<uint8_t>& responsePacket);
+	virtual void rawSend(std::vector<uint8_t>& packet) {}
+	void addCrc8(std::vector<uint8_t>& packet);
+
+	virtual void raisePacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
 };
 
 }
