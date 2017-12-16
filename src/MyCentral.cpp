@@ -666,7 +666,6 @@ void MyCentral::deletePeer(uint64_t id)
 		}
 
 		raiseRPCDeleteDevices(deviceAddresses, deviceInfo);
-		peer->deleteFromDatabase();
 
 		if(peer->getRpcDevice()->addressSize == 25)
 		{
@@ -686,23 +685,32 @@ void MyCentral::deletePeer(uint64_t id)
 			}
 		}
 
-		_peersMutex.lock();
-		if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
-		if(_peersById.find(id) != _peersById.end()) _peersById.erase(id);
-		auto peerIterator = _peers.find(peer->getAddress());
-		if(peerIterator != _peers.end())
-		{
-			for(std::list<PMyPeer>::iterator element = peerIterator->second.begin(); element != peerIterator->second.end(); ++element)
-			{
-				if((*element)->getID() == peer->getID())
-				{
-					peerIterator->second.erase(element);
-					break;
-				}
-			}
-			if(peerIterator->second.empty()) _peers.erase(peerIterator);
-		}
-		_peersMutex.unlock();
+        {
+            std::lock_guard<std::mutex> peersGuard(_peersMutex);
+            if(_peersBySerial.find(peer->getSerialNumber()) != _peersBySerial.end()) _peersBySerial.erase(peer->getSerialNumber());
+            if(_peersById.find(id) != _peersById.end()) _peersById.erase(id);
+            auto peerIterator = _peers.find(peer->getAddress());
+            if(peerIterator != _peers.end())
+            {
+                for(std::list<PMyPeer>::iterator element = peerIterator->second.begin(); element != peerIterator->second.end(); ++element)
+                {
+                    if((*element)->getID() == peer->getID())
+                    {
+                        peerIterator->second.erase(element);
+                        break;
+                    }
+                }
+                if(peerIterator->second.empty()) _peers.erase(peerIterator);
+            }
+        }
+
+        while(peer.use_count() > 1)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
+        peer->deleteFromDatabase();
+
 		GD::out.printMessage("Removed EnOcean peer " + std::to_string(peer->getID()));
 	}
 	catch(const std::exception& ex)
