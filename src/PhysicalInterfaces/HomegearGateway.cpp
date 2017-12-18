@@ -423,12 +423,12 @@ void HomegearGateway::processPacket(std::vector<uint8_t>& data)
         }
 
         uint8_t packetType = data[4];
-        _requestsMutex.lock();
+        std::unique_lock<std::mutex> requestsGuard(_requestsMutex);
         std::map<uint8_t, std::shared_ptr<Request>>::iterator requestIterator = _requests.find(packetType);
         if(requestIterator != _requests.end())
         {
             std::shared_ptr<Request> request = requestIterator->second;
-            _requestsMutex.unlock();
+            requestsGuard.unlock();
             request->response = data;
             {
                 std::lock_guard<std::mutex> lock(request->mutex);
@@ -437,7 +437,7 @@ void HomegearGateway::processPacket(std::vector<uint8_t>& data)
             request->conditionVariable.notify_one();
             return;
         }
-        else _requestsMutex.unlock();
+        else requestsGuard.unlock();
 
         PMyPacket packet(new MyPacket(data));
         if(packet->getType() == MyPacket::Type::RADIO_ERP1 || packet->getType() == MyPacket::Type::RADIO_ERP2)
