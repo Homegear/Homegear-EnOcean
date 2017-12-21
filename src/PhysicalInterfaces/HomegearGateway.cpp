@@ -14,6 +14,7 @@ HomegearGateway::HomegearGateway(std::shared_ptr<BaseLib::Systems::PhysicalInter
 
     signal(SIGPIPE, SIG_IGN);
 
+    _stopped = true;
     _waitForResponse = false;
 
     _binaryRpc.reset(new BaseLib::Rpc::BinaryRpc(_bl));
@@ -282,7 +283,7 @@ void HomegearGateway::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packe
     try
     {
         std::shared_ptr<MyPacket> myPacket(std::dynamic_pointer_cast<MyPacket>(packet));
-        if(!myPacket) return;
+        if(!myPacket || !_tcpSocket) return;
 
         if(_stopped || !_tcpSocket->connected())
         {
