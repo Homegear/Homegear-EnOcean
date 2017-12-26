@@ -4,6 +4,7 @@
 #define IENOCEANINTERFACE_H_
 
 #include <homegear-base/BaseLib.h>
+#include <queue>
 
 namespace MyFamily
 {
@@ -72,6 +73,12 @@ protected:
 		0xe6, 0xe1, 0xe8, 0xef, 0xfa, 0xfd, 0xf4, 0xf3
 	};
 
+    struct DeviceInfo
+    {
+        std::queue<int64_t> packetReceivedTimes;
+        int32_t rssi = 0;
+    };
+
 	std::map<uint8_t, std::string> _responseStatusCodes;
 
 	BaseLib::SharedObjects* _bl = nullptr;
@@ -84,8 +91,8 @@ protected:
 	std::mutex _requestsMutex;
 	std::map<uint8_t, std::shared_ptr<Request>> _requests;
     std::mutex _rssiMutex;
-    std::unordered_map<int32_t, int32_t> _wildcardRssi;
-	std::unordered_map<int32_t, int32_t> _rssi;
+    std::unordered_map<int32_t, DeviceInfo> _wildcardRssi;
+	std::unordered_map<int32_t, DeviceInfo> _rssi;
 
 	void getResponse(uint8_t packetType, std::vector<uint8_t>& requestPacket, std::vector<uint8_t>& responsePacket);
 	virtual void rawSend(std::vector<uint8_t>& packet) {}
