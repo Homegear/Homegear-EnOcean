@@ -1035,14 +1035,22 @@ void MyPeer::packetReceived(PMyPacket& packet)
 
 		if(frameValues.empty())
 		{
-			std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
-			auto rpcRequestIterator = _rpcRequests.find("ANY");
-			if(rpcRequestIterator != _rpcRequests.end())
+            PRpcRequest rpcRequest;
+            {
+                std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+                auto rpcRequestIterator = _rpcRequests.find("ANY");
+                if(rpcRequestIterator != _rpcRequests.end()) rpcRequest = rpcRequestIterator->second;
+            }
+			if(rpcRequest)
 			{
-				std::unique_lock<std::mutex> conditionVariableGuard(rpcRequestIterator->second->conditionVariableMutex);
+				std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
 				conditionVariableGuard.unlock();
-				if(rpcRequestIterator->second->wait) rpcRequestIterator->second->conditionVariable.notify_all();
-				else _rpcRequests.erase(rpcRequestIterator);
+				if(rpcRequest->wait) rpcRequest->conditionVariable.notify_all();
+				else
+                {
+                    std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+                    _rpcRequests.erase("ANY");
+                }
 			}
 		}
 
@@ -1054,24 +1062,40 @@ void MyPeer::packetReceived(PMyPacket& packet)
 			if(!frame) continue;
 
 			{
-				std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
-				auto rpcRequestIterator = _rpcRequests.find(a->frameID);
-				if(rpcRequestIterator != _rpcRequests.end())
+                PRpcRequest rpcRequest;
+                {
+                    std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+                    auto rpcRequestIterator = _rpcRequests.find(a->frameID);
+                    if(rpcRequestIterator != _rpcRequests.end()) rpcRequest = rpcRequestIterator->second;
+                }
+				if(rpcRequest)
 				{
-					std::unique_lock<std::mutex> conditionVariableGuard(rpcRequestIterator->second->conditionVariableMutex);
+					std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
 					conditionVariableGuard.unlock();
-					if(rpcRequestIterator->second->wait) rpcRequestIterator->second->conditionVariable.notify_all();
-					else _rpcRequests.erase(rpcRequestIterator);
+					if(rpcRequest->wait) rpcRequest->conditionVariable.notify_all();
+					else
+                    {
+                        std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+                        _rpcRequests.erase(a->frameID);
+                    }
 				}
 				else
 				{
-					rpcRequestIterator = _rpcRequests.find("ANY");
-					if(rpcRequestIterator != _rpcRequests.end())
+                    {
+                        std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+                        auto rpcRequestIterator = _rpcRequests.find("ANY");
+                        if(rpcRequestIterator != _rpcRequests.end()) rpcRequest = rpcRequestIterator->second;
+                    }
+					if(rpcRequest)
 					{
-						std::unique_lock<std::mutex> conditionVariableGuard(rpcRequestIterator->second->conditionVariableMutex);
+						std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
 						conditionVariableGuard.unlock();
-						if(rpcRequestIterator->second->wait) rpcRequestIterator->second->conditionVariable.notify_all();
-						else _rpcRequests.erase(rpcRequestIterator);
+						if(rpcRequest->wait) rpcRequest->conditionVariable.notify_all();
+						else
+                        {
+                            std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
+                            _rpcRequests.erase("ANY");
+                        }
 					}
 				}
 			}
@@ -1491,6 +1515,7 @@ void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay,
 						if(rpcRequest->conditionVariable.wait_for(conditionVariableGuard, std::chrono::milliseconds(resendTimeout)) == std::cv_status::no_timeout || rpcRequest->abort) break;
 						if(i == resends) serviceMessages->setUnreach(true, false);
 					}
+                    conditionVariableGuard.unlock();
 					{
 						std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
 						_rpcRequests.erase(rpcRequest->responseId);
