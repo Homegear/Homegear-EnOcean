@@ -18,6 +18,7 @@ public:
 	int32_t getAddress() { return _baseAddress; }
 	uint32_t getBaseAddress() { return _baseAddress; }
     int32_t getRssi(int32_t address, bool wildcardPeer);
+	void decrementRssi(int32_t address, bool wildcardPeer);
 	virtual int32_t setBaseAddress(uint32_t value)  { return -1; };
 
 	virtual void startListening() {}
@@ -75,7 +76,7 @@ protected:
 
     struct DeviceInfo
     {
-        std::queue<int64_t> packetReceivedTimes;
+        //std::queue<int64_t> packetReceivedTimes;
         int32_t rssi = 0;
     };
 

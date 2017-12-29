@@ -385,10 +385,15 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
             std::string settingName = "roaming";
             auto roamingSetting = GD::family->getFamilySetting(settingName);
             bool roaming = roamingSetting ? roamingSetting->integerValue : true;
-			if(roaming && senderId != peer->getPhysicalInterfaceId() && peer->getPhysicalInterface()->getBaseAddress() == GD::physicalInterfaces.at(senderId)->getBaseAddress() && myPacket->getRssi() > peer->getPhysicalInterface()->getRssi(peer->getAddress(), peer->isWildcardPeer()) + 6)
+			if(roaming && senderId != peer->getPhysicalInterfaceId() && peer->getPhysicalInterface()->getBaseAddress() == GD::physicalInterfaces.at(senderId)->getBaseAddress())
 			{
-                GD::out.printInfo("Info: Setting physical interface of peer " + std::to_string(peer->getID()) + " to " + senderId + ", because the RSSI is better.");
-                peer->setPhysicalInterfaceId(senderId);
+                if(myPacket->getRssi() > peer->getPhysicalInterface()->getRssi(peer->getAddress(), peer->isWildcardPeer()) + 6)
+                {
+                    peer->getPhysicalInterface()->decrementRssi(peer->getAddress(), peer->isWildcardPeer()); //Reduce RSSI on current peer's interface in case it is not receiving any packets from this peer anymore
+                    GD::out.printInfo("Info: Setting physical interface of peer " + std::to_string(peer->getID()) + " to " + senderId + ", because the RSSI is better.");
+                    peer->setPhysicalInterfaceId(senderId);
+                }
+                else peer->getPhysicalInterface()->decrementRssi(peer->getAddress(), peer->isWildcardPeer()); //Reduce RSSI on current peer's interface in case it is not receiving any packets from this peer anymore
 			}
 			if((peer->getDeviceType() >> 16) == myPacket->getRorg()) unpaired = false;
 
