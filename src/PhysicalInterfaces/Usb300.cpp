@@ -141,7 +141,7 @@ int32_t Usb300::setBaseAddress(uint32_t value)
 			getResponse(0x02, data, response);
 			if(response.size() != 8 || response[1] != 0 || response[2] != 1 || response[3] != 0 || response[4] != 2 || response[6] != 0)
 			{
-				_out.printError("Error setting address on device: " + BaseLib::HelperFunctions::getHexString(data));
+				_out.printError("Error setting address on device: " + BaseLib::HelperFunctions::getHexString(response));
 				_stopped = true;
 				return -1;
 			}
@@ -195,7 +195,7 @@ void Usb300::init()
 			if(response.size() != 13 || response[1] != 0 || response[2] != 5 || response[3] != 1 || response[6] != 0)
 			{
 				if(i < 9) continue;
-				_out.printError("Error reading address from device: " + BaseLib::HelperFunctions::getHexString(data));
+				_out.printError("Error reading address from device: " + BaseLib::HelperFunctions::getHexString(response));
 				_stopped = true;
 				return;
 			}
@@ -381,12 +381,12 @@ void Usb300::processPacket(std::vector<uint8_t>& data)
 		}
 
 		uint8_t packetType = data[4];
-		_requestsMutex.lock();
+        std::unique_lock<std::mutex> requestsGuard(_requestsMutex);
 		std::map<uint8_t, std::shared_ptr<Request>>::iterator requestIterator = _requests.find(packetType);
 		if(requestIterator != _requests.end())
 		{
 			std::shared_ptr<Request> request = requestIterator->second;
-			_requestsMutex.unlock();
+            requestsGuard.unlock();
 			request->response = data;
 			{
 				std::lock_guard<std::mutex> lock(request->mutex);
@@ -395,7 +395,7 @@ void Usb300::processPacket(std::vector<uint8_t>& data)
 			request->conditionVariable.notify_one();
 			return;
 		}
-		else _requestsMutex.unlock();
+		else requestsGuard.unlock();
 
 		PMyPacket packet(new MyPacket(data));
 		if(packet->getType() == MyPacket::Type::RADIO_ERP1 || packet->getType() == MyPacket::Type::RADIO_ERP2)

@@ -385,10 +385,15 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
             std::string settingName = "roaming";
             auto roamingSetting = GD::family->getFamilySetting(settingName);
             bool roaming = roamingSetting ? roamingSetting->integerValue : true;
-			if(roaming && senderId != peer->getPhysicalInterfaceId() && peer->getPhysicalInterface()->getBaseAddress() == GD::physicalInterfaces.at(senderId)->getBaseAddress() && myPacket->getRssi() > peer->getPhysicalInterface()->getRssi(peer->getAddress(), peer->isWildcardPeer()) + 6)
+			if(roaming && senderId != peer->getPhysicalInterfaceId() && peer->getPhysicalInterface()->getBaseAddress() == GD::physicalInterfaces.at(senderId)->getBaseAddress())
 			{
-                GD::out.printInfo("Info: Setting physical interface of peer " + std::to_string(peer->getID()) + " to " + senderId + ", because the RSSI is better.");
-                peer->setPhysicalInterfaceId(senderId);
+                if(myPacket->getRssi() > peer->getPhysicalInterface()->getRssi(peer->getAddress(), peer->isWildcardPeer()) + 6)
+                {
+                    peer->getPhysicalInterface()->decrementRssi(peer->getAddress(), peer->isWildcardPeer()); //Reduce RSSI on current peer's interface in case it is not receiving any packets from this peer anymore
+                    GD::out.printInfo("Info: Setting physical interface of peer " + std::to_string(peer->getID()) + " to " + senderId + ", because the RSSI is better.");
+                    peer->setPhysicalInterfaceId(senderId);
+                }
+                else peer->getPhysicalInterface()->decrementRssi(peer->getAddress(), peer->isWildcardPeer()); //Reduce RSSI on current peer's interface in case it is not receiving any packets from this peer anymore
 			}
 			if((peer->getDeviceType() >> 16) == myPacket->getRorg()) unpaired = false;
 
@@ -704,10 +709,14 @@ void MyCentral::deletePeer(uint64_t id)
             }
         }
 
-        while(peer.use_count() > 1)
+        int32_t i = 0;
+        while(peer.use_count() > 1 && i < 600)
         {
+            if(_currentPeer && _currentPeer->getID() == id) _currentPeer.reset();
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            i++;
         }
+        if(i == 600) GD::out.printError("Error: Peer deletion took too long.");
 
         peer->deleteFromDatabase();
 
@@ -779,7 +788,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 				if(duration < 5 || duration > 3600) return "Invalid duration. Duration has to be greater than 5 and less than 3600.\n";
 			}
 
-			setInstallMode(nullptr, true, duration, false);
+			setInstallMode(nullptr, true, duration, nullptr, false);
 			stringStream << "Pairing mode enabled." << std::endl;
 			return stringStream.str();
 		}
@@ -794,7 +803,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 				return stringStream.str();
 			}
 
-			setInstallMode(nullptr, false, -1, false);
+			setInstallMode(nullptr, false, -1, nullptr, false);
 			stringStream << "Pairing mode disabled." << std::endl;
 			return stringStream.str();
 		}
@@ -803,7 +812,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 			if(showHelp)
 			{
 				stringStream << "Description: This command creates a new peer." << std::endl;
-				stringStream << "Usage: interface setaddress INTERFACE TYPE ADDRESS" << std::endl << std::endl;
+				stringStream << "Usage: peers create INTERFACE TYPE ADDRESS" << std::endl << std::endl;
 				stringStream << "Parameters:" << std::endl;
 				stringStream << "  INTERFACE: The id of the interface to associate the new device to as defined in the familie's configuration file." << std::endl;
 				stringStream << "  TYPE:      The 3 or 4 byte hexadecimal device type (for most devices the EEP number). Example: 0xF60201" << std::endl;
@@ -1292,6 +1301,7 @@ PVariable MyCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t p
 		std::shared_ptr<MyPeer> peer = getPeer(peerID);
 		if(!peer) return PVariable(new Variable(VariableType::tVoid));
 		uint64_t id = peer->getID();
+        peer.reset();
 
 		deletePeer(id);
 
@@ -1497,7 +1507,7 @@ void MyCentral::pairingModeTimer(int32_t duration, bool debugOutput)
     }
 }
 
-std::shared_ptr<Variable> MyCentral::setInstallMode(BaseLib::PRpcClientInfo clientInfo, bool on, uint32_t duration, bool debugOutput)
+std::shared_ptr<Variable> MyCentral::setInstallMode(BaseLib::PRpcClientInfo clientInfo, bool on, uint32_t duration, BaseLib::PVariable metadata, bool debugOutput)
 {
 	try
 	{

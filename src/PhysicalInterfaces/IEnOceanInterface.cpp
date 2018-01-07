@@ -132,8 +132,18 @@ void IEnOceanInterface::raisePacketReceived(std::shared_ptr<BaseLib::Systems::Pa
                 _rssi.clear();
                 _wildcardRssi.clear();
             }
-            _rssi[myPacket->senderAddress()] = myPacket->getRssi();
-            _wildcardRssi[myPacket->senderAddress() & 0xFFFFFF80] = myPacket->getRssi();
+
+            auto rssiIterator = _rssi.find(myPacket->senderAddress());
+            if(rssiIterator == _rssi.end()) rssiIterator = _rssi.emplace(myPacket->senderAddress(), DeviceInfo()).first;
+            rssiIterator->second.rssi = myPacket->getRssi();
+            //rssiIterator->second.packetReceivedTimes.push(myPacket->timeReceived());
+            //while(rssiIterator->second.packetReceivedTimes.size() > 5) rssiIterator->second.packetReceivedTimes.pop();
+
+            rssiIterator = _wildcardRssi.find(myPacket->senderAddress());
+            if(rssiIterator == _wildcardRssi.end()) rssiIterator = _wildcardRssi.emplace(myPacket->senderAddress() & 0xFFFFFF80, DeviceInfo()).first;
+            rssiIterator->second.rssi = myPacket->getRssi();
+            //rssiIterator->second.packetReceivedTimes.push(myPacket->timeReceived());
+            //while(rssiIterator->second.packetReceivedTimes.size() > 5) rssiIterator->second.packetReceivedTimes.pop();
         }
 
         BaseLib::Systems::IPhysicalInterface::raisePacketReceived(packet);
@@ -160,12 +170,12 @@ int32_t IEnOceanInterface::getRssi(int32_t address, bool wildcardPeer)
         if(wildcardPeer)
         {
             auto rssiIterator = _wildcardRssi.find(address & 0xFFFFFF80);
-            if(rssiIterator != _wildcardRssi.end()) return rssiIterator->second;
+            if(rssiIterator != _wildcardRssi.end()) return rssiIterator->second.rssi;
         }
         else
         {
             auto rssiIterator = _rssi.find(address);
-            if(rssiIterator != _rssi.end()) return rssiIterator->second;
+            if(rssiIterator != _rssi.end()) return rssiIterator->second.rssi;
         }
     }
     catch(const std::exception& ex)
@@ -182,4 +192,35 @@ int32_t IEnOceanInterface::getRssi(int32_t address, bool wildcardPeer)
     }
     return 0;
 }
+
+void IEnOceanInterface::decrementRssi(int32_t address, bool wildcardPeer)
+{
+    try
+    {
+        std::lock_guard<std::mutex> rssiGuard(_rssiMutex);
+        if(wildcardPeer)
+        {
+            auto rssiIterator = _wildcardRssi.find(address & 0xFFFFFF80);
+            if(rssiIterator != _wildcardRssi.end()) rssiIterator->second.rssi -= 5;
+        }
+        else
+        {
+            auto rssiIterator = _rssi.find(address);
+            if(rssiIterator != _rssi.end())  rssiIterator->second.rssi -= 5;
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 }
