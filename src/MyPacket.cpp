@@ -39,7 +39,7 @@ MyPacket::MyPacket(std::vector<uint8_t>& espPacket) : _packet(espPacket)
 MyPacket::MyPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress) : _type(type), _rorg(rorg)
 {
 	_senderAddress = senderAddress;
-	_destinationAddress = destinationAddress;
+    _destinationAddress = ((destinationAddress & 0xFFFFFF80) == (senderAddress & 0xFFFFFF80) ? 0xFFFFFFFF : destinationAddress);
 	_appendAddressAndStatus = true;
 	_data.reserve(20);
 	_data.push_back(rorg);
