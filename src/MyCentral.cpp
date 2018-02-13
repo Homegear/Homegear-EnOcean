@@ -374,7 +374,7 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 					sniffedPacketsIterator->second.push_back(myPacket);
 				}
 			}
-			if(_pairing) return handlePairingRequest(senderId, myPacket);
+			if(_pairing && (_pairingInterface.empty() || _pairingInterface == senderId)) return handlePairingRequest(senderId, myPacket);
 			return false;
 		}
 
@@ -1516,6 +1516,15 @@ std::shared_ptr<Variable> MyCentral::setInstallMode(BaseLib::PRpcClientInfo clie
 		_stopPairingModeThread = true;
 		_bl->threadManager.join(_pairingModeThread);
 		_stopPairingModeThread = false;
+
+        if(metadata)
+        {
+            auto metadataIterator = metadata->structValue->find("interface");
+            if(metadataIterator != metadata->structValue->end()) _pairingInterface = metadataIterator->second->stringValue;
+            else _pairingInterface = "";
+        }
+        else _pairingInterface = "";
+
 		_timeLeftInPairingMode = 0;
 		if(on && duration >= 5)
 		{
