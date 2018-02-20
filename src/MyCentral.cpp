@@ -348,7 +348,7 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 		PMyPacket myPacket(std::dynamic_pointer_cast<MyPacket>(packet));
 		if(!myPacket) return false;
 
-		if(_bl->debugLevel >= 4) std::cout << BaseLib::HelperFunctions::getTimeString(myPacket->timeReceived()) << " EnOcean packet received (" << senderId << std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" << "): " << BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) << " - Sender address: 0x" << BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8) << std::endl;
+		if(_bl->debugLevel >= 4) std::cout << BaseLib::HelperFunctions::getTimeString(myPacket->timeReceived()) << " EnOcean packet received (" << senderId << std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" << "): " << BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) << " - Sender address (= EnOcean ID): 0x" << BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8) << std::endl;
 
 		std::list<PMyPeer> peers = getPeer(myPacket->senderAddress());
 		if(peers.empty())
@@ -374,7 +374,7 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 					sniffedPacketsIterator->second.push_back(myPacket);
 				}
 			}
-			if(_pairing) return handlePairingRequest(senderId, myPacket);
+			if(_pairing && (_pairingInterface.empty() || _pairingInterface == senderId)) return handlePairingRequest(senderId, myPacket);
 			return false;
 		}
 
@@ -1516,6 +1516,15 @@ std::shared_ptr<Variable> MyCentral::setInstallMode(BaseLib::PRpcClientInfo clie
 		_stopPairingModeThread = true;
 		_bl->threadManager.join(_pairingModeThread);
 		_stopPairingModeThread = false;
+
+        if(metadata)
+        {
+            auto metadataIterator = metadata->structValue->find("interface");
+            if(metadataIterator != metadata->structValue->end()) _pairingInterface = metadataIterator->second->stringValue;
+            else _pairingInterface = "";
+        }
+        else _pairingInterface = "";
+
 		_timeLeftInPairingMode = 0;
 		if(on && duration >= 5)
 		{
