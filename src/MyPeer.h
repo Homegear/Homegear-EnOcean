@@ -137,12 +137,14 @@ protected:
 	// }}}
 
 	// {{{ Variables for blinds
-		int32_t _blindSignalDuration = -1;
-		int64_t _blindStateResetTime = -1;
-		bool _blindUp = false;
-		int64_t _lastBlindPositionUpdate = 0;
-		int64_t _lastRpcBlindPositionUpdate = 0;
-		int32_t _blindPosition = 0;
+		std::atomic_int _blindSignalDuration;
+        std::atomic_long _blindStateResetTime;
+		std::atomic_bool _blindUp;
+		std::atomic_long _lastBlindPositionUpdate;
+        std::atomic_long _lastRpcBlindPositionUpdate;
+        std::atomic_long _blindCurrentTargetPosition;
+        std::atomic_long _blindCurrentSignalDuration;
+        std::atomic_int _blindPosition;
 	// }}}
 
 	virtual void loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows);

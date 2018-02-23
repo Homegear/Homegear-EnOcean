@@ -65,6 +65,14 @@ void MyPeer::init()
 {
 	try
 	{
+        _blindSignalDuration = -1;
+        _blindStateResetTime = -1;
+        _blindUp = false;
+        _lastBlindPositionUpdate = 0;
+        _lastRpcBlindPositionUpdate = 0;
+        _blindCurrentTargetPosition = 0;
+        _blindCurrentSignalDuration =  0;
+        _blindPosition  = 0;
 	}
 	catch(const std::exception& ex)
 	{
@@ -95,28 +103,36 @@ void MyPeer::worker()
 			std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
 			std::set<std::string> elementsToErase;
 			if(!_rpcRequests.empty())
-			{
-				for(auto request : _rpcRequests)
-				{
-					if(request.second->maxResends == 0) continue; //Synchronous
-					if(BaseLib::HelperFunctions::getTime() - request.second->lastResend < request.second->resendTimeout) continue;
-					if(request.second->resends == request.second->maxResends)
-					{
-						serviceMessages->setUnreach(true, false);
-						elementsToErase.emplace(request.first);
-						continue;
-					}
+            {
+                for(auto request : _rpcRequests)
+                {
+                    if(request.second->maxResends == 0) continue; //Synchronous
+                    if(BaseLib::HelperFunctions::getTime() - request.second->lastResend < request.second->resendTimeout) continue;
+                    if(request.second->resends == request.second->maxResends)
+                    {
+                        serviceMessages->setUnreach(true, false);
+                        elementsToErase.emplace(request.first);
+                        continue;
+                    }
 
                     setBestInterface();
-					_physicalInterface->sendPacket(request.second->packet);
-					request.second->lastResend = BaseLib::HelperFunctions::getTime();
-					request.second->resends++;
-				}
-				for(auto& element : elementsToErase)
-				{
-					_rpcRequests.erase(element);
-				}
-			}
+                    _physicalInterface->sendPacket(request.second->packet);
+                    request.second->lastResend = BaseLib::HelperFunctions::getTime();
+                    request.second->resends++;
+                }
+                for(auto& element : elementsToErase)
+                {
+                    _rpcRequests.erase(element);
+                }
+
+                if(_blindStateResetTime != -1)
+                {
+                    //Correct blind state reset time
+                    _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentSignalDuration + (_blindCurrentTargetPosition == 0 || _blindCurrentTargetPosition == 10000 ? 5000 : 0);
+                    _lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
+                    return;
+                }
+            }
 		}
 		// }}}
 
@@ -1667,14 +1683,14 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 							std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("SIGNAL_DURATION");
 							if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
 							{
-								int32_t newPosition = valueKey == "DOWN" ? 10000 : 0;
-								int32_t positionDifference = newPosition - _blindPosition;
+								_blindCurrentTargetPosition = valueKey == "DOWN" ? 10000 : 0;
+								int32_t positionDifference = _blindCurrentTargetPosition - _blindPosition;
 								if(positionDifference != 0) //Prevent division by 0
 								{
 									parameterData = parameterIterator->second.getBinaryData();
 									_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterData)->integerValue * 1000;
-									int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
-									_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
+									_blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
+									_blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentSignalDuration + (_blindCurrentTargetPosition == 0 || _blindCurrentTargetPosition == 10000 ? 5000 : 0);
 									_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
 									_blindUp = valueKey == "UP";
 								}
