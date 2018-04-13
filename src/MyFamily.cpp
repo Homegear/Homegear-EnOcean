@@ -1,4 +1,13 @@
-/* Copyright 2013-2017 Homegear UG (haftungsbeschränkt) */
+/*
+ * Copyright (C) 2013-2018 Homegear UG (haftungsbeschränkt). All rights reserved.
+ *
+ * This document is the property of Homegear UG (haftungsbeschränkt)
+ * It is considered confidential and proprietary.
+ *
+ * This document may not be reproduced or transmitted in any form,
+ * in whole or in part, without the express written permission of
+ * Homegear UG (haftungsbeschränkt)
+ */
 
 #include "GD.h"
 #include "Interfaces.h"
