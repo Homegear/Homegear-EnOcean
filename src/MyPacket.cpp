@@ -43,7 +43,7 @@ MyPacket::MyPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t desti
 	_appendAddressAndStatus = true;
 	_data.reserve(20);
 	_data.push_back(rorg);
-	if(type == Type::RADIO_ERP1) _optionalData = std::vector<uint8_t>{ 3, (uint8_t)((destinationAddress >> 24) & 0xFF), (uint8_t)((destinationAddress >> 16) & 0xFF), (uint8_t)((destinationAddress >> 8) & 0xFF), (uint8_t)(destinationAddress & 0xFF), 0, 0 };
+	if(type == Type::RADIO_ERP1) _optionalData = std::vector<uint8_t>{ 3, (uint8_t)((_destinationAddress >> 24) & 0xFF), (uint8_t)((_destinationAddress >> 16) & 0xFF), (uint8_t)((_destinationAddress >> 8) & 0xFF), (uint8_t)(_destinationAddress & 0xFF), 0, 0 };
 	else if(type == Type::RADIO_ERP2) _optionalData = std::vector<uint8_t>{ 3, (uint8_t)0xFF };
 }
 
@@ -65,7 +65,7 @@ std::vector<uint8_t> MyPacket::getBinary()
 			_data.push_back((uint8_t)((_senderAddress >> 16) & 0xFF));
 			_data.push_back((uint8_t)((_senderAddress >> 8) & 0xFF));
 			_data.push_back((uint8_t)(_senderAddress & 0xFF));
-			_data.push_back(0);
+			_data.push_back(_rorg == 0xF6 ? 0x30 : 0);
 		}
 		if(_data.empty() && _optionalData.empty()) return std::vector<uint8_t>();
 		_packet.reserve(7 + _data.size() + _optionalData.size());
