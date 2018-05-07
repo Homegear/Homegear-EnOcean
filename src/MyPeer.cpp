@@ -71,8 +71,8 @@ void MyPeer::init()
         _lastBlindPositionUpdate = 0;
         _lastRpcBlindPositionUpdate = 0;
         _blindCurrentTargetPosition = 0;
-        _blindCurrentSignalDuration =  0;
-        _blindPosition  = 0;
+        _blindCurrentSignalDuration = 0;
+        _blindPosition = 0;
 	}
 	catch(const std::exception& ex)
 	{
