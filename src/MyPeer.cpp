@@ -146,6 +146,7 @@ void MyPeer::worker()
 			bool updatePosition = false;
 			if(BaseLib::HelperFunctions::getTime() >= _blindStateResetTime)
 			{
+                _blindStateResetTime = -1;
 				setValue(BaseLib::PRpcClientInfo(), 1, _blindUp ? "UP" : "DOWN", std::make_shared<BaseLib::Variable>(false), false);
 				updatePosition = true;
 			}
@@ -155,32 +156,7 @@ void MyPeer::worker()
 				updatePosition = true;
 			}
 
-			if(updatePosition)
-			{
-				auto channelIterator = valuesCentral.find(1);
-				if(channelIterator != valuesCentral.end())
-				{
-					auto parameterIterator = channelIterator->second.find("CURRENT_POSITION");
-					if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
-					{
-						BaseLib::PVariable blindPosition = std::make_shared<BaseLib::Variable>(_blindPosition / 100);
-
-						std::vector<uint8_t> parameterData;
-						parameterIterator->second.rpcParameter->convertToPacket(blindPosition, parameterData);
-						parameterIterator->second.setBinaryData(parameterData);
-						if(parameterIterator->second.databaseId > 0) saveParameter(parameterIterator->second.databaseId, parameterData);
-						else saveParameter(0, ParameterGroup::Type::Enum::variables, 1, "CURRENT_POSITION", parameterData);
-						if(_bl->debugLevel >= 4) GD::out.printInfo("Info: CURRENT_POSITION of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(1) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + ".");
-
-						std::shared_ptr<std::vector<std::string>> valueKeys = std::make_shared<std::vector<std::string>>();
-						valueKeys->push_back("CURRENT_POSITION");
-						std::shared_ptr<std::vector<PVariable>> values = std::make_shared<std::vector<PVariable>>();
-						values->push_back(blindPosition);
-						raiseEvent(_peerID, 1, valueKeys, values);
-						raiseRPCEvent(_peerID, 1, _serialNumber + ":" + std::to_string(1), valueKeys, values);
-					}
-				}
-			}
+			if(updatePosition) updateBlindPosition();
 		}
 		if(!serviceMessages->getUnreach()) serviceMessages->checkUnreach(_rpcDevice->timeout, getLastPacketReceived());
 	}
@@ -196,6 +172,48 @@ void MyPeer::worker()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
+}
+
+void MyPeer::updateBlindPosition()
+{
+    try
+    {
+        auto channelIterator = valuesCentral.find(1);
+        if(channelIterator != valuesCentral.end())
+        {
+            auto parameterIterator = channelIterator->second.find("CURRENT_POSITION");
+            if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+            {
+                BaseLib::PVariable blindPosition = std::make_shared<BaseLib::Variable>(_blindPosition / 100);
+
+                std::vector<uint8_t> parameterData;
+                parameterIterator->second.rpcParameter->convertToPacket(blindPosition, parameterData);
+                parameterIterator->second.setBinaryData(parameterData);
+                if(parameterIterator->second.databaseId > 0) saveParameter(parameterIterator->second.databaseId, parameterData);
+                else saveParameter(0, ParameterGroup::Type::Enum::variables, 1, "CURRENT_POSITION", parameterData);
+                if(_bl->debugLevel >= 4) GD::out.printInfo("Info: CURRENT_POSITION of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(1) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + ".");
+
+                std::shared_ptr<std::vector<std::string>> valueKeys = std::make_shared<std::vector<std::string>>();
+                valueKeys->push_back("CURRENT_POSITION");
+                std::shared_ptr<std::vector<PVariable>> values = std::make_shared<std::vector<PVariable>>();
+                values->push_back(blindPosition);
+                raiseEvent(_peerID, 1, valueKeys, values);
+                raiseRPCEvent(_peerID, 1, _serialNumber + ":" + std::to_string(1), valueKeys, values);
+            }
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
 }
 
 void MyPeer::homegearStarted()
@@ -1706,7 +1724,11 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 					else
 					{
 						// Set the opposite value to "false", too
-						_blindStateResetTime = -1;
+						if(_blindStateResetTime != -1)
+                        {
+                            _blindStateResetTime = -1;
+                            updateBlindPosition();
+                        }
 						channelIterator = valuesCentral.find(1);
 						if(channelIterator != valuesCentral.end())
 						{
