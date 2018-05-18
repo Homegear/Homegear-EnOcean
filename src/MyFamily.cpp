@@ -135,10 +135,16 @@ PVariable MyFamily::getPairingInfo()
             interface->structValue->emplace("id", field);
 
             field = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-            field->structValue->emplace("pos", std::make_shared<BaseLib::Variable>(2));
+            field->structValue->emplace("pos", std::make_shared<BaseLib::Variable>(1));
             field->structValue->emplace("label", std::make_shared<BaseLib::Variable>(std::string("l10n.common.hostname")));
             field->structValue->emplace("type", std::make_shared<BaseLib::Variable>(std::string("string")));
             interface->structValue->emplace("host", field);
+
+            field = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            field->structValue->emplace("pos", std::make_shared<BaseLib::Variable>(2));
+            field->structValue->emplace("label", std::make_shared<BaseLib::Variable>(std::string("l10n.common.password")));
+            field->structValue->emplace("type", std::make_shared<BaseLib::Variable>(std::string("string")));
+            interface->structValue->emplace("password", field);
 
             field = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             field->structValue->emplace("type", std::make_shared<BaseLib::Variable>(std::string("string")));
