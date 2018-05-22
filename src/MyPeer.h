@@ -169,6 +169,8 @@ protected:
 
 	void sendPacket(PMyPacket packet, std::string responseId, int32_t delay, bool wait);
 
+    void updateBlindPosition();
+
 	// {{{ Hooks
 		/**
 		 * {@inheritDoc}
