@@ -228,7 +228,7 @@ void HomegearGateway::listen()
                 {
                     try
                     {
-                        processedBytes += _binaryRpc->process(buffer.data(), bytesRead);
+                        processedBytes += _binaryRpc->process(buffer.data() + processedBytes, bytesRead - processedBytes);
                         if(_binaryRpc->isFinished())
                         {
                             if(_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::request)
@@ -236,9 +236,9 @@ void HomegearGateway::listen()
                                 std::string method;
                                 BaseLib::PArray parameters = _rpcDecoder->decodeRequest(_binaryRpc->getData(), method);
 
-                                if(method == "packetReceived" && parameters && parameters->size() == 2 && parameters->at(0)->integerValue64 == BIDCOS_FAMILY_ID && !parameters->at(1)->stringValue.empty())
+                                if(method == "packetReceived" && parameters && parameters->size() == 2 && parameters->at(0)->integerValue64 == MY_FAMILY_ID && !parameters->at(1)->binaryValue.empty())
                                 {
-                                    processPacket(parameters->at(1)->stringValue);
+                                    processPacket(parameters->at(1)->binaryValue);
                                 }
 
                                 BaseLib::PVariable response = std::make_shared<BaseLib::Variable>();
