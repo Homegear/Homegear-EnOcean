@@ -1146,7 +1146,6 @@ void MyPeer::packetReceived(PMyPacket& packet)
 					}
 
 					BaseLib::Systems::RpcConfigurationParameter& parameter = valuesCentral[*j][i->first];
-					if(parameter.equals(i->second.value)) continue;
 					parameter.setBinaryData(i->second.value);
 					if(parameter.databaseId > 0) saveParameter(parameter.databaseId, i->second.value);
 					else saveParameter(0, ParameterGroup::Type::Enum::variables, *j, i->first, i->second.value);
