@@ -1675,15 +1675,6 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 		// {{{ Blinds
 			else if(_deviceType == 0x01A53807)
 			{
-                GD::out.printError("Moin before " + valueKey + " now: " + std::to_string(BaseLib::HelperFunctions::getTime()));
-                GD::out.printError("Moin before " + valueKey + " _blindCurrentTargetPosition: " + std::to_string(_blindCurrentTargetPosition));
-                GD::out.printError("Moin before " + valueKey + " _blindSignalDuration: " + std::to_string(_blindSignalDuration));
-                GD::out.printError("Moin before " + valueKey + " _blindCurrentSignalDuration: " + std::to_string(_blindCurrentSignalDuration));
-                GD::out.printError("Moin before " + valueKey + " _blindStateResetTime: " + std::to_string(_blindStateResetTime));
-                GD::out.printError("Moin before " + valueKey + " _lastBlindPositionUpdate: " + std::to_string(_lastBlindPositionUpdate));
-                GD::out.printError("Moin before " + valueKey + " _blindPosition: " + std::to_string(_blindPosition));
-                GD::out.printError("Moin before " + valueKey + " _lastRpcBlindPositionUpdate: " + std::to_string(_lastRpcBlindPositionUpdate));
-                GD::out.printError("Moin before " + valueKey + " _blindUp: " + std::to_string(_blindUp));
 				if(valueKey == "UP" || valueKey == "DOWN")
 				{
 					if(value->booleanValue)
@@ -1761,7 +1752,6 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 					if(newPosition != _blindPosition)
 					{
 						int32_t positionDifference = newPosition - _blindPosition; //Can't be 0
-                        GD::out.printError("Moin diff: " + std::to_string(positionDifference));
                         setValue(clientInfo, channel, positionDifference > 0 ? "UP" : "DOWN", std::make_shared<BaseLib::Variable>(false), false);
 
                         channelIterator = configCentral.find(0);
@@ -1802,15 +1792,6 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
                         }
 					}
 				}
-                GD::out.printError("Moin after " + valueKey + " now: " + std::to_string(BaseLib::HelperFunctions::getTime()));
-                GD::out.printError("Moin after " + valueKey + " _blindCurrentTargetPosition: " + std::to_string(_blindCurrentTargetPosition));
-                GD::out.printError("Moin after " + valueKey + " _blindSignalDuration: " + std::to_string(_blindSignalDuration));
-                GD::out.printError("Moin after " + valueKey + " _blindCurrentSignalDuration: " + std::to_string(_blindCurrentSignalDuration));
-                GD::out.printError("Moin after " + valueKey + " _blindStateResetTime: " + std::to_string(_blindStateResetTime));
-                GD::out.printError("Moin after " + valueKey + " _lastBlindPositionUpdate: " + std::to_string(_lastBlindPositionUpdate));
-                GD::out.printError("Moin after " + valueKey + " _blindPosition: " + std::to_string(_blindPosition));
-                GD::out.printError("Moin after " + valueKey + " _lastRpcBlindPositionUpdate: " + std::to_string(_lastRpcBlindPositionUpdate));
-                GD::out.printError("Moin after " + valueKey + " _blindUp: " + std::to_string(_blindUp));
 			}
 		// }}}
 
