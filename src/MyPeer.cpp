@@ -1146,7 +1146,6 @@ void MyPeer::packetReceived(PMyPacket& packet)
 					}
 
 					BaseLib::Systems::RpcConfigurationParameter& parameter = valuesCentral[*j][i->first];
-					if(parameter.equals(i->second.value)) continue;
 					parameter.setBinaryData(i->second.value);
 					if(parameter.databaseId > 0) saveParameter(parameter.databaseId, i->second.value);
 					else saveParameter(0, ParameterGroup::Type::Enum::variables, *j, i->first, i->second.value);
@@ -1709,15 +1708,13 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 							{
 								_blindCurrentTargetPosition = valueKey == "DOWN" ? 10000 : 0;
 								int32_t positionDifference = _blindCurrentTargetPosition - _blindPosition;
-								if(positionDifference != 0) //Prevent division by 0
-								{
-									parameterData = parameterIterator->second.getBinaryData();
-									_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterData)->integerValue * 1000;
-									_blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
-									_blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentSignalDuration + (_blindCurrentTargetPosition == 0 || _blindCurrentTargetPosition == 10000 ? 5000 : 0);
-									_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
-									_blindUp = valueKey == "UP";
-								}
+                                parameterData = parameterIterator->second.getBinaryData();
+                                _blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterData)->integerValue * 1000;
+                                if(positionDifference != 0) _blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
+                                else _blindCurrentSignalDuration = 0;
+                                _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentSignalDuration + (_blindCurrentTargetPosition == 0 || _blindCurrentTargetPosition == 10000 ? 5000 : 0);
+                                _lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
+                                _blindUp = valueKey == "UP";
 							}
 						}
 					}
@@ -1754,48 +1751,45 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 					int32_t newPosition = value->integerValue * 1000;
 					if(newPosition != _blindPosition)
 					{
-						int32_t positionDifference = newPosition - _blindPosition;
+						int32_t positionDifference = newPosition - _blindPosition; //Can't be 0
+                        setValue(clientInfo, channel, positionDifference > 0 ? "UP" : "DOWN", std::make_shared<BaseLib::Variable>(false), false);
 
-						if(positionDifference != 0) //Prevent division by 0
-						{
-							setValue(clientInfo, channel, positionDifference > 0 ? "UP" : "DOWN", std::make_shared<BaseLib::Variable>(false), false);
+                        channelIterator = configCentral.find(0);
+                        if(channelIterator != configCentral.end())
+                        {
+                            auto parameterIterator2 = channelIterator->second.find("SIGNAL_DURATION");
+                            if(parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter)
+                            {
+                                parameterData = parameterIterator2->second.getBinaryData();
+                                _blindSignalDuration = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData)->integerValue * 1000;
+                                _blindCurrentTargetPosition = _blindPosition + positionDifference;
+                                _blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
+                                _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
+                                _lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
+                                _blindUp = positionDifference < 0;
 
-							channelIterator = configCentral.find(0);
-							if(channelIterator != configCentral.end())
-							{
-								std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("SIGNAL_DURATION");
-								if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
-								{
-									parameterData = parameterIterator->second.getBinaryData();
-									_blindSignalDuration = parameterIterator->second.rpcParameter->convertFromPacket(parameterData)->integerValue * 1000;
-									int32_t blindCurrentSignalDuration = _blindSignalDuration / (10000 / std::abs(positionDifference));
-									_blindStateResetTime = BaseLib::HelperFunctions::getTime() + blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
-									_lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
-									_blindUp = positionDifference < 0;
+                                PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+                                std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
+                                packet->setPosition(8, 8, data);
+                                sendPacket(packet, "ANY", 0, wait);
 
-									PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
-									std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
-									packet->setPosition(8, 8, data);
-									sendPacket(packet, "ANY", 0, wait);
-
-									channelIterator = valuesCentral.find(1);
-									if(channelIterator != valuesCentral.end())
-									{
-										std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator parameterIterator = channelIterator->second.find(_blindUp ? "UP" : "DOWN");
-										if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
-										{
-											BaseLib::PVariable trueValue = std::make_shared<BaseLib::Variable>(true);
-											parameterIterator->second.rpcParameter->convertToPacket(trueValue, parameterData);
-											parameterIterator->second.setBinaryData(parameterData);
-											if(parameterIterator->second.databaseId > 0) saveParameter(parameterIterator->second.databaseId, parameterData);
-											else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, _blindUp ? "UP" : "DOWN", parameterData);
-											valueKeys->push_back(_blindUp ? "UP" : "DOWN");
-											values->push_back(trueValue);
-										}
-									}
-								}
-							}
-						}
+                                channelIterator = valuesCentral.find(1);
+                                if(channelIterator != valuesCentral.end())
+                                {
+                                    parameterIterator2 = channelIterator->second.find(_blindUp ? "UP" : "DOWN");
+                                    if(parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter)
+                                    {
+                                        BaseLib::PVariable trueValue = std::make_shared<BaseLib::Variable>(true);
+                                        parameterIterator2->second.rpcParameter->convertToPacket(trueValue, parameterData);
+                                        parameterIterator2->second.setBinaryData(parameterData);
+                                        if(parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData);
+                                        else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, _blindUp ? "UP" : "DOWN", parameterData);
+                                        valueKeys->push_back(_blindUp ? "UP" : "DOWN");
+                                        values->push_back(trueValue);
+                                    }
+                                }
+                            }
+                        }
 					}
 				}
 			}

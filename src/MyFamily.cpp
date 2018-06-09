@@ -153,17 +153,17 @@ PVariable MyFamily::getPairingInfo()
 
             field = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             field->structValue->emplace("type", std::make_shared<BaseLib::Variable>(std::string("string")));
-            field->structValue->emplace("const", std::make_shared<BaseLib::Variable>(std::string("/etc/homegear/ca/ca.crt")));
+            field->structValue->emplace("const", std::make_shared<BaseLib::Variable>(std::string("/etc/homegear/ca/cacert.pem")));
             interface->structValue->emplace("caFile", field);
 
             field = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             field->structValue->emplace("type", std::make_shared<BaseLib::Variable>(std::string("string")));
-            field->structValue->emplace("const", std::make_shared<BaseLib::Variable>(std::string("/etc/homegear/ca/gateway-client.crt")));
+            field->structValue->emplace("const", std::make_shared<BaseLib::Variable>(std::string("/etc/homegear/ca/certs/gateway-client.crt")));
             interface->structValue->emplace("certFile", field);
 
             field = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             field->structValue->emplace("type", std::make_shared<BaseLib::Variable>(std::string("string")));
-            field->structValue->emplace("const", std::make_shared<BaseLib::Variable>(std::string("/etc/homegear/ca/gateway-client.key")));
+            field->structValue->emplace("const", std::make_shared<BaseLib::Variable>(std::string("/etc/homegear/ca/private/gateway-client.key")));
             interface->structValue->emplace("keyFile", field);
 
             interfaces->structValue->emplace("homegeargateway", interface);
