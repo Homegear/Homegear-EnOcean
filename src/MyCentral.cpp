@@ -1226,7 +1226,7 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 		if(!interfaceId.empty() && GD::physicalInterfaces.find(interfaceId) == GD::physicalInterfaces.end()) return Variable::createError(-6, "Unknown physical interface.");
         if(interfaceId.empty())
         {
-            if(GD::physicalInterfaces.size() > 1) GD::physicalInterfaces.size() > 1) return Variable::createError(-7, "Please specify the ID of the physical interface (= communication module) to use.");
+            if(GD::physicalInterfaces.size() > 1) return Variable::createError(-7, "Please specify the ID of the physical interface (= communication module) to use.");
             interfaceId = GD::physicalInterfaces.begin()->second->getID();
         }
 
