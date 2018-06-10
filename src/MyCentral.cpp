@@ -531,13 +531,15 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				physicalInterface->sendPacket(response);
 			}
 		}
-		else if(packet->getRorg() == 0xA5) //4BS teach-in, variant 3
+		else if(packet->getRorg() == 0xA5 && (packet->payload()->at(3) & 0x80)) //4BS teach-in, variant 3; LRN type bit needs to be set
 		{
 			if(payload.size() < 4) return false;
 			int32_t eep = ((int32_t)(uint8_t)payload.at(0) << 16) | (((int32_t)(uint8_t)payload.at(1) >> 2) << 8) | (((uint8_t)payload.at(1) & 3) << 5) | ((uint8_t)payload.at(2) >> 3);
+            int32_t manufacturer = (((int32_t)(uint8_t)(payload.at(2) & 7)) << 8) | (uint8_t)payload.at(3);
+            int32_t manufacturerEep = (manufacturer << 24) | eep;
 			std::string serial = getFreeSerialNumber(packet->senderAddress());
 
-			if(!peerExists(packet->senderAddress(), eep))
+			if(!peerExists(packet->senderAddress(), eep) && !peerExists(packet->senderAddress(), manufacturerEep))
 			{
 				int32_t rfChannel = getFreeRfChannel(interfaceId);
 				if(rfChannel == -1)
@@ -545,9 +547,18 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 					GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
 					return false;
 				}
-				GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ". If nothing happens, the EEP is not yet supported.");
-				std::shared_ptr<MyPeer> peer = createPeer(eep, packet->senderAddress(), serial, false);
-				if(!peer || !peer->getRpcDevice()) return false;
+				GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(manufacturerEep) + ". If nothing happens, the EEP is not yet supported.");
+				std::shared_ptr<MyPeer> peer = createPeer(manufacturerEep, packet->senderAddress(), serial, false);
+				if(!peer || !peer->getRpcDevice())
+                {
+                    GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ".");
+                    peer = createPeer(eep, packet->senderAddress(), serial, false);
+                    if(!peer || !peer->getRpcDevice())
+                    {
+                        GD::out.printWarning("Warning: The eep " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
+                        return false;
+                    }
+                }
 				try
 				{
 					std::unique_lock<std::mutex> peersGuard(_peersMutex);
