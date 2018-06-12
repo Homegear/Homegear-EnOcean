@@ -434,6 +434,8 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 {
 	try
 	{
+        std::lock_guard<std::mutex> pairingGuard(_pairingMutex);
+
 		auto physicalInterfaceIterator = GD::physicalInterfaces.find(interfaceId);
 		if(physicalInterfaceIterator == GD::physicalInterfaces.end()) return false;
 		std::shared_ptr<IEnOceanInterface> physicalInterface = physicalInterfaceIterator->second;
@@ -566,7 +568,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 					peer->save(true, true, false);
 					peer->initializeCentralConfig();
 					peer->setPhysicalInterfaceId(interfaceId);
-					peer->setRfChannel(0, rfChannel);
+					if(peer->hasRfChannel(0)) peer->setRfChannel(0, rfChannel);
 					peersGuard.lock();
 					_peers[peer->getAddress()].push_back(peer);
 					_peersById[peer->getID()] = peer;
@@ -585,12 +587,15 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				}
 
-				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0), 0xFFFFFFFF));
-				std::vector<uint8_t> responsePayload;
-				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
-				responsePayload.back() = 0xF0;
-				response->setData(responsePayload);
-				physicalInterface->sendPacket(response);
+                if(peer->hasRfChannel(0))
+                {
+                    PMyPacket response(new MyPacket((MyPacket::Type) 1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0), 0xFFFFFFFF));
+                    std::vector<uint8_t> responsePayload;
+                    responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
+                    responsePayload.back() = 0xF0;
+                    response->setData(responsePayload);
+                    physicalInterface->sendPacket(response);
+                }
 
 				PVariable deviceDescriptions(new Variable(VariableType::tArray));
 				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());

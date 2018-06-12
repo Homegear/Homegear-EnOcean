@@ -715,6 +715,32 @@ void MyPeer::setRssiDevice(uint8_t rssi)
     }
 }
 
+bool MyPeer::hasRfChannel(int32_t channel)
+{
+    try
+    {
+        auto channelIterator = valuesCentral.find(channel);
+        if(channelIterator != valuesCentral.end())
+        {
+            auto parameterIterator = channelIterator->second.find("RF_CHANNEL");
+            if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter) return true;
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
+}
+
 int32_t MyPeer::getRfChannel(int32_t channel)
 {
 	try
