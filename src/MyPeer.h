@@ -35,6 +35,7 @@ public:
 
 	std::shared_ptr<IEnOceanInterface>& getPhysicalInterface() { return _physicalInterface; }
 
+    bool hasRfChannel(int32_t channel);
 	int32_t getRfChannel(int32_t channel);
 	std::vector<int32_t> getRfChannels();
 	void setRfChannel(int32_t channel, int32_t value);
@@ -168,6 +169,8 @@ protected:
 	virtual PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type);
 
 	void sendPacket(PMyPacket packet, std::string responseId, int32_t delay, bool wait);
+
+    void updateBlindSpeed();
 
     void updateBlindPosition();
 

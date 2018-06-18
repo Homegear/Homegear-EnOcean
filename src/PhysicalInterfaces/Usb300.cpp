@@ -397,7 +397,7 @@ void Usb300::processPacket(std::vector<uint8_t>& data)
 		}
 		else requestsGuard.unlock();
 
-		PMyPacket packet(new MyPacket(data));
+		PMyPacket packet = std::make_shared<MyPacket>(data);
 		if(packet->getType() == MyPacket::Type::RADIO_ERP1 || packet->getType() == MyPacket::Type::RADIO_ERP2)
 		{
 			if((packet->senderAddress() & 0xFFFFFF80) == _baseAddress) _out.printInfo("Info: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
