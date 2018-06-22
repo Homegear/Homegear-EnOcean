@@ -52,6 +52,7 @@ protected:
 	std::map<int32_t, std::list<PMyPeer>> _peers;
 	std::mutex _wildcardPeersMutex;
 	std::map<int32_t, std::list<PMyPeer>> _wildcardPeers;
+    std::mutex _pairingMutex;
 	std::atomic_bool _pairing;
     std::string _pairingInterface;
 	std::atomic<uint32_t> _timeLeftInPairingMode;

@@ -174,6 +174,49 @@ void MyPeer::worker()
 	}
 }
 
+void MyPeer::updateBlindSpeed()
+{
+    try
+    {
+        auto channelIterator = valuesCentral.find(1);
+        if(channelIterator != valuesCentral.end())
+        {
+            auto parameterIterator = channelIterator->second.find("CURRENT_SPEED");
+            if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
+            {
+                BaseLib::PVariable blindSpeed = std::make_shared<BaseLib::Variable>(100.0 / (double)(_blindSignalDuration / 1000));
+                if(_blindUp) blindSpeed->floatValue *= -1.0;
+
+                std::vector<uint8_t> parameterData;
+                parameterIterator->second.rpcParameter->convertToPacket(blindSpeed, parameterData);
+                parameterIterator->second.setBinaryData(parameterData);
+                if(parameterIterator->second.databaseId > 0) saveParameter(parameterIterator->second.databaseId, parameterData);
+                else saveParameter(0, ParameterGroup::Type::Enum::variables, 1, "CURRENT_SPEED", parameterData);
+                if(_bl->debugLevel >= 4) GD::out.printInfo("Info: CURRENT_SPEED of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(1) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + ".");
+
+                std::shared_ptr<std::vector<std::string>> valueKeys = std::make_shared<std::vector<std::string>>();
+                valueKeys->push_back("CURRENT_SPEED");
+                std::shared_ptr<std::vector<PVariable>> values = std::make_shared<std::vector<PVariable>>();
+                values->push_back(blindSpeed);
+                raiseEvent(_peerID, 1, valueKeys, values);
+                raiseRPCEvent(_peerID, 1, _serialNumber + ":" + std::to_string(1), valueKeys, values);
+            }
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+}
+
 void MyPeer::updateBlindPosition()
 {
     try
@@ -713,6 +756,32 @@ void MyPeer::setRssiDevice(uint8_t rssi)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
+}
+
+bool MyPeer::hasRfChannel(int32_t channel)
+{
+    try
+    {
+        auto channelIterator = valuesCentral.find(channel);
+        if(channelIterator != valuesCentral.end())
+        {
+            auto parameterIterator = channelIterator->second.find("RF_CHANNEL");
+            if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter) return true;
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return false;
 }
 
 int32_t MyPeer::getRfChannel(int32_t channel)
@@ -1715,6 +1784,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
                                 _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentSignalDuration + (_blindCurrentTargetPosition == 0 || _blindCurrentTargetPosition == 10000 ? 5000 : 0);
                                 _lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
                                 _blindUp = valueKey == "UP";
+                                updateBlindSpeed();
 							}
 						}
 					}
@@ -1767,6 +1837,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
                                 _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
                                 _lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
                                 _blindUp = positionDifference < 0;
+                                updateBlindSpeed();
 
                                 PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
                                 std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
