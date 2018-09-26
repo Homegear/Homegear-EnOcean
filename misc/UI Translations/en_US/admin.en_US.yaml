@@ -5,3 +5,9 @@ l10n.enocean.pairingInfo.hostname: 'Hostname'
 l10n.enocean.pairingInfo.password: 'Password'
 l10n.enocean.pairingInfo.device: 'Device'
 # }}}
+
+# {{{ Pairing
+l10n.enocean.pairing.noFreeRfChannels: 'Could not pair peer, because there are no free RF channels. You need to remove peers or use a different communication module.'
+l10n.enocean.pairing.unsupportedEep: 'The EEP %variable0% is currently not supported.'
+l10n.enocean.pairing.unsupportedUnidirectionalCommunication: 'Could not teach-in device as it expects currently unsupported unidirectional communication.'
+# }}}

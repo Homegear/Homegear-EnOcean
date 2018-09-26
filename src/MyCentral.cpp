@@ -454,7 +454,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 			if(!(byte1 & 0x80))
 			{
 				std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
-				_pairingMessages.emplace_back("Could not teach-in device as it expects currently unsupported unidirectional communication.");
+				_pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedUnidirectionalCommunication"));
 				GD::out.printWarning("Warning: Could not teach-in device as it expects currently unsupported unidirectional communication.");
 				return false;
 			}
@@ -472,7 +472,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				if(rfChannel == -1)
 				{
 					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
-					_pairingMessages.emplace_back("Could not pair peer, because there are no free RF channels. You need to remove peers or use a different communication module.");
+                    _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.noFreeRfChannels"));
 					GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
 					return false;
 				}
@@ -481,7 +481,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				if(!peer || !peer->getRpcDevice())
 				{
 					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
-					_pairingMessages.emplace_back("The EEP " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
+					_pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedEep", std::list<std::string>{ BaseLib::HelperFunctions::getHexString(eep) }));
 					GD::out.printWarning("Warning: The EEP " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
 					return false;
 				}
@@ -565,7 +565,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				if(rfChannel == -1)
 				{
 					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
-					_pairingMessages.emplace_back("Could not pair peer, because there are no free RF channels. You need to remove peers or use a different communication module.");
+					_pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.noFreeRfChannels"));
 					GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
 					return false;
 				}
@@ -578,7 +578,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
                     if(!peer || !peer->getRpcDevice())
                     {
 						std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
-						_pairingMessages.emplace_back("The EEP " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
+                        _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedEep", std::list<std::string>{ BaseLib::HelperFunctions::getHexString(eep) }));
                         GD::out.printWarning("Warning: The EEP " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
                         return false;
                     }
@@ -1370,7 +1370,16 @@ PVariable MyCentral::getPairingState(BaseLib::PRpcClientInfo clientInfo)
             pairingMessages->arrayValue->reserve(_pairingMessages.size());
             for(auto& message : _pairingMessages)
             {
-                pairingMessages->arrayValue->push_back(std::make_shared<BaseLib::Variable>(message));
+                auto pairingMessage = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                pairingMessage->structValue->emplace("messageId", std::make_shared<BaseLib::Variable>(message->messageId));
+                auto variables = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+                variables->arrayValue->reserve(message->variables.size());
+                for(auto& variable : message->variables)
+                {
+                    variables->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
+                }
+                pairingMessage->structValue->emplace("variables", variables);
+                pairingMessages->arrayValue->push_back(pairingMessage);
             }
             states->structValue->emplace("general", std::move(pairingMessages));
 
