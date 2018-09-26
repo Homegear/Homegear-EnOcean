@@ -1,0 +1,7 @@
+---
+# {{{ Pairing info
+l10n.enocean.pairingInfo.id: 'ID'
+l10n.enocean.pairingInfo.hostname: 'Hostname'
+l10n.enocean.pairingInfo.password: 'Password'
+l10n.enocean.pairingInfo.device: 'Device'
+# }}}
