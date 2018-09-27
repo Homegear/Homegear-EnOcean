@@ -1358,44 +1358,48 @@ PVariable MyCentral::getPairingState(BaseLib::PRpcClientInfo clientInfo)
 {
     try
     {
-        auto states = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+		auto states = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 
-        states->structValue->emplace("pairingModeEnabled", std::make_shared<BaseLib::Variable>(_pairing));
-        states->structValue->emplace("pairingModeEndTime", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTimeSeconds() + _timeLeftInPairingMode));
+		{
+			std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
 
-        {
-            std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+			auto pairingMessages = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+			pairingMessages->arrayValue->reserve(_pairingMessages.size());
+			for(auto& message : _pairingMessages)
+			{
+				auto pairingMessage = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				pairingMessage->structValue->emplace("messageId", std::make_shared<BaseLib::Variable>(message->messageId));
+				auto variables = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+				variables->arrayValue->reserve(message->variables.size());
+				for(auto& variable : message->variables)
+				{
+					variables->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(variable));
+				}
+				pairingMessage->structValue->emplace("variables", variables);
+				pairingMessages->arrayValue->push_back(pairingMessage);
+			}
+			states->structValue->emplace("general", std::move(pairingMessages));
 
-            auto pairingMessages = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-            pairingMessages->arrayValue->reserve(_pairingMessages.size());
-            for(auto& message : _pairingMessages)
-            {
-                auto pairingMessage = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                pairingMessage->structValue->emplace("messageId", std::make_shared<BaseLib::Variable>(message->messageId));
-                auto variables = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
-                variables->arrayValue->reserve(message->variables.size());
-                for(auto& variable : message->variables)
-                {
-                    variables->arrayValue->push_back(std::make_shared<BaseLib::Variable>(variable));
-                }
-                pairingMessage->structValue->emplace("variables", variables);
-                pairingMessages->arrayValue->push_back(pairingMessage);
-            }
-            states->structValue->emplace("general", std::move(pairingMessages));
+			for(auto& element : _newPeers)
+			{
+				for(auto& peer : element.second)
+				{
+					auto peerState = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+					peerState->structValue->emplace("state", std::make_shared<BaseLib::Variable>(peer->state));
+					peerState->structValue->emplace("messageId", std::make_shared<BaseLib::Variable>(peer->messageId));
+					auto variables = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+					variables->arrayValue->reserve(peer->variables.size());
+					for(auto& variable : peer->variables)
+					{
+						variables->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(variable));
+					}
+					peerState->structValue->emplace("variables", variables);
+					states->structValue->emplace(std::to_string(peer->peerId), std::move(peerState));
+				}
+			}
+		}
 
-            for(auto& element : _newPeers)
-            {
-                for(auto& peer : element.second)
-                {
-                    auto peerState = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-                    peerState->structValue->emplace("state", std::make_shared<BaseLib::Variable>(peer->state));
-                    peerState->structValue->emplace("message", std::make_shared<BaseLib::Variable>(peer->message));
-                    states->structValue->emplace(std::to_string(peer->peerId), std::move(peerState));
-                }
-            }
-        }
-
-        return states;
+		return states;
     }
     catch(const std::exception& ex)
     {
