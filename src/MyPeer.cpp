@@ -936,17 +936,6 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
 				}
 				else continue;
 
-				//Check for low battery
-				if((*j)->parameterId == "LOWBAT")
-				{
-					if(data.size() > 0 && data.at(0))
-					{
-						serviceMessages->set("LOWBAT", true);
-						if(_bl->debugLevel >= 4) GD::out.printInfo("Info: LOWBAT of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " was set to \"true\".");
-					}
-					else serviceMessages->set("LOWBAT", false);
-				}
-
                 for(std::vector<PParameter>::iterator k = frame->associatedVariables.begin(); k != frame->associatedVariables.end(); ++k)
 				{
 					if((*k)->physical->groupId != (*j)->parameterId) continue;
@@ -1676,11 +1665,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 		BaseLib::Systems::RpcConfigurationParameter& parameter = valuesCentral[channel][valueKey];
 		std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
 		std::shared_ptr<std::vector<PVariable>> values(new std::vector<PVariable>());
-		if(rpcParameter->readable)
-		{
-			valueKeys->push_back(valueKey);
-			values->push_back(value);
-		}
+
 		if(rpcParameter->physical->operationType == IPhysical::OperationType::Enum::store)
 		{
 			std::vector<uint8_t> parameterData;
@@ -1688,6 +1673,13 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 			parameter.setBinaryData(parameterData);
 			if(parameter.databaseId > 0) saveParameter(parameter.databaseId, parameterData);
 			else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey, parameterData);
+
+            if(rpcParameter->readable)
+            {
+                valueKeys->push_back(valueKey);
+                values->push_back(rpcParameter->convertFromPacket(parameterData, true));
+            }
+
 			if(!valueKeys->empty())
 			{
 				std::string address(_serialNumber + ":" + std::to_string(channel));
@@ -1719,6 +1711,12 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 		if(parameter.databaseId > 0) saveParameter(parameter.databaseId, parameterData);
 		else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey, parameterData);
 		if(_bl->debugLevel >= 4) GD::out.printInfo("Info: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + ".");
+
+        if(rpcParameter->readable)
+        {
+            valueKeys->push_back(valueKey);
+            values->push_back(rpcParameter->convertFromPacket(parameterData, true));
+        }
 
 		if(valueKey == "PAIRING")
 		{

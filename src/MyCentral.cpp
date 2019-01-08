@@ -453,6 +453,8 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 			if((byte1 & 0x0F) != 0) return false; //Command 0 => teach-in request
 			if(!(byte1 & 0x80))
 			{
+				std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+				_pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedUnidirectionalCommunication"));
 				GD::out.printWarning("Warning: Could not teach-in device as it expects currently unsupported unidirectional communication.");
 				return false;
 			}
@@ -469,12 +471,20 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				rfChannel = getFreeRfChannel(interfaceId);
 				if(rfChannel == -1)
 				{
+					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+                    _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.noFreeRfChannels"));
 					GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
 					return false;
 				}
 				GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ". If nothing happens, the EEP is not yet supported.");
 				std::shared_ptr<MyPeer> peer = createPeer(eep, packet->senderAddress(), serial, false);
-				if(!peer || !peer->getRpcDevice()) return false;
+				if(!peer || !peer->getRpcDevice())
+				{
+					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+					_pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedEep", std::list<std::string>{ BaseLib::HelperFunctions::getHexString(eep) }));
+					GD::out.printWarning("Warning: The EEP " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
+					return false;
+				}
 				try
 				{
 					std::unique_lock<std::mutex> peersGuard(_peersMutex);
@@ -506,6 +516,15 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
 				std::vector<uint64_t> newIds{ peer->getID() };
 				raiseRPCNewDevices(newIds, deviceDescriptions);
+
+				{
+					auto pairingState = std::make_shared<PairingState>();
+					pairingState->peerId = peer->getID();
+					pairingState->state = "success";
+					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+					_newPeers[BaseLib::HelperFunctions::getTime()].emplace_back(std::move(pairingState));
+				}
+
 				GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
 			}
 			else
@@ -545,6 +564,8 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				int32_t rfChannel = getFreeRfChannel(interfaceId);
 				if(rfChannel == -1)
 				{
+					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+					_pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.noFreeRfChannels"));
 					GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
 					return false;
 				}
@@ -556,7 +577,9 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
                     peer = createPeer(eep, packet->senderAddress(), serial, false);
                     if(!peer || !peer->getRpcDevice())
                     {
-                        GD::out.printWarning("Warning: The eep " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
+						std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+                        _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedEep", std::list<std::string>{ BaseLib::HelperFunctions::getHexString(eep) }));
+                        GD::out.printWarning("Warning: The EEP " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
                         return false;
                     }
                 }
@@ -601,6 +624,15 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
 				std::vector<uint64_t> newIds{ peer->getID() };
 				raiseRPCNewDevices(newIds, deviceDescriptions);
+
+				{
+					auto pairingState = std::make_shared<PairingState>();
+					pairingState->peerId = peer->getID();
+					pairingState->state = "success";
+					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+					_newPeers[BaseLib::HelperFunctions::getTime()].emplace_back(std::move(pairingState));
+				}
+
 				GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
 			}
 			else
@@ -879,6 +911,15 @@ std::string MyCentral::handleCliCommand(std::string command)
 				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
 				std::vector<uint64_t> newIds{ peer->getID() };
 				raiseRPCNewDevices(newIds, deviceDescriptions);
+
+				{
+					auto pairingState = std::make_shared<PairingState>();
+					pairingState->peerId = peer->getID();
+					pairingState->state = "success";
+					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+					_newPeers[BaseLib::HelperFunctions::getTime()].emplace_back(std::move(pairingState));
+				}
+
 				GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
 				stringStream << "Added peer " << std::to_string(peer->getID()) << " with address 0x" << BaseLib::HelperFunctions::getHexString(peer->getAddress(), 8) << " and serial number " << serial << "." << std::dec << std::endl;
 			}
@@ -1222,6 +1263,15 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(clientInfo, true, std::map<std::string, bool>());
 		std::vector<uint64_t> newIds{ peer->getID() };
 		raiseRPCNewDevices(newIds, deviceDescriptions);
+
+		{
+			auto pairingState = std::make_shared<PairingState>();
+			pairingState->peerId = peer->getID();
+			pairingState->state = "success";
+			std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+			_newPeers[BaseLib::HelperFunctions::getTime()].emplace_back(std::move(pairingState));
+		}
+
 		GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
 
 		return PVariable(new Variable((uint32_t)peer->getID()));
@@ -1290,6 +1340,71 @@ PVariable MyCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t p
 		return PVariable(new Variable(VariableType::tVoid));
 	}
 	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(BaseLib::Exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    catch(...)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+    }
+    return Variable::createError(-32500, "Unknown application error.");
+}
+
+PVariable MyCentral::getPairingState(BaseLib::PRpcClientInfo clientInfo)
+{
+    try
+    {
+		auto states = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+        states->structValue->emplace("pairingModeEnabled", std::make_shared<BaseLib::Variable>(_pairing));
+        states->structValue->emplace("pairingModeEndTime", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTimeSeconds() + _timeLeftInPairingMode));
+
+		{
+			std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+
+			auto pairingMessages = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+			pairingMessages->arrayValue->reserve(_pairingMessages.size());
+			for(auto& message : _pairingMessages)
+			{
+				auto pairingMessage = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+				pairingMessage->structValue->emplace("messageId", std::make_shared<BaseLib::Variable>(message->messageId));
+				auto variables = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+				variables->arrayValue->reserve(message->variables.size());
+				for(auto& variable : message->variables)
+				{
+					variables->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(variable));
+				}
+				pairingMessage->structValue->emplace("variables", variables);
+				pairingMessages->arrayValue->push_back(pairingMessage);
+			}
+			states->structValue->emplace("general", std::move(pairingMessages));
+
+			for(auto& element : _newPeers)
+			{
+				for(auto& peer : element.second)
+				{
+					auto peerState = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+					peerState->structValue->emplace("state", std::make_shared<BaseLib::Variable>(peer->state));
+					peerState->structValue->emplace("messageId", std::make_shared<BaseLib::Variable>(peer->messageId));
+					auto variables = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+					variables->arrayValue->reserve(peer->variables.size());
+					for(auto& variable : peer->variables)
+					{
+						variables->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(variable));
+					}
+					peerState->structValue->emplace("variables", variables);
+					states->structValue->emplace(std::to_string(peer->peerId), std::move(peerState));
+				}
+			}
+		}
+
+		return states;
+    }
+    catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1404,6 +1519,12 @@ std::shared_ptr<Variable> MyCentral::setInstallMode(BaseLib::PRpcClientInfo clie
 		_timeLeftInPairingMode = 0;
 		if(on && duration >= 5)
 		{
+			{
+				std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+				_newPeers.clear();
+				_pairingMessages.clear();
+			}
+
 			_timeLeftInPairingMode = duration; //It's important to set it here, because the thread often doesn't completely initialize before getInstallMode requests _timeLeftInPairingMode
 			_bl->threadManager.start(_pairingModeThread, true, &MyCentral::pairingModeTimer, this, duration, debugOutput);
 		}

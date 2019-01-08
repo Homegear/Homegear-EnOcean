@@ -40,6 +40,7 @@ public:
 	virtual PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags);
 	virtual PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags);
 	virtual PVariable getSniffedDevices(BaseLib::PRpcClientInfo clientInfo);
+    virtual PVariable getPairingState(BaseLib::PRpcClientInfo clientInfo);
 	virtual PVariable setInstallMode(BaseLib::PRpcClientInfo clientInfo, bool on, uint32_t duration, BaseLib::PVariable metadata, bool debugOutput = true);
 	virtual PVariable setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string interfaceId);
 	virtual PVariable startSniffing(BaseLib::PRpcClientInfo clientInfo);
@@ -53,9 +54,7 @@ protected:
 	std::mutex _wildcardPeersMutex;
 	std::map<int32_t, std::list<PMyPeer>> _wildcardPeers;
     std::mutex _pairingMutex;
-	std::atomic_bool _pairing;
     std::string _pairingInterface;
-	std::atomic<uint32_t> _timeLeftInPairingMode;
 	std::atomic_bool _stopPairingModeThread;
 	std::mutex _pairingModeThreadMutex;
 	std::thread _pairingModeThread;
