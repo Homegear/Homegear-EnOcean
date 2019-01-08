@@ -1164,6 +1164,35 @@ std::string MyCentral::handleCliCommand(std::string command)
 
 			return stringStream.str();
 		}
+		else if(BaseLib::HelperFunctions::checkCliCommand(command, "process packet", "pp", "", 2, arguments, showHelp))
+		{
+			if(showHelp)
+			{
+				stringStream << "Description: This command processes the passed packet as it were received from an EnOcean interface" << std::endl;
+				stringStream << "Usage: process packet INTERFACE PACKET" << std::endl << std::endl;
+				stringStream << "Parameters:" << std::endl;
+				stringStream << "  INTERFACE: The id of the interface to set the address for." << std::endl;
+				stringStream << "  ADDRESS:   The hex string of the packet to process." << std::endl;
+				return stringStream.str();
+			}
+
+			std::string interfaceId = arguments.at(0);
+			auto interfaceIterator = GD::physicalInterfaces.find(interfaceId);
+			if(interfaceIterator == GD::physicalInterfaces.end()) return "Unknown physical interface.\n";
+
+			std::vector<uint8_t> rawPacket = _bl->hf.getUBinary(arguments.at(1));
+			PMyPacket packet = std::make_shared<MyPacket>(rawPacket);
+			if(packet->getType() == MyPacket::Type::RADIO_ERP1 || packet->getType() == MyPacket::Type::RADIO_ERP2)
+			{
+				if((packet->senderAddress() & 0xFFFFFF80) != interfaceIterator->second->getBaseAddress())
+				{
+					onPacketReceived(interfaceId, packet);
+					stringStream << "Processed packet " << BaseLib::HelperFunctions::getHexString(packet->getBinary()) << std::endl;
+				}
+			}
+
+			return stringStream.str();
+		}
 		else return "Unknown command.\n";
 	}
 	catch(const std::exception& ex)
