@@ -1,4 +1,4 @@
-/* Copyright 2013-2017 Homegear UG (haftungsbeschränkt) */
+/* Copyright 2013-2019 Homegear GmbH */
 
 #ifndef SECURITY_H_
 #define SECURITY_H_
