@@ -1,4 +1,4 @@
-/* Copyright 2013-2017 Homegear UG (haftungsbeschränkt) */
+/* Copyright 2013-2019 Homegear GmbH */
 
 #ifndef HOMEGEAR_ENOCEAN_HOMEGEARGATEWAY_H
 #define HOMEGEAR_ENOCEAN_HOMEGEARGATEWAY_H
