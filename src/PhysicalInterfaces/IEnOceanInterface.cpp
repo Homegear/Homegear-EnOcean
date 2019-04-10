@@ -54,7 +54,7 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t>& re
         }
         catch(BaseLib::SocketOperationException ex)
         {
-            _out.printError("Error sending packet: " + ex.what());
+            _out.printError("Error sending packet: " + std::string(ex.what()));
             return;
         }
 
