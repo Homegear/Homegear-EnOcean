@@ -49,14 +49,6 @@ void MyCentral::dispose(bool wait)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void MyCentral::init()
@@ -80,14 +72,6 @@ void MyCentral::init()
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 	}
 }
 
@@ -148,27 +132,11 @@ void MyCentral::worker()
 			{
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
-			catch(BaseLib::Exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
 		}
 	}
     catch(const std::exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -199,14 +167,6 @@ void MyCentral::loadPeers()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 std::shared_ptr<MyPeer> MyCentral::getPeer(uint64_t id)
@@ -223,14 +183,6 @@ std::shared_ptr<MyPeer> MyCentral::getPeer(uint64_t id)
 	catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<MyPeer>();
 }
@@ -250,14 +202,6 @@ std::list<PMyPeer> MyCentral::getPeer(int32_t address)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return std::list<PMyPeer>();
 }
 
@@ -275,14 +219,6 @@ std::shared_ptr<MyPeer> MyCentral::getPeer(std::string serialNumber)
 	catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<MyPeer>();
 }
@@ -331,14 +267,6 @@ int32_t MyCentral::getFreeRfChannel(std::string& interfaceId)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return -1;
 }
 
@@ -350,7 +278,7 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 		PMyPacket myPacket(std::dynamic_pointer_cast<MyPacket>(packet));
 		if(!myPacket) return false;
 
-		if(_bl->debugLevel >= 4) _bl->out.printInfo(BaseLib::HelperFunctions::getTimeString(myPacket->timeReceived()) + " EnOcean packet received (" + senderId + std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" + "): " + BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) + " - Sender address (= EnOcean ID): 0x" + BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8));
+		if(_bl->debugLevel >= 4) _bl->out.printInfo(BaseLib::HelperFunctions::getTimeString(myPacket->getTimeReceived()) + " EnOcean packet received (" + senderId + std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" + "): " + BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) + " - Sender address (= EnOcean ID): 0x" + BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8));
 
 		std::list<PMyPeer> peers = getPeer(myPacket->senderAddress());
 		if(peers.empty())
@@ -408,14 +336,6 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 	catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return false;
 }
@@ -504,14 +424,6 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				catch(const std::exception& ex)
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(BaseLib::Exception& ex)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				}
 
 				PVariable deviceDescriptions(new Variable(VariableType::tArray));
@@ -603,14 +515,6 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
-				catch(BaseLib::Exception& ex)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				}
 
                 if(peer->hasRfChannel(0))
                 {
@@ -664,14 +568,6 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return false;
 }
 
@@ -689,14 +585,6 @@ void MyCentral::savePeers(bool full)
 	catch(const std::exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -777,16 +665,6 @@ void MyCentral::deletePeer(uint64_t id)
     {
 		_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	_peersMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_peersMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -897,16 +775,6 @@ std::string MyCentral::handleCliCommand(std::string command)
 				{
 					_peersMutex.unlock();
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(BaseLib::Exception& ex)
-				{
-					_peersMutex.unlock();
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					_peersMutex.unlock();
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				}
 
 				PVariable deviceDescriptions(new Variable(VariableType::tArray));
@@ -1084,16 +952,6 @@ std::string MyCentral::handleCliCommand(std::string command)
 				_peersMutex.unlock();
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
-			catch(BaseLib::Exception& ex)
-			{
-				_peersMutex.unlock();
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_peersMutex.unlock();
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
 		}
 		else if(command.compare(0, 13, "peers setname") == 0 || command.compare(0, 2, "pn") == 0)
 		{
@@ -1201,14 +1059,6 @@ std::string MyCentral::handleCliCommand(std::string command)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return "Error executing command. See log file for more details.\n";
 }
 
@@ -1228,14 +1078,6 @@ std::shared_ptr<MyPeer> MyCentral::createPeer(uint32_t deviceType, int32_t addre
     catch(const std::exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return std::shared_ptr<MyPeer>();
 }
@@ -1279,16 +1121,6 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 			_peersMutex.unlock();
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
-		catch(BaseLib::Exception& ex)
-		{
-			_peersMutex.unlock();
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_peersMutex.unlock();
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
 
 		PVariable deviceDescriptions(new Variable(VariableType::tArray));
 		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(clientInfo, true, std::map<std::string, bool>());
@@ -1310,14 +1142,6 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 	catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Variable::createError(-32500, "Unknown application error.");
 }
@@ -1342,14 +1166,6 @@ PVariable MyCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::strin
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -1373,14 +1189,6 @@ PVariable MyCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t p
 	catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Variable::createError(-32500, "Unknown application error.");
 }
@@ -1439,14 +1247,6 @@ PVariable MyCentral::getPairingState(BaseLib::PRpcClientInfo clientInfo)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -1474,7 +1274,7 @@ PVariable MyCentral::getSniffedDevices(BaseLib::PRpcClientInfo clientInfo)
 			for(auto packet : peerPackets.second)
 			{
 				PVariable packetInfo(new Variable(VariableType::tStruct));
-				packetInfo->structValue->insert(StructElement("TIME_RECEIVED", PVariable(new Variable(packet->timeReceived() / 1000))));
+				packetInfo->structValue->insert(StructElement("TIME_RECEIVED", PVariable(new Variable(packet->getTimeReceived() / 1000))));
 				packetInfo->structValue->insert(StructElement("PACKET", PVariable(new Variable(BaseLib::HelperFunctions::getHexString(packet->getBinary())))));
 				packets->arrayValue->push_back(packetInfo);
 			}
@@ -1484,14 +1284,6 @@ PVariable MyCentral::getSniffedDevices(BaseLib::PRpcClientInfo clientInfo)
 	catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Variable::createError(-32500, "Unknown application error.");
 }
@@ -1518,14 +1310,6 @@ void MyCentral::pairingModeTimer(int32_t duration, bool debugOutput)
 	catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -1565,14 +1349,6 @@ std::shared_ptr<Variable> MyCentral::setInstallMode(BaseLib::PRpcClientInfo clie
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
@@ -1587,14 +1363,6 @@ PVariable MyCentral::setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t p
 	catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Variable::createError(-32500, "Unknown application error.");
 }

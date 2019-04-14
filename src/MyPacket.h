@@ -32,6 +32,8 @@ class MyPacket : public BaseLib::Systems::Packet
         MyPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress);
         virtual ~MyPacket();
 
+        int32_t senderAddress() { return _senderAddress; }
+        int32_t destinationAddress() { return _destinationAddress; }
         Type getType() { return _type; }
         uint8_t getRorg() { return _rorg; }
         int32_t getRssi() { return _rssi; }
@@ -46,6 +48,8 @@ class MyPacket : public BaseLib::Systems::Packet
     protected:
 		bool _appendAddressAndStatus = false;
         std::vector<uint8_t> _packet;
+        int32_t _senderAddress = 0;
+        int32_t _destinationAddress = 0;
         Type _type = Type::RESERVED;
         int32_t _rssi = 0;
         uint8_t _rorg = 0;

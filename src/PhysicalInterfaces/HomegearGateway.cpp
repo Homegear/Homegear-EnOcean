@@ -54,14 +54,6 @@ void HomegearGateway::startListening()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void HomegearGateway::stopListening()
@@ -78,14 +70,6 @@ void HomegearGateway::stopListening()
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -113,17 +97,9 @@ int32_t HomegearGateway::setBaseAddress(uint32_t value)
 
         return result->integerValue64;
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
 }
@@ -146,17 +122,9 @@ void HomegearGateway::init()
             _out.printInfo("Info: Base address set to 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + ".");
         }
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -174,17 +142,9 @@ void HomegearGateway::listen()
                 _bl->threadManager.start(_initThread, true, &HomegearGateway::init, this);
             }
         }
-        catch(BaseLib::Exception& ex)
-        {
-            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        }
         catch(const std::exception& ex)
         {
             _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        }
-        catch(...)
-        {
-            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
         }
 
         std::vector<char> buffer(1024);
@@ -263,32 +223,16 @@ void HomegearGateway::listen()
                     }
                 }
             }
-            catch(BaseLib::Exception& ex)
+            catch(const std::exception& ex)
             {
                 _stopped = true;
                 _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
             }
         }
     }
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -331,14 +275,6 @@ void HomegearGateway::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packe
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void HomegearGateway::rawSend(std::vector<uint8_t>& packet)
@@ -361,14 +297,6 @@ void HomegearGateway::rawSend(std::vector<uint8_t>& packet)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -416,14 +344,6 @@ PVariable HomegearGateway::invoke(std::string methodName, PArray& parameters)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return BaseLib::Variable::createError(-32500, "Unknown application error. See log for more details.");
 }
 
@@ -464,14 +384,6 @@ void HomegearGateway::processPacket(std::vector<uint8_t>& data)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
