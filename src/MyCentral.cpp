@@ -3,6 +3,8 @@
 #include "MyCentral.h"
 #include "GD.h"
 
+#include <iomanip>
+
 namespace MyFamily {
 
 MyCentral::MyCentral(ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(MY_FAMILY_ID, GD::bl, eventHandler)
@@ -348,7 +350,7 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
 		PMyPacket myPacket(std::dynamic_pointer_cast<MyPacket>(packet));
 		if(!myPacket) return false;
 
-		if(_bl->debugLevel >= 4) std::cout << BaseLib::HelperFunctions::getTimeString(myPacket->timeReceived()) << " EnOcean packet received (" << senderId << std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" << "): " << BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) << " - Sender address (= EnOcean ID): 0x" << BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8) << std::endl;
+		if(_bl->debugLevel >= 4) _bl->out.printInfo(BaseLib::HelperFunctions::getTimeString(myPacket->timeReceived()) + " EnOcean packet received (" + senderId + std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" + "): " + BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) + " - Sender address (= EnOcean ID): 0x" + BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8));
 
 		std::list<PMyPeer> peers = getPeer(myPacket->senderAddress());
 		if(peers.empty())
