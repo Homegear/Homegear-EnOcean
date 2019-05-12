@@ -11,13 +11,13 @@
 
 #include "GD.h"
 #include "Interfaces.h"
-#include "MyFamily.h"
-#include "MyCentral.h"
+#include "EnOcean.h"
+#include "EnOceanCentral.h"
 
-namespace MyFamily
+namespace EnOcean
 {
 
-MyFamily::MyFamily(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(bl, eventHandler, MY_FAMILY_ID, MY_FAMILY_NAME)
+EnOcean::EnOcean(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink* eventHandler) : BaseLib::Systems::DeviceFamily(bl, eventHandler, MY_FAMILY_ID, MY_FAMILY_NAME)
 {
 	GD::bl = bl;
 	GD::family = this;
@@ -27,12 +27,12 @@ MyFamily::MyFamily(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSin
 	_physicalInterfaces.reset(new Interfaces(bl, _settings->getPhysicalInterfaceSettings()));
 }
 
-MyFamily::~MyFamily()
+EnOcean::~EnOcean()
 {
 
 }
 
-void MyFamily::dispose()
+void EnOcean::dispose()
 {
 	if(_disposed) return;
 	DeviceFamily::dispose();
@@ -40,11 +40,11 @@ void MyFamily::dispose()
 	_central.reset();
 }
 
-void MyFamily::createCentral()
+void EnOcean::createCentral()
 {
 	try
 	{
-		_central.reset(new MyCentral(0, "VEO0000001", this));
+		_central.reset(new EnOceanCentral(0, "VEO0000001", this));
 		GD::out.printMessage("Created central with id " + std::to_string(_central->getId()) + ".");
 	}
 	catch(const std::exception& ex)
@@ -53,12 +53,12 @@ void MyFamily::createCentral()
     }
 }
 
-std::shared_ptr<BaseLib::Systems::ICentral> MyFamily::initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber)
+std::shared_ptr<BaseLib::Systems::ICentral> EnOcean::initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber)
 {
-	return std::shared_ptr<MyCentral>(new MyCentral(deviceId, serialNumber, this));
+	return std::shared_ptr<EnOceanCentral>(new EnOceanCentral(deviceId, serialNumber, this));
 }
 
-PVariable MyFamily::getPairingInfo()
+PVariable EnOcean::getPairingInfo()
 {
 	try
 	{

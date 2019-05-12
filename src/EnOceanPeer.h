@@ -4,23 +4,23 @@
 #define MYPEER_H_
 
 #include "PhysicalInterfaces/IEnOceanInterface.h"
-#include "MyPacket.h"
+#include "EnOceanPacket.h"
 #include "Security.h"
 #include <homegear-base/BaseLib.h>
 
 using namespace BaseLib;
 using namespace BaseLib::DeviceDescription;
 
-namespace MyFamily
+namespace EnOcean
 {
-class MyCentral;
+class EnOceanCentral;
 
-class MyPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserverEventSink
+class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserverEventSink
 {
 public:
-	MyPeer(uint32_t parentID, IPeerEventSink* eventHandler);
-	MyPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, IPeerEventSink* eventHandler);
-	virtual ~MyPeer();
+	EnOceanPeer(uint32_t parentID, IPeerEventSink* eventHandler);
+	EnOceanPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, IPeerEventSink* eventHandler);
+	virtual ~EnOceanPeer();
 	void init();
 	void dispose();
 
@@ -187,7 +187,7 @@ protected:
 	// }}}
 };
 
-typedef std::shared_ptr<MyPeer> PMyPeer;
+typedef std::shared_ptr<EnOceanPeer> PMyPeer;
 
 }
 

@@ -5,7 +5,7 @@
 #include "PhysicalInterfaces/Usb300.h"
 #include "PhysicalInterfaces/HomegearGateway.h"
 
-namespace MyFamily
+namespace EnOcean
 {
 
 Interfaces::Interfaces(BaseLib::SharedObjects* bl, std::map<std::string, Systems::PPhysicalInterfaceSettings> physicalInterfaceSettings) : Systems::PhysicalInterfaces(bl, GD::family->getFamily(), physicalInterfaceSettings)

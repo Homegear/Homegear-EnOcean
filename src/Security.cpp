@@ -4,7 +4,7 @@
 
 #include "GD.h"
 
-namespace MyFamily
+namespace EnOcean
 {
 Security::Security(BaseLib::SharedObjects* bl) : _bl(bl)
 {

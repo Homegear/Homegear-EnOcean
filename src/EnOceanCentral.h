@@ -3,23 +3,23 @@
 #ifndef MYCENTRAL_H_
 #define MYCENTRAL_H_
 
-#include "MyPeer.h"
-#include "MyPacket.h"
+#include "EnOceanPeer.h"
+#include "EnOceanPacket.h"
 #include <homegear-base/BaseLib.h>
 
 #include <memory>
 #include <mutex>
 #include <string>
 
-namespace MyFamily
+namespace EnOcean
 {
 
-class MyCentral : public BaseLib::Systems::ICentral
+class EnOceanCentral : public BaseLib::Systems::ICentral
 {
 public:
-	MyCentral(ICentralEventSink* eventHandler);
-	MyCentral(uint32_t deviceType, std::string serialNumber, ICentralEventSink* eventHandler);
-	virtual ~MyCentral();
+	EnOceanCentral(ICentralEventSink* eventHandler);
+	EnOceanCentral(uint32_t deviceType, std::string serialNumber, ICentralEventSink* eventHandler);
+	virtual ~EnOceanCentral();
 	virtual void dispose(bool wait = true);
 
 	std::string handleCliCommand(std::string command);
@@ -27,7 +27,7 @@ public:
 
 	int32_t getFreeRfChannel(std::string& interfaceId);
 
-	uint64_t getPeerIdFromSerial(std::string& serialNumber) { std::shared_ptr<MyPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
+	uint64_t getPeerIdFromSerial(std::string& serialNumber) { std::shared_ptr<EnOceanPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
 	PMyPeer getPeer(uint64_t id);
 	std::list<PMyPeer> getPeer(int32_t address);
 	PMyPeer getPeer(std::string serialNumber);
@@ -69,7 +69,7 @@ protected:
 	virtual void savePeers(bool full);
 	virtual void loadVariables() {}
 	virtual void saveVariables() {}
-	std::shared_ptr<MyPeer> createPeer(uint32_t deviceType, int32_t address, std::string serialNumber, bool save = true);
+	std::shared_ptr<EnOceanPeer> createPeer(uint32_t deviceType, int32_t address, std::string serialNumber, bool save = true);
 	void deletePeer(uint64_t id);
 
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);

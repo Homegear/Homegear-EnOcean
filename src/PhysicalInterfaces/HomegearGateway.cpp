@@ -3,7 +3,7 @@
 #include "../GD.h"
 #include "HomegearGateway.h"
 
-namespace MyFamily
+namespace EnOcean
 {
 
 HomegearGateway::HomegearGateway(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IEnOceanInterface(settings)
@@ -240,7 +240,7 @@ void HomegearGateway::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packe
 {
     try
     {
-        std::shared_ptr<MyPacket> myPacket(std::dynamic_pointer_cast<MyPacket>(packet));
+        std::shared_ptr<EnOceanPacket> myPacket(std::dynamic_pointer_cast<EnOceanPacket>(packet));
         if(!myPacket || !_tcpSocket) return;
 
         if(_stopped || !_tcpSocket->connected())
@@ -359,10 +359,10 @@ void HomegearGateway::processPacket(std::vector<uint8_t>& data)
 
         uint8_t packetType = data[4];
         std::unique_lock<std::mutex> requestsGuard(_requestsMutex);
-        std::map<uint8_t, std::shared_ptr<Request>>::iterator requestIterator = _requests.find(packetType);
+        auto requestIterator = _requests.find(packetType);
         if(requestIterator != _requests.end())
         {
-            std::shared_ptr<Request> request = requestIterator->second;
+            auto request = requestIterator->second;
             requestsGuard.unlock();
             request->response = data;
             {
@@ -374,8 +374,8 @@ void HomegearGateway::processPacket(std::vector<uint8_t>& data)
         }
         else requestsGuard.unlock();
 
-        PMyPacket packet(new MyPacket(data));
-        if(packet->getType() == MyPacket::Type::RADIO_ERP1 || packet->getType() == MyPacket::Type::RADIO_ERP2)
+        PMyPacket packet(new EnOceanPacket(data));
+        if(packet->getType() == EnOceanPacket::Type::RADIO_ERP1 || packet->getType() == EnOceanPacket::Type::RADIO_ERP2)
         {
             if((packet->senderAddress() & 0xFFFFFF80) == _baseAddress) _out.printInfo("Info: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
             else raisePacketReceived(packet);

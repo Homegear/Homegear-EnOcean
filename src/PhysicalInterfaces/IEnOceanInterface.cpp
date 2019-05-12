@@ -2,9 +2,9 @@
 
 #include "IEnOceanInterface.h"
 #include "../GD.h"
-#include "../MyPacket.h"
+#include "../EnOceanPacket.h"
 
-namespace MyFamily
+namespace EnOcean
 {
 
 IEnOceanInterface::IEnOceanInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(GD::bl, GD::family->getFamily(), settings)
@@ -41,7 +41,7 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t>& re
 
         std::lock_guard<std::mutex> sendPacketGuard(_sendPacketMutex);
         std::lock_guard<std::mutex> getResponseGuard(_getResponseMutex);
-        std::shared_ptr<Request> request(new Request());
+        std::shared_ptr<Request> request = std::make_shared<Request>();
         std::unique_lock<std::mutex> requestsGuard(_requestsMutex);
         _requests[packetType] = request;
         requestsGuard.unlock();
@@ -52,7 +52,7 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t>& re
             GD::out.printInfo("Info: Sending packet " + BaseLib::HelperFunctions::getHexString(requestPacket));
             rawSend(requestPacket);
         }
-        catch(BaseLib::SocketOperationException ex)
+        catch(const BaseLib::SocketOperationException& ex)
         {
             _out.printError("Error sending packet: " + std::string(ex.what()));
             return;
@@ -104,7 +104,7 @@ void IEnOceanInterface::raisePacketReceived(std::shared_ptr<BaseLib::Systems::Pa
 {
     try
     {
-        PMyPacket myPacket(std::dynamic_pointer_cast<MyPacket>(packet));
+        PMyPacket myPacket(std::dynamic_pointer_cast<EnOceanPacket>(packet));
         if(!myPacket) return;
 
         if(myPacket->senderAddress() != (int32_t)_baseAddress)

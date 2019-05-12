@@ -3,7 +3,7 @@
 #include "../GD.h"
 #include "Usb300.h"
 
-namespace MyFamily
+namespace EnOcean
 {
 
 Usb300::Usb300(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IEnOceanInterface(settings)
@@ -333,8 +333,8 @@ void Usb300::processPacket(std::vector<uint8_t>& data)
 		}
 		else requestsGuard.unlock();
 
-		PMyPacket packet = std::make_shared<MyPacket>(data);
-		if(packet->getType() == MyPacket::Type::RADIO_ERP1 || packet->getType() == MyPacket::Type::RADIO_ERP2)
+		PMyPacket packet = std::make_shared<EnOceanPacket>(data);
+		if(packet->getType() == EnOceanPacket::Type::RADIO_ERP1 || packet->getType() == EnOceanPacket::Type::RADIO_ERP2)
 		{
 			if((packet->senderAddress() & 0xFFFFFF80) == _baseAddress) _out.printInfo("Info: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
 			else raisePacketReceived(packet);
@@ -350,7 +350,7 @@ void Usb300::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{
-		std::shared_ptr<MyPacket> myPacket(std::dynamic_pointer_cast<MyPacket>(packet));
+		std::shared_ptr<EnOceanPacket> myPacket(std::dynamic_pointer_cast<EnOceanPacket>(packet));
 		if(!myPacket) return;
 
 		if(!_initComplete)

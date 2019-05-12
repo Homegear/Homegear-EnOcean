@@ -1,16 +1,16 @@
 /* Copyright 2013-2019 Homegear GmbH */
 
-#include "MyPacket.h"
+#include "EnOceanPacket.h"
 
 #include "GD.h"
 
-namespace MyFamily
+namespace EnOcean
 {
-MyPacket::MyPacket()
+EnOceanPacket::EnOceanPacket()
 {
 }
 
-MyPacket::MyPacket(std::vector<uint8_t>& espPacket) : _packet(espPacket)
+EnOceanPacket::EnOceanPacket(std::vector<uint8_t>& espPacket) : _packet(espPacket)
 {
 	_timeReceived = BaseLib::HelperFunctions::getTime();
 	if(espPacket.size() < 6) return;
@@ -36,7 +36,7 @@ MyPacket::MyPacket(std::vector<uint8_t>& espPacket) : _packet(espPacket)
 	}
 }
 
-MyPacket::MyPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress) : _type(type), _rorg(rorg)
+EnOceanPacket::EnOceanPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress) : _type(type), _rorg(rorg)
 {
 	_senderAddress = senderAddress;
     _destinationAddress = ((destinationAddress & 0xFFFFFF80) == (senderAddress & 0xFFFFFF80) ? 0xFFFFFFFF : destinationAddress);
@@ -47,14 +47,14 @@ MyPacket::MyPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t desti
 	else if(type == Type::RADIO_ERP2) _optionalData = std::vector<uint8_t>{ 3, (uint8_t)0xFF };
 }
 
-MyPacket::~MyPacket()
+EnOceanPacket::~EnOceanPacket()
 {
 	_packet.clear();
 	_data.clear();
 	_optionalData.clear();
 }
 
-std::vector<uint8_t> MyPacket::getBinary()
+std::vector<uint8_t> EnOceanPacket::getBinary()
 {
 	try
 	{
@@ -87,7 +87,7 @@ std::vector<uint8_t> MyPacket::getBinary()
     return std::vector<uint8_t>();
 }
 
-std::vector<uint8_t> MyPacket::getPosition(uint32_t position, uint32_t size)
+std::vector<uint8_t> EnOceanPacket::getPosition(uint32_t position, uint32_t size)
 {
 	try
 	{
@@ -100,7 +100,7 @@ std::vector<uint8_t> MyPacket::getPosition(uint32_t position, uint32_t size)
     return std::vector<uint8_t>();
 }
 
-void MyPacket::setPosition(uint32_t position, uint32_t size, const std::vector<uint8_t>& source)
+void EnOceanPacket::setPosition(uint32_t position, uint32_t size, const std::vector<uint8_t>& source)
 {
 	try
 	{
