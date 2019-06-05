@@ -1445,10 +1445,11 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
 			if(!valueKeys->empty())
 			{
 				std::string address(_serialNumber + ":" + std::to_string(channel));
-				raiseEvent(clientInfo->initInterfaceId, _peerID, channel, valueKeys, values);
-				raiseRPCEvent(clientInfo->initInterfaceId, _peerID, channel, address, valueKeys, values);
+                std::string eventSource = clientInfo ? clientInfo->initInterfaceId : "device-" + std::to_string(_peerID);
+				raiseEvent(eventSource, _peerID, channel, valueKeys, values);
+				raiseRPCEvent(eventSource, _peerID, channel, address, valueKeys, values);
 			}
-			return PVariable(new Variable(VariableType::tVoid));
+			return std::make_shared<Variable>(VariableType::tVoid);
 		}
 		else if(rpcParameter->physical->operationType != IPhysical::OperationType::Enum::command) return Variable::createError(-6, "Parameter is not settable.");
 		if(rpcParameter->setPackets.empty() && !rpcParameter->writeable) return Variable::createError(-6, "parameter is read only");
@@ -1711,11 +1712,12 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
 		if(!valueKeys->empty())
 		{
 			std::string address(_serialNumber + ":" + std::to_string(channel));
-			raiseEvent(clientInfo->initInterfaceId, _peerID, channel, valueKeys, values);
-			raiseRPCEvent(clientInfo->initInterfaceId, _peerID, channel, address, valueKeys, values);
+            std::string eventSource = clientInfo ? clientInfo->initInterfaceId : "device-" + std::to_string(_peerID);
+			raiseEvent(eventSource, _peerID, channel, valueKeys, values);
+			raiseRPCEvent(eventSource, _peerID, channel, address, valueKeys, values);
 		}
 
-		return PVariable(new Variable(VariableType::tVoid));
+		return std::make_shared<Variable>(VariableType::tVoid);
 	}
 	catch(const std::exception& ex)
     {
