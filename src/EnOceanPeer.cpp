@@ -1,14 +1,16 @@
 /* Copyright 2013-2019 Homegear GmbH */
 
-#include "MyPeer.h"
+#include "EnOceanPeer.h"
 
 #include "GD.h"
-#include "MyPacket.h"
-#include "MyCentral.h"
+#include "EnOceanPacket.h"
+#include "EnOceanCentral.h"
 
-namespace MyFamily
+#include <iomanip>
+
+namespace EnOcean
 {
-std::shared_ptr<BaseLib::Systems::ICentral> MyPeer::getCentral()
+std::shared_ptr<BaseLib::Systems::ICentral> EnOceanPeer::getCentral()
 {
 	try
 	{
@@ -20,28 +22,20 @@ std::shared_ptr<BaseLib::Systems::ICentral> MyPeer::getCentral()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 	return std::shared_ptr<BaseLib::Systems::ICentral>();
 }
 
-MyPeer::MyPeer(uint32_t parentID, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl, parentID, eventHandler)
+EnOceanPeer::EnOceanPeer(uint32_t parentID, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl, parentID, eventHandler)
 {
 	init();
 }
 
-MyPeer::MyPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl, id, address, serialNumber, parentID, eventHandler)
+EnOceanPeer::EnOceanPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, IPeerEventSink* eventHandler) : BaseLib::Systems::Peer(GD::bl, id, address, serialNumber, parentID, eventHandler)
 {
 	init();
 }
 
-MyPeer::~MyPeer()
+EnOceanPeer::~EnOceanPeer()
 {
 	try
 	{
@@ -51,17 +45,9 @@ MyPeer::~MyPeer()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-void MyPeer::init()
+void EnOceanPeer::init()
 {
 	try
 	{
@@ -78,23 +64,15 @@ void MyPeer::init()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-void MyPeer::dispose()
+void EnOceanPeer::dispose()
 {
 	if(_disposing) return;
 	Peer::dispose();
 }
 
-void MyPeer::worker()
+void EnOceanPeer::worker()
 {
 	try
 	{
@@ -164,17 +142,9 @@ void MyPeer::worker()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-void MyPeer::updateBlindSpeed()
+void EnOceanPeer::updateBlindSpeed()
 {
     try
     {
@@ -209,17 +179,9 @@ void MyPeer::updateBlindSpeed()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void MyPeer::updateBlindPosition()
+void EnOceanPeer::updateBlindPosition()
 {
     try
     {
@@ -253,17 +215,9 @@ void MyPeer::updateBlindPosition()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void MyPeer::homegearStarted()
+void EnOceanPeer::homegearStarted()
 {
 	try
 	{
@@ -273,17 +227,9 @@ void MyPeer::homegearStarted()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-void MyPeer::homegearShuttingDown()
+void EnOceanPeer::homegearShuttingDown()
 {
 	try
 	{
@@ -294,17 +240,9 @@ void MyPeer::homegearShuttingDown()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-std::string MyPeer::handleCliCommand(std::string command)
+std::string EnOceanPeer::handleCliCommand(std::string command)
 {
 	try
 	{
@@ -382,18 +320,10 @@ std::string MyPeer::handleCliCommand(std::string command)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return "Error executing command. See log file for more details.\n";
 }
 
-std::string MyPeer::printConfig()
+std::string EnOceanPeer::printConfig()
 {
 	try
 	{
@@ -446,24 +376,16 @@ std::string MyPeer::printConfig()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return "";
 }
 
-std::string MyPeer::getPhysicalInterfaceId()
+std::string EnOceanPeer::getPhysicalInterfaceId()
 {
 	if(_physicalInterfaceId.empty()) setPhysicalInterfaceId(GD::defaultPhysicalInterface->getID());
 	return _physicalInterfaceId;
 }
 
-void MyPeer::setPhysicalInterfaceId(std::string id)
+void EnOceanPeer::setPhysicalInterfaceId(std::string id)
 {
 	if(id.empty() || (GD::physicalInterfaces.find(id) != GD::physicalInterfaces.end() && GD::physicalInterfaces.at(id)))
 	{
@@ -478,7 +400,7 @@ void MyPeer::setPhysicalInterfaceId(std::string id)
 	}
 }
 
-void MyPeer::setPhysicalInterface(std::shared_ptr<IEnOceanInterface> interface)
+void EnOceanPeer::setPhysicalInterface(std::shared_ptr<IEnOceanInterface> interface)
 {
 	try
 	{
@@ -489,17 +411,9 @@ void MyPeer::setPhysicalInterface(std::shared_ptr<IEnOceanInterface> interface)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void MyPeer::setBestInterface()
+void EnOceanPeer::setBestInterface()
 {
     try
     {
@@ -524,17 +438,9 @@ void MyPeer::setBestInterface()
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void MyPeer::loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows)
+void EnOceanPeer::loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows)
 {
 	try
 	{
@@ -579,17 +485,9 @@ void MyPeer::loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void MyPeer::saveVariables()
+void EnOceanPeer::saveVariables()
 {
 	try
 	{
@@ -607,17 +505,9 @@ void MyPeer::saveVariables()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-bool MyPeer::load(BaseLib::Systems::ICentral* central)
+bool EnOceanPeer::load(BaseLib::Systems::ICentral* central)
 {
 	try
 	{
@@ -679,18 +569,10 @@ bool MyPeer::load(BaseLib::Systems::ICentral* central)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return false;
 }
 
-void MyPeer::initializeCentralConfig()
+void EnOceanPeer::initializeCentralConfig()
 {
 	try
 	{
@@ -711,17 +593,9 @@ void MyPeer::initializeCentralConfig()
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-void MyPeer::setRssiDevice(uint8_t rssi)
+void EnOceanPeer::setRssiDevice(uint8_t rssi)
 {
 	try
 	{
@@ -754,17 +628,9 @@ void MyPeer::setRssiDevice(uint8_t rssi)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-bool MyPeer::hasRfChannel(int32_t channel)
+bool EnOceanPeer::hasRfChannel(int32_t channel)
 {
     try
     {
@@ -779,18 +645,10 @@ bool MyPeer::hasRfChannel(int32_t channel)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return false;
 }
 
-int32_t MyPeer::getRfChannel(int32_t channel)
+int32_t EnOceanPeer::getRfChannel(int32_t channel)
 {
 	try
 	{
@@ -801,18 +659,10 @@ int32_t MyPeer::getRfChannel(int32_t channel)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return 0;
 }
 
-std::vector<int32_t> MyPeer::getRfChannels()
+std::vector<int32_t> EnOceanPeer::getRfChannels()
 {
 	try
 	{
@@ -828,18 +678,10 @@ std::vector<int32_t> MyPeer::getRfChannels()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return std::vector<int32_t>();
 }
 
-void MyPeer::setRfChannel(int32_t channel, int32_t rfChannel)
+void EnOceanPeer::setRfChannel(int32_t channel, int32_t rfChannel)
 {
 	try
 	{
@@ -872,17 +714,9 @@ void MyPeer::setRfChannel(int32_t channel, int32_t rfChannel)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& frameValues)
+void EnOceanPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& frameValues)
 {
 	try
 	{
@@ -986,27 +820,19 @@ void MyPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& fra
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void MyPeer::packetReceived(PMyPacket& packet)
+void EnOceanPeer::packetReceived(PMyPacket& packet)
 {
 	try
 	{
 		if(_disposing || !packet || !_rpcDevice) return;
 		if(!isWildcardPeer() && packet->senderAddress() != _address) return;
 		else if(isWildcardPeer() && (signed)(packet->senderAddress() & 0xFFFFFF80) != _address) return;
-		std::shared_ptr<MyCentral> central = std::dynamic_pointer_cast<MyCentral>(getCentral());
+		std::shared_ptr<EnOceanCentral> central = std::dynamic_pointer_cast<EnOceanCentral>(getCentral());
 		if(!central) return;
 		setLastPacketReceived();
-        if(_lastPacket && BaseLib::HelperFunctions::getTime() - _lastPacket->timeReceived() < 1000 && _lastPacket->getBinary() == packet->getBinary()) return;
+        if(_lastPacket && BaseLib::HelperFunctions::getTime() - _lastPacket->getTimeReceived() < 1000 && _lastPacket->getBinary() == packet->getBinary()) return;
 		setRssiDevice(packet->getRssi() * -1);
 		serviceMessages->endUnreach();
 
@@ -1288,7 +1114,7 @@ void MyPeer::packetReceived(PMyPacket& packet)
                     if(responseFrame)
                     {
                         if(responseFrame->subtype == -1) responseFrame->subtype = 1;
-                        PMyPacket packet(new MyPacket((MyPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | getRfChannel(0), _address));
+                        PMyPacket packet(new EnOceanPacket((EnOceanPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | getRfChannel(0), _address));
 
                         for(BinaryPayloads::iterator i = responseFrame->binaryPayloads.begin(); i != responseFrame->binaryPayloads.end(); ++i)
                         {
@@ -1339,17 +1165,9 @@ void MyPeer::packetReceived(PMyPacket& packet)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-PParameterGroup MyPeer::getParameterSet(int32_t channel, ParameterGroup::Type::Enum type)
+PParameterGroup EnOceanPeer::getParameterSet(int32_t channel, ParameterGroup::Type::Enum type)
 {
 	try
 	{
@@ -1362,18 +1180,10 @@ PParameterGroup MyPeer::getParameterSet(int32_t channel, ParameterGroup::Type::E
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 	return PParameterGroup();
 }
 
-bool MyPeer::getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters)
+bool EnOceanPeer::getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters)
 {
 	try
 	{
@@ -1391,18 +1201,10 @@ bool MyPeer::getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter, 
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return false;
 }
 
-bool MyPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters)
+bool EnOceanPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters)
 {
 	try
 	{
@@ -1420,18 +1222,10 @@ bool MyPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter, u
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return false;
 }
 
-PVariable MyPeer::getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields)
+PVariable EnOceanPeer::getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields)
 {
 	try
 	{
@@ -1446,18 +1240,10 @@ PVariable MyPeer::getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return PVariable();
 }
 
-PVariable MyPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool checkAcls, bool onlyPushing)
+PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool checkAcls, bool onlyPushing)
 {
 	try
 	{
@@ -1519,18 +1305,10 @@ PVariable MyPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channe
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MyPeer::setInterface(BaseLib::PRpcClientInfo clientInfo, std::string interfaceId)
+PVariable EnOceanPeer::setInterface(BaseLib::PRpcClientInfo clientInfo, std::string interfaceId)
 {
 	try
 	{
@@ -1546,18 +1324,10 @@ PVariable MyPeer::setInterface(BaseLib::PRpcClientInfo clientInfo, std::string i
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay, bool wait)
+void EnOceanPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay, bool wait)
 {
 	try
 	{
@@ -1635,24 +1405,16 @@ void MyPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay,
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait)
+PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait)
 {
 	try
 	{
 		if(_disposing) return Variable::createError(-32500, "Peer is disposing.");
 		if(!value) return Variable::createError(-32500, "value is nullptr.");
 		Peer::setValue(clientInfo, channel, valueKey, value, wait); //Ignore result, otherwise setHomegerValue might not be executed
-		std::shared_ptr<MyCentral> central = std::dynamic_pointer_cast<MyCentral>(getCentral());
+		std::shared_ptr<EnOceanCentral> central = std::dynamic_pointer_cast<EnOceanCentral>(getCentral());
 		if(!central) return Variable::createError(-32500, "Could not get central object.");;
 		if(valueKey.empty()) return Variable::createError(-5, "Value key is empty.");
 		if(channel == 0 && serviceMessages->set(valueKey, value->booleanValue)) return PVariable(new Variable(VariableType::tVoid));
@@ -1683,10 +1445,11 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 			if(!valueKeys->empty())
 			{
 				std::string address(_serialNumber + ":" + std::to_string(channel));
-				raiseEvent(clientInfo->initInterfaceId, _peerID, channel, valueKeys, values);
-				raiseRPCEvent(clientInfo->initInterfaceId, _peerID, channel, address, valueKeys, values);
+                std::string eventSource = clientInfo ? clientInfo->initInterfaceId : "device-" + std::to_string(_peerID);
+				raiseEvent(eventSource, _peerID, channel, valueKeys, values);
+				raiseRPCEvent(eventSource, _peerID, channel, address, valueKeys, values);
 			}
-			return PVariable(new Variable(VariableType::tVoid));
+			return std::make_shared<Variable>(VariableType::tVoid);
 		}
 		else if(rpcParameter->physical->operationType != IPhysical::OperationType::Enum::command) return Variable::createError(-6, "Parameter is not settable.");
 		if(rpcParameter->setPackets.empty() && !rpcParameter->writeable) return Variable::createError(-6, "parameter is read only");
@@ -1769,7 +1532,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 								values->push_back(falseValue);
 							}
 
-							PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+							PMyPacket packet(new EnOceanPacket((EnOceanPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
 							std::vector<uint8_t> data{ 0 };
 							packet->setPosition(8, 8, data);
 							sendPacket(packet, "ANY", 0, wait);
@@ -1845,7 +1608,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
                                 _blindUp = positionDifference < 0;
                                 updateBlindSpeed();
 
-                                PMyPacket packet(new MyPacket((MyPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+                                PMyPacket packet(new EnOceanPacket((EnOceanPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
                                 std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
                                 packet->setPosition(8, 8, data);
                                 sendPacket(packet, "ANY", 0, wait);
@@ -1881,7 +1644,7 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 			PPacket frame = packetIterator->second;
 
 			if(frame->subtype == -1) frame->subtype = 1;
-			PMyPacket packet(new MyPacket((MyPacket::Type)frame->subtype, (uint8_t)frame->type, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+			PMyPacket packet(new EnOceanPacket((EnOceanPacket::Type)frame->subtype, (uint8_t)frame->type, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
 
 			for(BinaryPayloads::iterator i = frame->binaryPayloads.begin(); i != frame->binaryPayloads.end(); ++i)
 			{
@@ -1949,23 +1712,16 @@ PVariable MyPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel,
 		if(!valueKeys->empty())
 		{
 			std::string address(_serialNumber + ":" + std::to_string(channel));
-			raiseEvent(clientInfo->initInterfaceId, _peerID, channel, valueKeys, values);
-			raiseRPCEvent(clientInfo->initInterfaceId, _peerID, channel, address, valueKeys, values);
+            std::string eventSource = clientInfo ? clientInfo->initInterfaceId : "device-" + std::to_string(_peerID);
+			raiseEvent(eventSource, _peerID, channel, valueKeys, values);
+			raiseRPCEvent(eventSource, _peerID, channel, address, valueKeys, values);
 		}
 
-		return PVariable(new Variable(VariableType::tVoid));
+		return std::make_shared<Variable>(VariableType::tVoid);
 	}
 	catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return Variable::createError(-32500, "Unknown application error. See error log for more details.");
 }

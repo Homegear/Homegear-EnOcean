@@ -6,7 +6,7 @@
 #include <homegear-base/BaseLib.h>
 #include <queue>
 
-namespace MyFamily
+namespace EnOcean
 {
 
 class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface

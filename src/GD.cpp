@@ -2,10 +2,10 @@
 
 #include "GD.h"
 
-namespace MyFamily
+namespace EnOcean
 {
 	BaseLib::SharedObjects* GD::bl = nullptr;
-	MyFamily* GD::family = nullptr;
+	EnOcean* GD::family = nullptr;
 	std::map<std::string, std::shared_ptr<IEnOceanInterface>> GD::physicalInterfaces;
 	std::shared_ptr<IEnOceanInterface> GD::defaultPhysicalInterface;
 	BaseLib::Output GD::out;

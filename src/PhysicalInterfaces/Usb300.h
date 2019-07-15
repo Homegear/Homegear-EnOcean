@@ -3,11 +3,11 @@
 #ifndef USB300_H_
 #define USB300_H_
 
-#include "../MyPacket.h"
+#include "../EnOceanPacket.h"
 #include "IEnOceanInterface.h"
 #include <homegear-base/BaseLib.h>
 
-namespace MyFamily
+namespace EnOcean
 {
 
 class Usb300 : public IEnOceanInterface

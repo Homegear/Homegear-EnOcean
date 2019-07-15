@@ -7,10 +7,10 @@
 #define MY_FAMILY_NAME "EnOcean"
 
 #include <homegear-base/BaseLib.h>
-#include "MyFamily.h"
+#include "EnOcean.h"
 #include "PhysicalInterfaces/IEnOceanInterface.h"
 
-namespace MyFamily
+namespace EnOcean
 {
 
 class GD
@@ -19,7 +19,7 @@ public:
 	virtual ~GD();
 
 	static BaseLib::SharedObjects* bl;
-	static MyFamily* family;
+	static EnOcean* family;
 	static std::map<std::string, std::shared_ptr<IEnOceanInterface>> physicalInterfaces;
 	static std::shared_ptr<IEnOceanInterface> defaultPhysicalInterface;
 	static BaseLib::Output out;

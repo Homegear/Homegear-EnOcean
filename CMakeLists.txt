@@ -14,14 +14,14 @@ set(SOURCE_FILES
         src/GD.h
         src/Interfaces.cpp
         src/Interfaces.h
-        src/MyCentral.cpp
-        src/MyCentral.h
-        src/MyFamily.cpp
-        src/MyFamily.h
-        src/MyPacket.cpp
-        src/MyPacket.h
-        src/MyPeer.cpp
-        src/MyPeer.h
+        src/EnOceanCentral.cpp
+        src/EnOceanCentral.h
+        src/EnOcean.cpp
+        src/EnOcean.h
+        src/EnOceanPacket.cpp
+        src/EnOceanPacket.h
+        src/EnOceanPeer.cpp
+        src/EnOceanPeer.h
         src/Security.cpp
         src/Security.h
         config.h src/PhysicalInterfaces/HomegearGateway.cpp src/PhysicalInterfaces/HomegearGateway.h)

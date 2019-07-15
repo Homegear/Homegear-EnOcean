@@ -3,7 +3,7 @@
 #include "../GD.h"
 #include "HomegearGateway.h"
 
-namespace MyFamily
+namespace EnOcean
 {
 
 HomegearGateway::HomegearGateway(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IEnOceanInterface(settings)
@@ -54,14 +54,6 @@ void HomegearGateway::startListening()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void HomegearGateway::stopListening()
@@ -78,14 +70,6 @@ void HomegearGateway::stopListening()
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -113,17 +97,9 @@ int32_t HomegearGateway::setBaseAddress(uint32_t value)
 
         return result->integerValue64;
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
     return -1;
 }
@@ -146,17 +122,9 @@ void HomegearGateway::init()
             _out.printInfo("Info: Base address set to 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + ".");
         }
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -174,17 +142,9 @@ void HomegearGateway::listen()
                 _bl->threadManager.start(_initThread, true, &HomegearGateway::init, this);
             }
         }
-        catch(BaseLib::Exception& ex)
-        {
-            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        }
         catch(const std::exception& ex)
         {
             _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-        }
-        catch(...)
-        {
-            _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
         }
 
         std::vector<char> buffer(1024);
@@ -259,22 +219,14 @@ void HomegearGateway::listen()
                     catch(BaseLib::Rpc::BinaryRpcException& ex)
                     {
                         _binaryRpc->reset();
-                        _out.printError("Error processing packet: " + ex.what());
+                        _out.printError("Error processing packet: " + std::string(ex.what()));
                     }
                 }
             }
-            catch(BaseLib::Exception& ex)
+            catch(const std::exception& ex)
             {
                 _stopped = true;
                 _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(const std::exception& ex)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-            }
-            catch(...)
-            {
-                _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
             }
         }
     }
@@ -282,21 +234,13 @@ void HomegearGateway::listen()
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void HomegearGateway::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
     try
     {
-        std::shared_ptr<MyPacket> myPacket(std::dynamic_pointer_cast<MyPacket>(packet));
+        std::shared_ptr<EnOceanPacket> myPacket(std::dynamic_pointer_cast<EnOceanPacket>(packet));
         if(!myPacket || !_tcpSocket) return;
 
         if(_stopped || !_tcpSocket->connected())
@@ -331,14 +275,6 @@ void HomegearGateway::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packe
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
 void HomegearGateway::rawSend(std::vector<uint8_t>& packet)
@@ -361,14 +297,6 @@ void HomegearGateway::rawSend(std::vector<uint8_t>& packet)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 
@@ -395,7 +323,7 @@ PVariable HomegearGateway::invoke(std::string methodName, PArray& parameters)
             }
             catch(BaseLib::SocketOperationException& ex)
             {
-                _out.printError("Error: " + ex.what());
+                _out.printError("Error: " + std::string(ex.what()));
                 if(i == 5) return BaseLib::Variable::createError(-32500, ex.what());
                 _tcpSocket->open();
             }
@@ -416,14 +344,6 @@ PVariable HomegearGateway::invoke(std::string methodName, PArray& parameters)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return BaseLib::Variable::createError(-32500, "Unknown application error. See log for more details.");
 }
 
@@ -439,10 +359,10 @@ void HomegearGateway::processPacket(std::vector<uint8_t>& data)
 
         uint8_t packetType = data[4];
         std::unique_lock<std::mutex> requestsGuard(_requestsMutex);
-        std::map<uint8_t, std::shared_ptr<Request>>::iterator requestIterator = _requests.find(packetType);
+        auto requestIterator = _requests.find(packetType);
         if(requestIterator != _requests.end())
         {
-            std::shared_ptr<Request> request = requestIterator->second;
+            auto request = requestIterator->second;
             requestsGuard.unlock();
             request->response = data;
             {
@@ -454,8 +374,8 @@ void HomegearGateway::processPacket(std::vector<uint8_t>& data)
         }
         else requestsGuard.unlock();
 
-        PMyPacket packet(new MyPacket(data));
-        if(packet->getType() == MyPacket::Type::RADIO_ERP1 || packet->getType() == MyPacket::Type::RADIO_ERP2)
+        PMyPacket packet(new EnOceanPacket(data));
+        if(packet->getType() == EnOceanPacket::Type::RADIO_ERP1 || packet->getType() == EnOceanPacket::Type::RADIO_ERP2)
         {
             if((packet->senderAddress() & 0xFFFFFF80) == _baseAddress) _out.printInfo("Info: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
             else raisePacketReceived(packet);
@@ -464,14 +384,6 @@ void HomegearGateway::processPacket(std::vector<uint8_t>& data)
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(BaseLib::Exception& ex)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
     }
 }
 

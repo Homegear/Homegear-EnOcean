@@ -7,15 +7,15 @@
 
 using namespace BaseLib;
 
-namespace MyFamily
+namespace EnOcean
 {
-class MyCentral;
+class EnOceanCentral;
 
-class MyFamily : public BaseLib::Systems::DeviceFamily
+class EnOcean : public BaseLib::Systems::DeviceFamily
 {
 public:
-	MyFamily(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink* eventHandler);
-	virtual ~MyFamily();
+	EnOcean(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink* eventHandler);
+	virtual ~EnOcean();
 	virtual void dispose();
 
 	virtual bool hasPhysicalInterface() { return true; }
