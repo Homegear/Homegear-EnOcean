@@ -5,7 +5,7 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace MyFamily
+namespace EnOcean
 {
 
 using namespace BaseLib;

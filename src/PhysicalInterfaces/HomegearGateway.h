@@ -3,11 +3,11 @@
 #ifndef HOMEGEAR_ENOCEAN_HOMEGEARGATEWAY_H
 #define HOMEGEAR_ENOCEAN_HOMEGEARGATEWAY_H
 
-#include "../MyPacket.h"
+#include "../EnOceanPacket.h"
 #include "IEnOceanInterface.h"
 #include <homegear-base/BaseLib.h>
 
-namespace MyFamily
+namespace EnOcean
 {
 
 class HomegearGateway : public IEnOceanInterface

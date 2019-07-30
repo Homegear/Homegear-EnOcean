@@ -1,26 +1,28 @@
 /* Copyright 2013-2019 Homegear GmbH */
 
-#include "MyCentral.h"
+#include "EnOceanCentral.h"
 #include "GD.h"
 
-namespace MyFamily {
+#include <iomanip>
 
-MyCentral::MyCentral(ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(MY_FAMILY_ID, GD::bl, eventHandler)
+namespace EnOcean {
+
+EnOceanCentral::EnOceanCentral(ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(MY_FAMILY_ID, GD::bl, eventHandler)
 {
 	init();
 }
 
-MyCentral::MyCentral(uint32_t deviceID, std::string serialNumber, ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(MY_FAMILY_ID, GD::bl, deviceID, serialNumber, -1, eventHandler)
+EnOceanCentral::EnOceanCentral(uint32_t deviceID, std::string serialNumber, ICentralEventSink* eventHandler) : BaseLib::Systems::ICentral(MY_FAMILY_ID, GD::bl, deviceID, serialNumber, -1, eventHandler)
 {
 	init();
 }
 
-MyCentral::~MyCentral()
+EnOceanCentral::~EnOceanCentral()
 {
 	dispose();
 }
 
-void MyCentral::dispose(bool wait)
+void EnOceanCentral::dispose(bool wait)
 {
 	try
 	{
@@ -47,17 +49,9 @@ void MyCentral::dispose(bool wait)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void MyCentral::init()
+void EnOceanCentral::init()
 {
 	try
 	{
@@ -73,23 +67,15 @@ void MyCentral::init()
 			_physicalInterfaceEventhandlers[i->first] = i->second->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 		}
 
-		GD::bl->threadManager.start(_workerThread, true, _bl->settings.workerThreadPriority(), _bl->settings.workerThreadPolicy(), &MyCentral::worker, this);
+		GD::bl->threadManager.start(_workerThread, true, _bl->settings.workerThreadPriority(), _bl->settings.workerThreadPolicy(), &EnOceanCentral::worker, this);
 	}
 	catch(const std::exception& ex)
 	{
 		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 	}
-	catch(BaseLib::Exception& ex)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-	}
-	catch(...)
-	{
-		GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-	}
 }
 
-void MyCentral::worker()
+void EnOceanCentral::worker()
 {
 	try
 	{
@@ -118,7 +104,7 @@ void MyCentral::worker()
 					}
 				}
 
-				std::shared_ptr<MyPeer> peer;
+				std::shared_ptr<EnOceanPeer> peer;
 
 				{
 					std::lock_guard<std::mutex> peersGuard(_peersMutex);
@@ -134,7 +120,7 @@ void MyCentral::worker()
 							}
 							else nextPeer = _peersById.begin();
 							lastPeer = nextPeer->first;
-							peer = std::dynamic_pointer_cast<MyPeer>(nextPeer->second);
+							peer = std::dynamic_pointer_cast<EnOceanPeer>(nextPeer->second);
 						}
 					}
 				}
@@ -146,31 +132,15 @@ void MyCentral::worker()
 			{
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
-			catch(BaseLib::Exception& ex)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
 		}
 	}
     catch(const std::exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void MyCentral::loadPeers()
+void EnOceanCentral::loadPeers()
 {
 	try
 	{
@@ -179,7 +149,7 @@ void MyCentral::loadPeers()
 		{
 			int32_t peerID = row->second.at(0)->intValue;
 			GD::out.printMessage("Loading EnOcean peer " + std::to_string(peerID));
-			std::shared_ptr<MyPeer> peer(new MyPeer(peerID, row->second.at(2)->intValue, row->second.at(3)->textValue, _deviceId, this));
+			std::shared_ptr<EnOceanPeer> peer(new EnOceanPeer(peerID, row->second.at(2)->intValue, row->second.at(3)->textValue, _deviceId, this));
 			if(!peer->load(this)) continue;
 			if(!peer->getRpcDevice()) continue;
 			std::lock_guard<std::mutex> peersGuard(_peersMutex);
@@ -197,24 +167,16 @@ void MyCentral::loadPeers()
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-std::shared_ptr<MyPeer> MyCentral::getPeer(uint64_t id)
+std::shared_ptr<EnOceanPeer> EnOceanCentral::getPeer(uint64_t id)
 {
 	try
 	{
 		std::lock_guard<std::mutex> peersGuard(_peersMutex);
 		if(_peersById.find(id) != _peersById.end())
 		{
-			std::shared_ptr<MyPeer> peer(std::dynamic_pointer_cast<MyPeer>(_peersById.at(id)));
+			std::shared_ptr<EnOceanPeer> peer(std::dynamic_pointer_cast<EnOceanPeer>(_peersById.at(id)));
 			return peer;
 		}
 	}
@@ -222,18 +184,10 @@ std::shared_ptr<MyPeer> MyCentral::getPeer(uint64_t id)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return std::shared_ptr<MyPeer>();
+    return std::shared_ptr<EnOceanPeer>();
 }
 
-std::list<PMyPeer> MyCentral::getPeer(int32_t address)
+std::list<PMyPeer> EnOceanCentral::getPeer(int32_t address)
 {
 	try
 	{
@@ -248,25 +202,17 @@ std::list<PMyPeer> MyCentral::getPeer(int32_t address)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return std::list<PMyPeer>();
 }
 
-std::shared_ptr<MyPeer> MyCentral::getPeer(std::string serialNumber)
+std::shared_ptr<EnOceanPeer> EnOceanCentral::getPeer(std::string serialNumber)
 {
 	try
 	{
 		std::lock_guard<std::mutex> peersGuard(_peersMutex);
 		if(_peersBySerial.find(serialNumber) != _peersBySerial.end())
 		{
-			std::shared_ptr<MyPeer> peer(std::dynamic_pointer_cast<MyPeer>(_peersBySerial.at(serialNumber)));
+			std::shared_ptr<EnOceanPeer> peer(std::dynamic_pointer_cast<EnOceanPeer>(_peersBySerial.at(serialNumber)));
 			return peer;
 		}
 	}
@@ -274,28 +220,20 @@ std::shared_ptr<MyPeer> MyCentral::getPeer(std::string serialNumber)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return std::shared_ptr<MyPeer>();
+    return std::shared_ptr<EnOceanPeer>();
 }
 
-bool MyCentral::peerExists(uint64_t id)
+bool EnOceanCentral::peerExists(uint64_t id)
 {
 	return ICentral::peerExists(id);
 }
 
-bool MyCentral::peerExists(std::string serialNumber)
+bool EnOceanCentral::peerExists(std::string serialNumber)
 {
 	return ICentral::peerExists(serialNumber);
 }
 
-bool MyCentral::peerExists(int32_t address, int32_t eep)
+bool EnOceanCentral::peerExists(int32_t address, int32_t eep)
 {
 	std::list<PMyPeer> peers = getPeer(address);
 	for(auto& peer : peers)
@@ -305,7 +243,7 @@ bool MyCentral::peerExists(int32_t address, int32_t eep)
 	return false;
 }
 
-int32_t MyCentral::getFreeRfChannel(std::string& interfaceId)
+int32_t EnOceanCentral::getFreeRfChannel(std::string& interfaceId)
 {
 	try
 	{
@@ -313,7 +251,7 @@ int32_t MyCentral::getFreeRfChannel(std::string& interfaceId)
 		std::set<int32_t> usedChannels;
 		for(std::vector<std::shared_ptr<BaseLib::Systems::Peer>>::iterator i = peers.begin(); i != peers.end(); ++i)
 		{
-			PMyPeer peer(std::dynamic_pointer_cast<MyPeer>(*i));
+			PMyPeer peer(std::dynamic_pointer_cast<EnOceanPeer>(*i));
 			if(!peer) continue;
 			if(peer->getPhysicalInterfaceId() != interfaceId) continue;
 			std::vector<int32_t> channels = peer->getRfChannels();
@@ -329,26 +267,18 @@ int32_t MyCentral::getFreeRfChannel(std::string& interfaceId)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return -1;
 }
 
-bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool EnOceanCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib::Systems::Packet> packet)
 {
 	try
 	{
 		if(_disposing) return false;
-		PMyPacket myPacket(std::dynamic_pointer_cast<MyPacket>(packet));
+		PMyPacket myPacket(std::dynamic_pointer_cast<EnOceanPacket>(packet));
 		if(!myPacket) return false;
 
-		if(_bl->debugLevel >= 4) std::cout << BaseLib::HelperFunctions::getTimeString(myPacket->timeReceived()) << " EnOcean packet received (" << senderId << std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" << "): " << BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) << " - Sender address (= EnOcean ID): 0x" << BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8) << std::endl;
+		if(_bl->debugLevel >= 4) _bl->out.printInfo(BaseLib::HelperFunctions::getTimeString(myPacket->getTimeReceived()) + " EnOcean packet received (" + senderId + std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" + "): " + BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) + " - Sender address (= EnOcean ID): 0x" + BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8));
 
 		std::list<PMyPeer> peers = getPeer(myPacket->senderAddress());
 		if(peers.empty())
@@ -407,18 +337,10 @@ bool MyCentral::onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib:
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return false;
 }
 
-std::string MyCentral::getFreeSerialNumber(int32_t address)
+std::string EnOceanCentral::getFreeSerialNumber(int32_t address)
 {
 	std::string serial;
 	int32_t i = 0;
@@ -430,7 +352,7 @@ std::string MyCentral::getFreeSerialNumber(int32_t address)
 	return serial;
 }
 
-bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
+bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 {
 	try
 	{
@@ -477,7 +399,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 					return false;
 				}
 				GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ". If nothing happens, the EEP is not yet supported.");
-				std::shared_ptr<MyPeer> peer = createPeer(eep, packet->senderAddress(), serial, false);
+				std::shared_ptr<EnOceanPeer> peer = createPeer(eep, packet->senderAddress(), serial, false);
 				if(!peer || !peer->getRpcDevice())
 				{
 					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
@@ -502,14 +424,6 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				catch(const std::exception& ex)
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(BaseLib::Exception& ex)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				}
 
 				PVariable deviceDescriptions(new Variable(VariableType::tArray));
@@ -544,7 +458,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 			if(responseExpected)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, packet->senderAddress()));
+				PMyPacket response(new EnOceanPacket((EnOceanPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, packet->senderAddress()));
 				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 8);
 				responsePayload.at(1) = (responsePayload.at(1) & 0x80) | 0x11; // Command 1 => teach-in response
@@ -570,7 +484,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 					return false;
 				}
 				GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(manufacturerEep) + ". If nothing happens, the EEP is not yet supported.");
-				std::shared_ptr<MyPeer> peer = createPeer(manufacturerEep, packet->senderAddress(), serial, false);
+				std::shared_ptr<EnOceanPeer> peer = createPeer(manufacturerEep, packet->senderAddress(), serial, false);
 				if(!peer || !peer->getRpcDevice())
                 {
                     GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ".");
@@ -601,18 +515,10 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 				{
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 				}
-				catch(BaseLib::Exception& ex)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-				}
 
                 if(peer->hasRfChannel(0))
                 {
-                    PMyPacket response(new MyPacket((MyPacket::Type) 1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0), 0xFFFFFFFF));
+                    PMyPacket response(new EnOceanPacket((EnOceanPacket::Type) 1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0), 0xFFFFFFFF));
                     std::vector<uint8_t> responsePayload;
                     responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
                     responsePayload.back() = 0xF0;
@@ -648,7 +554,7 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
 						break;
 					}
 				}
-				PMyPacket response(new MyPacket((MyPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, 0xFFFFFFFF));
+				PMyPacket response(new EnOceanPacket((EnOceanPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, 0xFFFFFFFF));
 				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
 				responsePayload.back() = 0xF0;
@@ -662,18 +568,10 @@ bool MyCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return false;
 }
 
-void MyCentral::savePeers(bool full)
+void EnOceanCentral::savePeers(bool full)
 {
 	try
 	{
@@ -688,21 +586,13 @@ void MyCentral::savePeers(bool full)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-void MyCentral::deletePeer(uint64_t id)
+void EnOceanCentral::deletePeer(uint64_t id)
 {
 	try
 	{
-		std::shared_ptr<MyPeer> peer(getPeer(id));
+		std::shared_ptr<EnOceanPeer> peer(getPeer(id));
 		if(!peer) return;
 		peer->deleting = true;
 		PVariable deviceAddresses(new Variable(VariableType::tArray));
@@ -776,19 +666,9 @@ void MyCentral::deletePeer(uint64_t id)
 		_peersMutex.unlock();
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	_peersMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	_peersMutex.unlock();
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-std::string MyCentral::handleCliCommand(std::string command)
+std::string EnOceanCentral::handleCliCommand(std::string command)
 {
 	try
 	{
@@ -870,7 +750,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 			if(peerExists(address, deviceType)) stringStream << "A peer with this address and EEP is already paired to this central." << std::endl;
 			else
 			{
-				std::shared_ptr<MyPeer> peer = createPeer(deviceType, address, serial, false);
+				std::shared_ptr<EnOceanPeer> peer = createPeer(deviceType, address, serial, false);
 				if(!peer || !peer->getRpcDevice()) return "Device type not supported.\n";
 				try
 				{
@@ -895,16 +775,6 @@ std::string MyCentral::handleCliCommand(std::string command)
 				{
 					_peersMutex.unlock();
 					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(BaseLib::Exception& ex)
-				{
-					_peersMutex.unlock();
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-				catch(...)
-				{
-					_peersMutex.unlock();
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
 				}
 
 				PVariable deviceDescriptions(new Variable(VariableType::tArray));
@@ -1082,16 +952,6 @@ std::string MyCentral::handleCliCommand(std::string command)
 				_peersMutex.unlock();
 				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 			}
-			catch(BaseLib::Exception& ex)
-			{
-				_peersMutex.unlock();
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-			}
-			catch(...)
-			{
-				_peersMutex.unlock();
-				GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-			}
 		}
 		else if(command.compare(0, 13, "peers setname") == 0 || command.compare(0, 2, "pn") == 0)
 		{
@@ -1135,7 +995,7 @@ std::string MyCentral::handleCliCommand(std::string command)
 			if(!peerExists(peerID)) stringStream << "This peer is not paired to this central." << std::endl;
 			else
 			{
-				std::shared_ptr<MyPeer> peer = getPeer(peerID);
+				std::shared_ptr<EnOceanPeer> peer = getPeer(peerID);
 				peer->setName(name);
 				stringStream << "Name set to \"" << name << "\"." << std::endl;
 			}
@@ -1181,8 +1041,8 @@ std::string MyCentral::handleCliCommand(std::string command)
 			if(interfaceIterator == GD::physicalInterfaces.end()) return "Unknown physical interface.\n";
 
 			std::vector<uint8_t> rawPacket = _bl->hf.getUBinary(arguments.at(1));
-			PMyPacket packet = std::make_shared<MyPacket>(rawPacket);
-			if(packet->getType() == MyPacket::Type::RADIO_ERP1 || packet->getType() == MyPacket::Type::RADIO_ERP2)
+			PMyPacket packet = std::make_shared<EnOceanPacket>(rawPacket);
+			if(packet->getType() == EnOceanPacket::Type::RADIO_ERP1 || packet->getType() == EnOceanPacket::Type::RADIO_ERP2)
 			{
 				if((packet->senderAddress() & 0xFFFFFF80) != interfaceIterator->second->getBaseAddress())
 				{
@@ -1199,27 +1059,19 @@ std::string MyCentral::handleCliCommand(std::string command)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return "Error executing command. See log file for more details.\n";
 }
 
-std::shared_ptr<MyPeer> MyCentral::createPeer(uint32_t deviceType, int32_t address, std::string serialNumber, bool save)
+std::shared_ptr<EnOceanPeer> EnOceanCentral::createPeer(uint32_t deviceType, int32_t address, std::string serialNumber, bool save)
 {
 	try
 	{
-		std::shared_ptr<MyPeer> peer(new MyPeer(_deviceId, this));
+		std::shared_ptr<EnOceanPeer> peer(new EnOceanPeer(_deviceId, this));
 		peer->setDeviceType(deviceType);
 		peer->setAddress(address);
 		peer->setSerialNumber(serialNumber);
 		peer->setRpcDevice(GD::family->getRpcDevices()->find(deviceType, 0x10, -1));
-		if(!peer->getRpcDevice()) return std::shared_ptr<MyPeer>();
+		if(!peer->getRpcDevice()) return std::shared_ptr<EnOceanPeer>();
 		if(save) peer->save(true, true, false); //Save and create peerID
 		return peer;
 	}
@@ -1227,18 +1079,10 @@ std::shared_ptr<MyPeer> MyCentral::createPeer(uint32_t deviceType, int32_t addre
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-    	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
-    return std::shared_ptr<MyPeer>();
+    return std::shared_ptr<EnOceanPeer>();
 }
 
-PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId)
+PVariable EnOceanCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId)
 {
 	try
 	{
@@ -1252,7 +1096,7 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
             interfaceId = GD::physicalInterfaces.begin()->second->getID();
         }
 
-		std::shared_ptr<MyPeer> peer = createPeer(deviceType, address, serial, false);
+		std::shared_ptr<EnOceanPeer> peer = createPeer(deviceType, address, serial, false);
 		if(!peer || !peer->getRpcDevice()) return Variable::createError(-6, "Unknown device type.");
 
 		try
@@ -1277,16 +1121,6 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
 			_peersMutex.unlock();
 			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
 		}
-		catch(BaseLib::Exception& ex)
-		{
-			_peersMutex.unlock();
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-		}
-		catch(...)
-		{
-			_peersMutex.unlock();
-			GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-		}
 
 		PVariable deviceDescriptions(new Variable(VariableType::tArray));
 		deviceDescriptions->arrayValue = peer->getDeviceDescriptions(clientInfo, true, std::map<std::string, bool>());
@@ -1309,18 +1143,10 @@ PVariable MyCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t de
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MyCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags)
+PVariable EnOceanCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags)
 {
 	try
 	{
@@ -1329,7 +1155,7 @@ PVariable MyCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::strin
         uint64_t peerId = 0;
 
         {
-            std::shared_ptr<MyPeer> peer = getPeer(serialNumber);
+            std::shared_ptr<EnOceanPeer> peer = getPeer(serialNumber);
             if(!peer) return PVariable(new Variable(VariableType::tVoid));
             peerId = peer->getID();
         }
@@ -1340,25 +1166,17 @@ PVariable MyCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::strin
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MyCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags)
+PVariable EnOceanCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags)
 {
 	try
 	{
 		if(peerId == 0) return Variable::createError(-2, "Unknown device.");
 
         {
-            std::shared_ptr<MyPeer> peer = getPeer(peerId);
+            std::shared_ptr<EnOceanPeer> peer = getPeer(peerId);
             if(!peer) return PVariable(new Variable(VariableType::tVoid));
         }
 
@@ -1372,18 +1190,10 @@ PVariable MyCentral::deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t p
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MyCentral::getPairingState(BaseLib::PRpcClientInfo clientInfo)
+PVariable EnOceanCentral::getPairingState(BaseLib::PRpcClientInfo clientInfo)
 {
     try
     {
@@ -1437,18 +1247,10 @@ PVariable MyCentral::getPairingState(BaseLib::PRpcClientInfo clientInfo)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MyCentral::getSniffedDevices(BaseLib::PRpcClientInfo clientInfo)
+PVariable EnOceanCentral::getSniffedDevices(BaseLib::PRpcClientInfo clientInfo)
 {
 	try
 	{
@@ -1472,7 +1274,7 @@ PVariable MyCentral::getSniffedDevices(BaseLib::PRpcClientInfo clientInfo)
 			for(auto packet : peerPackets.second)
 			{
 				PVariable packetInfo(new Variable(VariableType::tStruct));
-				packetInfo->structValue->insert(StructElement("TIME_RECEIVED", PVariable(new Variable(packet->timeReceived() / 1000))));
+				packetInfo->structValue->insert(StructElement("TIME_RECEIVED", PVariable(new Variable(packet->getTimeReceived() / 1000))));
 				packetInfo->structValue->insert(StructElement("PACKET", PVariable(new Variable(BaseLib::HelperFunctions::getHexString(packet->getBinary())))));
 				packets->arrayValue->push_back(packetInfo);
 			}
@@ -1483,18 +1285,10 @@ PVariable MyCentral::getSniffedDevices(BaseLib::PRpcClientInfo clientInfo)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-void MyCentral::pairingModeTimer(int32_t duration, bool debugOutput)
+void EnOceanCentral::pairingModeTimer(int32_t duration, bool debugOutput)
 {
 	try
 	{
@@ -1517,17 +1311,9 @@ void MyCentral::pairingModeTimer(int32_t duration, bool debugOutput)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
 }
 
-std::shared_ptr<Variable> MyCentral::setInstallMode(BaseLib::PRpcClientInfo clientInfo, bool on, uint32_t duration, BaseLib::PVariable metadata, bool debugOutput)
+std::shared_ptr<Variable> EnOceanCentral::setInstallMode(BaseLib::PRpcClientInfo clientInfo, bool on, uint32_t duration, BaseLib::PVariable metadata, bool debugOutput)
 {
 	try
 	{
@@ -1555,7 +1341,7 @@ std::shared_ptr<Variable> MyCentral::setInstallMode(BaseLib::PRpcClientInfo clie
 			}
 
 			_timeLeftInPairingMode = duration; //It's important to set it here, because the thread often doesn't completely initialize before getInstallMode requests _timeLeftInPairingMode
-			_bl->threadManager.start(_pairingModeThread, true, &MyCentral::pairingModeTimer, this, duration, debugOutput);
+			_bl->threadManager.start(_pairingModeThread, true, &EnOceanCentral::pairingModeTimer, this, duration, debugOutput);
 		}
 		return PVariable(new Variable(VariableType::tVoid));
 	}
@@ -1563,22 +1349,14 @@ std::shared_ptr<Variable> MyCentral::setInstallMode(BaseLib::PRpcClientInfo clie
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MyCentral::setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string interfaceId)
+PVariable EnOceanCentral::setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string interfaceId)
 {
 	try
 	{
-		std::shared_ptr<MyPeer> peer(getPeer(peerId));
+		std::shared_ptr<EnOceanPeer> peer(getPeer(peerId));
 		if(!peer) return Variable::createError(-2, "Unknown device.");
 		return peer->setInterface(clientInfo, interfaceId);
 	}
@@ -1586,18 +1364,10 @@ PVariable MyCentral::setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t p
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    catch(BaseLib::Exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-    catch(...)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
-    }
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-PVariable MyCentral::startSniffing(BaseLib::PRpcClientInfo clientInfo)
+PVariable EnOceanCentral::startSniffing(BaseLib::PRpcClientInfo clientInfo)
 {
 	std::lock_guard<std::mutex> sniffedPacketsGuard(_sniffedPacketsMutex);
 	_sniffedPackets.clear();
@@ -1605,7 +1375,7 @@ PVariable MyCentral::startSniffing(BaseLib::PRpcClientInfo clientInfo)
 	return PVariable(new Variable());
 }
 
-PVariable MyCentral::stopSniffing(BaseLib::PRpcClientInfo clientInfo)
+PVariable EnOceanCentral::stopSniffing(BaseLib::PRpcClientInfo clientInfo)
 {
 	_sniff = false;
 	return PVariable(new Variable());

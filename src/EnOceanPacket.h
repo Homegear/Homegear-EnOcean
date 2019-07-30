@@ -5,10 +5,10 @@
 
 #include <homegear-base/BaseLib.h>
 
-namespace MyFamily
+namespace EnOcean
 {
 
-class MyPacket : public BaseLib::Systems::Packet
+class EnOceanPacket : public BaseLib::Systems::Packet
 {
     public:
 		enum class Type : uint8_t
@@ -27,11 +27,13 @@ class MyPacket : public BaseLib::Systems::Packet
 			COMMAND_2_4 = 0x11
 		};
 
-        MyPacket();
-        MyPacket(std::vector<uint8_t>& espPacket);
-        MyPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress);
-        virtual ~MyPacket();
+        EnOceanPacket();
+        EnOceanPacket(std::vector<uint8_t>& espPacket);
+        EnOceanPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress);
+        virtual ~EnOceanPacket();
 
+        int32_t senderAddress() { return _senderAddress; }
+        int32_t destinationAddress() { return _destinationAddress; }
         Type getType() { return _type; }
         uint8_t getRorg() { return _rorg; }
         int32_t getRssi() { return _rssi; }
@@ -46,6 +48,8 @@ class MyPacket : public BaseLib::Systems::Packet
     protected:
 		bool _appendAddressAndStatus = false;
         std::vector<uint8_t> _packet;
+        int32_t _senderAddress = 0;
+        int32_t _destinationAddress = 0;
         Type _type = Type::RESERVED;
         int32_t _rssi = 0;
         uint8_t _rorg = 0;
@@ -53,7 +57,7 @@ class MyPacket : public BaseLib::Systems::Packet
         std::vector<uint8_t> _optionalData;
 };
 
-typedef std::shared_ptr<MyPacket> PMyPacket;
+typedef std::shared_ptr<EnOceanPacket> PMyPacket;
 
 }
 #endif
