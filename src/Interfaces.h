@@ -3,6 +3,8 @@
 #ifndef INTERFACES_H_
 #define INTERFACES_H_
 
+#include "PhysicalInterfaces/IEnOceanInterface.h"
+
 #include <homegear-base/BaseLib.h>
 
 namespace EnOcean
@@ -14,10 +16,26 @@ class Interfaces : public BaseLib::Systems::PhysicalInterfaces
 {
 public:
 	Interfaces(BaseLib::SharedObjects* bl, std::map<std::string, Systems::PPhysicalInterfaceSettings> physicalInterfaceSettings);
-	virtual ~Interfaces();
+	~Interfaces() override;
 
+    void addEventHandlers(BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink* central);
+    void removeEventHandlers();
+    void startListening() override;
+    void stopListening() override;
+    std::shared_ptr<IEnOceanInterface> getDefaultInterface();
+    bool hasInterface(const std::string& name);
+    std::shared_ptr<IEnOceanInterface> getInterface(const std::string& name);
+    std::vector<std::shared_ptr<IEnOceanInterface>> getInterfaces();
 protected:
-	virtual void create();
+    int32_t _hgdcEventHandlerId = -1;
+    BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink* _central = nullptr;
+    std::shared_ptr<IEnOceanInterface> _defaultPhysicalInterface;
+    std::map<std::string, PEventHandler> _physicalInterfaceEventhandlers;
+    std::thread _modulesAddedThread;
+
+	void create() override;
+	void hgdcModuleUpdate(const BaseLib::PVariable& modules);
+	void hgdcModulesAdded(std::shared_ptr<std::list<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>> addedModules);
 };
 
 }

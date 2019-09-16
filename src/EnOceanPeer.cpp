@@ -381,21 +381,21 @@ std::string EnOceanPeer::printConfig()
 
 std::string EnOceanPeer::getPhysicalInterfaceId()
 {
-	if(_physicalInterfaceId.empty()) setPhysicalInterfaceId(GD::defaultPhysicalInterface->getID());
+	if(_physicalInterfaceId.empty()) setPhysicalInterfaceId(GD::interfaces->getDefaultInterface()->getID());
 	return _physicalInterfaceId;
 }
 
 void EnOceanPeer::setPhysicalInterfaceId(std::string id)
 {
-	if(id.empty() || (GD::physicalInterfaces.find(id) != GD::physicalInterfaces.end() && GD::physicalInterfaces.at(id)))
+	if(id.empty() || GD::interfaces->hasInterface(id))
 	{
 		_physicalInterfaceId = id;
-		setPhysicalInterface(id.empty() ? GD::defaultPhysicalInterface : GD::physicalInterfaces.at(_physicalInterfaceId));
+		setPhysicalInterface(id.empty() ? GD::interfaces->getDefaultInterface() : GD::interfaces->getInterface(_physicalInterfaceId));
 		saveVariable(19, _physicalInterfaceId);
 	}
 	else
 	{
-		setPhysicalInterface(GD::defaultPhysicalInterface);
+		setPhysicalInterface(GD::interfaces->getDefaultInterface());
 		saveVariable(19, _physicalInterfaceId);
 	}
 }
@@ -421,16 +421,17 @@ void EnOceanPeer::setBestInterface()
         std::string settingName = "roaming";
         auto roamingSetting = GD::family->getFamilySetting(settingName);
         if(roamingSetting && !roamingSetting->integerValue) return;
-        std::shared_ptr<IEnOceanInterface> bestInterface = GD::defaultPhysicalInterface->isOpen() ? GD::defaultPhysicalInterface : std::shared_ptr<IEnOceanInterface>();
-        for(auto& interface : GD::physicalInterfaces)
+        std::shared_ptr<IEnOceanInterface> bestInterface = GD::interfaces->getDefaultInterface()->isOpen() ? GD::interfaces->getDefaultInterface() : std::shared_ptr<IEnOceanInterface>();
+        auto interfaces = GD::interfaces->getInterfaces();
+        for(auto& interface : interfaces)
         {
-            if(interface.second->getBaseAddress() != _physicalInterface->getBaseAddress() || !interface.second->isOpen()) continue;
+            if(interface->getBaseAddress() != _physicalInterface->getBaseAddress() || !interface->isOpen()) continue;
             if(!bestInterface)
             {
-                bestInterface = interface.second;
+                bestInterface = interface;
                 continue;
             }
-            if(interface.second->getRssi(_address, isWildcardPeer()) > bestInterface->getRssi(_address, isWildcardPeer())) bestInterface = interface.second;
+            if(interface->getRssi(_address, isWildcardPeer()) > bestInterface->getRssi(_address, isWildcardPeer())) bestInterface = interface;
         }
         if(bestInterface) setPhysicalInterfaceId(bestInterface->getID());
     }
@@ -456,7 +457,7 @@ void EnOceanPeer::loadVariables(BaseLib::Systems::ICentral* central, std::shared
 			{
 			case 19:
 				_physicalInterfaceId = row->second.at(4)->textValue;
-				if(!_physicalInterfaceId.empty() && GD::physicalInterfaces.find(_physicalInterfaceId) != GD::physicalInterfaces.end()) setPhysicalInterface(GD::physicalInterfaces.at(_physicalInterfaceId));
+				if(!_physicalInterfaceId.empty() && GD::interfaces->hasInterface(_physicalInterfaceId)) setPhysicalInterface(GD::interfaces->getInterface(_physicalInterfaceId));
 				break;
 			case 20:
 				_rollingCode = row->second.at(3)->intValue;
@@ -479,7 +480,7 @@ void EnOceanPeer::loadVariables(BaseLib::Systems::ICentral* central, std::shared
 				break;
 			}
 		}
-		if(!_physicalInterface) _physicalInterface = GD::defaultPhysicalInterface;
+		if(!_physicalInterface) _physicalInterface = GD::interfaces->getDefaultInterface();
 	}
 	catch(const std::exception& ex)
     {
@@ -716,7 +717,7 @@ void EnOceanPeer::setRfChannel(int32_t channel, int32_t rfChannel)
     }
 }
 
-void EnOceanPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& frameValues)
+void EnOceanPeer::getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameValues>& frameValues)
 {
 	try
 	{
@@ -822,7 +823,7 @@ void EnOceanPeer::getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>
     }
 }
 
-void EnOceanPeer::packetReceived(PMyPacket& packet)
+void EnOceanPeer::packetReceived(PEnOceanPacket& packet)
 {
 	try
 	{
@@ -1114,7 +1115,7 @@ void EnOceanPeer::packetReceived(PMyPacket& packet)
                     if(responseFrame)
                     {
                         if(responseFrame->subtype == -1) responseFrame->subtype = 1;
-                        PMyPacket packet(new EnOceanPacket((EnOceanPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | getRfChannel(0), _address));
+                        PEnOceanPacket packet(new EnOceanPacket((EnOceanPacket::Type)responseFrame->subtype, (uint8_t)responseFrame->type, _physicalInterface->getBaseAddress() | getRfChannel(0), _address));
 
                         for(BinaryPayloads::iterator i = responseFrame->binaryPayloads.begin(); i != responseFrame->binaryPayloads.end(); ++i)
                         {
@@ -1312,11 +1313,10 @@ PVariable EnOceanPeer::setInterface(BaseLib::PRpcClientInfo clientInfo, std::str
 {
 	try
 	{
-		if(!interfaceId.empty() && GD::physicalInterfaces.find(interfaceId) == GD::physicalInterfaces.end())
+		if(!interfaceId.empty() && !GD::interfaces->hasInterface(interfaceId))
 		{
 			return Variable::createError(-5, "Unknown physical interface.");
 		}
-		std::shared_ptr<IEnOceanInterface> interface(GD::physicalInterfaces.at(interfaceId));
 		setPhysicalInterfaceId(interfaceId);
 		return PVariable(new Variable(VariableType::tVoid));
 	}
@@ -1327,7 +1327,7 @@ PVariable EnOceanPeer::setInterface(BaseLib::PRpcClientInfo clientInfo, std::str
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-void EnOceanPeer::sendPacket(PMyPacket packet, std::string responseId, int32_t delay, bool wait)
+void EnOceanPeer::sendPacket(PEnOceanPacket packet, std::string responseId, int32_t delay, bool wait)
 {
 	try
 	{
@@ -1532,7 +1532,7 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
 								values->push_back(falseValue);
 							}
 
-							PMyPacket packet(new EnOceanPacket((EnOceanPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+							PEnOceanPacket packet(new EnOceanPacket((EnOceanPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
 							std::vector<uint8_t> data{ 0 };
 							packet->setPosition(8, 8, data);
 							sendPacket(packet, "ANY", 0, wait);
@@ -1608,7 +1608,7 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
                                 _blindUp = positionDifference < 0;
                                 updateBlindSpeed();
 
-                                PMyPacket packet(new EnOceanPacket((EnOceanPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+                                PEnOceanPacket packet(new EnOceanPacket((EnOceanPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
                                 std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
                                 packet->setPosition(8, 8, data);
                                 sendPacket(packet, "ANY", 0, wait);
@@ -1644,7 +1644,7 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
 			PPacket frame = packetIterator->second;
 
 			if(frame->subtype == -1) frame->subtype = 1;
-			PMyPacket packet(new EnOceanPacket((EnOceanPacket::Type)frame->subtype, (uint8_t)frame->type, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+			PEnOceanPacket packet(new EnOceanPacket((EnOceanPacket::Type)frame->subtype, (uint8_t)frame->type, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
 
 			for(BinaryPayloads::iterator i = frame->binaryPayloads.begin(); i != frame->binaryPayloads.end(); ++i)
 			{

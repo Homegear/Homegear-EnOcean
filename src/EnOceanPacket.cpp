@@ -10,11 +10,11 @@ EnOceanPacket::EnOceanPacket()
 {
 }
 
-EnOceanPacket::EnOceanPacket(std::vector<uint8_t>& espPacket) : _packet(espPacket)
+EnOceanPacket::EnOceanPacket(const std::vector<uint8_t>& espPacket) : _packet(espPacket)
 {
 	_timeReceived = BaseLib::HelperFunctions::getTime();
 	if(espPacket.size() < 6) return;
-	uint32_t dataSize = (espPacket[1] << 8) | espPacket[2];
+	uint32_t dataSize = ((uint16_t)espPacket[1] << 8) | espPacket[2];
 	uint32_t optionalSize = espPacket[3];
 	uint32_t fullSize = dataSize + optionalSize;
 	if(espPacket.size() != fullSize + 7 || fullSize == 0)

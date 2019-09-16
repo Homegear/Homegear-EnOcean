@@ -24,7 +24,8 @@ EnOcean::EnOcean(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink*
 	GD::out.init(bl);
 	GD::out.setPrefix(std::string("Module ") + MY_FAMILY_NAME + ": ");
 	GD::out.printDebug("Debug: Loading module...");
-	_physicalInterfaces.reset(new Interfaces(bl, _settings->getPhysicalInterfaceSettings()));
+    GD::interfaces = std::make_shared<Interfaces>(bl, _settings->getPhysicalInterfaceSettings());
+	_physicalInterfaces = GD::interfaces;
 }
 
 EnOcean::~EnOcean()
@@ -36,8 +37,9 @@ void EnOcean::dispose()
 {
 	if(_disposed) return;
 	DeviceFamily::dispose();
-
 	_central.reset();
+    GD::interfaces.reset();
+    _physicalInterfaces.reset();
 }
 
 void EnOcean::createCentral()

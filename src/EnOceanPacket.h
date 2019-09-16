@@ -28,9 +28,9 @@ class EnOceanPacket : public BaseLib::Systems::Packet
 		};
 
         EnOceanPacket();
-        EnOceanPacket(std::vector<uint8_t>& espPacket);
+        explicit EnOceanPacket(const std::vector<uint8_t>& espPacket);
         EnOceanPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress);
-        virtual ~EnOceanPacket();
+        ~EnOceanPacket() override;
 
         int32_t senderAddress() { return _senderAddress; }
         int32_t destinationAddress() { return _destinationAddress; }
@@ -57,7 +57,7 @@ class EnOceanPacket : public BaseLib::Systems::Packet
         std::vector<uint8_t> _optionalData;
 };
 
-typedef std::shared_ptr<EnOceanPacket> PMyPacket;
+typedef std::shared_ptr<EnOceanPacket> PEnOceanPacket;
 
 }
 #endif
