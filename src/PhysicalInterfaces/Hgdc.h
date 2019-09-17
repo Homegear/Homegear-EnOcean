@@ -14,24 +14,24 @@ class Hgdc : public IEnOceanInterface
 {
 public:
     explicit Hgdc(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
-    virtual ~Hgdc();
+    ~Hgdc() override;
 
-    virtual void startListening();
-    virtual void stopListening();
+    void startListening() override;
+    void stopListening() override;
     void init();
 
-    virtual int32_t setBaseAddress(uint32_t value);
+    int32_t setBaseAddress(uint32_t value) override;
 
-    virtual bool isOpen() { return !_stopped && _initComplete; }
+    bool isOpen() override { return !_stopped && _initComplete; }
 
-    virtual void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
+    void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet) override;
 protected:
     int32_t _packetReceivedEventHandlerId = -1;
     int32_t _reconnectedEventHandlerId = -1;
-    std::atomic_bool _initComplete;
+    std::atomic_bool _initComplete{false};
     std::thread _initThread;
 
-    virtual void rawSend(std::vector<uint8_t>& packet);
+    void rawSend(std::vector<uint8_t>& packet) override;
     void processPacket(int64_t familyId, const std::string& serialNumber, const std::vector<uint8_t>& data);
     void reconnected();
 };

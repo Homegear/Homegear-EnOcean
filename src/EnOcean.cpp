@@ -1,3 +1,5 @@
+#include <memory>
+
 /*
  * Copyright (C) 2013-2018 Homegear UG (haftungsbeschränkt). All rights reserved.
  *
@@ -57,7 +59,7 @@ void EnOcean::createCentral()
 
 std::shared_ptr<BaseLib::Systems::ICentral> EnOcean::initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber)
 {
-	return std::shared_ptr<EnOceanCentral>(new EnOceanCentral(deviceId, serialNumber, this));
+	return std::make_shared<EnOceanCentral>(deviceId, serialNumber, this);
 }
 
 PVariable EnOcean::getPairingInfo()
