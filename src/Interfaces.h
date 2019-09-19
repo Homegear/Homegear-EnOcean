@@ -27,13 +27,17 @@ public:
     std::shared_ptr<IEnOceanInterface> getInterface(const std::string& name);
     std::vector<std::shared_ptr<IEnOceanInterface>> getInterfaces();
 protected:
-    int32_t _hgdcEventHandlerId = -1;
+    std::atomic_bool _stopped{true};
+    int32_t _hgdcModuleUpdateEventHandlerId = -1;
+    int32_t _hgdcReconnectedEventHandlerId = -1;
     BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink* _central = nullptr;
     std::shared_ptr<IEnOceanInterface> _defaultPhysicalInterface;
     std::map<std::string, PEventHandler> _physicalInterfaceEventhandlers;
     std::thread _modulesAddedThread;
 
 	void create() override;
+    void hgdcReconnected();
+    void createHgdcInterfaces();
 	void hgdcModuleUpdate(const BaseLib::PVariable& modules);
 	void hgdcModulesAdded(std::shared_ptr<std::list<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>> addedModules);
 };

@@ -89,39 +89,15 @@ void Interfaces::startListening()
 {
     try
     {
+        _stopped = false;
+
+        if(GD::bl->hgdc)
         {
-            std::lock_guard<std::mutex> interfacesGuard(_physicalInterfacesMutex);
-            if(GD::bl->hgdc)
-            {
-                _hgdcEventHandlerId = GD::bl->hgdc->registerModuleUpdateEventHandler(std::function<void(const BaseLib::PVariable&)>(std::bind(&Interfaces::hgdcModuleUpdate, this, std::placeholders::_1)));
-
-                auto modules = GD::bl->hgdc->getModules(MY_FAMILY_ID);
-                if(modules->errorStruct)
-                {
-                    GD::out.printError("Error getting HGDC modules: " + modules->structValue->at("faultString")->stringValue);
-                }
-                for(auto& module : *modules->arrayValue)
-                {
-                    std::shared_ptr<IEnOceanInterface> device;
-                    GD::out.printDebug("Debug: Creating HGDC device.");
-                    auto settings = std::make_shared<Systems::PhysicalInterfaceSettings>();
-                    settings->type = "hgdc";
-                    settings->id = module->structValue->at("serialNumber")->stringValue;
-                    settings->serialNumber = settings->id;
-                    device = std::make_shared<Hgdc>(settings);
-
-                    if(_physicalInterfaces.find(settings->id) != _physicalInterfaces.end()) GD::out.printError("Error: id used for two devices: " + settings->id);
-                    _physicalInterfaces[settings->id] = device;
-                    if(settings->isDefault || !_defaultPhysicalInterface || _defaultPhysicalInterface->getID().empty()) _defaultPhysicalInterface = device;
-
-                    if(_central)
-                    {
-                        if(_physicalInterfaceEventhandlers.find(settings->id) != _physicalInterfaceEventhandlers.end()) continue;
-                        _physicalInterfaceEventhandlers[settings->id] = device->addEventHandler(_central);
-                    }
-                }
-            }
+            _hgdcModuleUpdateEventHandlerId = GD::bl->hgdc->registerModuleUpdateEventHandler(std::function<void(const BaseLib::PVariable&)>(std::bind(&Interfaces::hgdcModuleUpdate, this, std::placeholders::_1)));
+            _hgdcReconnectedEventHandlerId = GD::bl->hgdc->registerReconnectedEventHandler(std::function<void()>(std::bind(&Interfaces::hgdcReconnected, this)));
         }
+
+        createHgdcInterfaces();
 
         PhysicalInterfaces::startListening();
     }
@@ -135,9 +111,12 @@ void Interfaces::stopListening()
 {
     try
     {
+        _stopped = true;
+
         if(GD::bl->hgdc)
         {
-            GD::bl->hgdc->unregisterModuleUpdateEventHandler(_hgdcEventHandlerId);
+            GD::bl->hgdc->unregisterModuleUpdateEventHandler(_hgdcModuleUpdateEventHandlerId);
+            GD::bl->hgdc->unregisterModuleUpdateEventHandler(_hgdcReconnectedEventHandlerId);
         }
 
         GD::bl->threadManager.join(_modulesAddedThread);
@@ -191,6 +170,61 @@ std::shared_ptr<IEnOceanInterface> Interfaces::getInterface(const std::string& n
     if(interfaceBase == _physicalInterfaces.end()) return _defaultPhysicalInterface;
     std::shared_ptr<IEnOceanInterface> interface(std::dynamic_pointer_cast<IEnOceanInterface>(interfaceBase->second));
     return interface;
+}
+
+void Interfaces::hgdcReconnected()
+{
+    try
+    {
+        int32_t cycles = BaseLib::HelperFunctions::getRandomNumber(40, 100);
+        for(int32_t i = 0; i < cycles; i++)
+        {
+            if(_stopped) return;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        createHgdcInterfaces();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
+void Interfaces::createHgdcInterfaces()
+{
+    try
+    {
+        std::lock_guard<std::mutex> interfacesGuard(_physicalInterfacesMutex);
+        auto modules = GD::bl->hgdc->getModules(MY_FAMILY_ID);
+        if(modules->errorStruct)
+        {
+            GD::out.printError("Error getting HGDC modules: " + modules->structValue->at("faultString")->stringValue);
+        }
+        for(auto& module : *modules->arrayValue)
+        {
+            std::shared_ptr<IEnOceanInterface> device;
+            GD::out.printDebug("Debug: Creating HGDC device.");
+            auto settings = std::make_shared<Systems::PhysicalInterfaceSettings>();
+            settings->type = "hgdc";
+            settings->id = module->structValue->at("serialNumber")->stringValue;
+            settings->serialNumber = settings->id;
+            device = std::make_shared<Hgdc>(settings);
+
+            if(_physicalInterfaces.find(settings->id) != _physicalInterfaces.end()) GD::out.printError("Error: id used for two devices: " + settings->id);
+            _physicalInterfaces[settings->id] = device;
+            if(settings->isDefault || !_defaultPhysicalInterface || _defaultPhysicalInterface->getID().empty()) _defaultPhysicalInterface = device;
+
+            if(_central)
+            {
+                if(_physicalInterfaceEventhandlers.find(settings->id) != _physicalInterfaceEventhandlers.end()) continue;
+                _physicalInterfaceEventhandlers[settings->id] = device->addEventHandler(_central);
+            }
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
 }
 
 void Interfaces::hgdcModuleUpdate(const BaseLib::PVariable& modules)

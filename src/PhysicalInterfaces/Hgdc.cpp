@@ -57,6 +57,12 @@ void Hgdc::stopListening()
 
 void Hgdc::reconnected()
 {
+    int32_t cycles = BaseLib::HelperFunctions::getRandomNumber(40, 100);
+    for(int32_t i = 0; i < cycles; i++)
+    {
+        if(_stopped) return;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
     init();
 }
 
