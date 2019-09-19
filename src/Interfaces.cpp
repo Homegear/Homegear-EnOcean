@@ -233,56 +233,69 @@ void Interfaces::hgdcModuleUpdate(const BaseLib::PVariable& modules)
     {
         auto addedModules = std::make_shared<std::list<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>>();
 
+        for(auto& module : *modules->structValue)
         {
-            std::lock_guard<std::mutex> interfaceGuard(_physicalInterfacesMutex);
-            for(auto& module : *modules->structValue)
+            auto familyIdIterator = module.second->structValue->find("familyId");
+            if(familyIdIterator == module.second->structValue->end() || familyIdIterator->second->integerValue64 != MY_FAMILY_ID) continue;
+
+            auto removedIterator = module.second->structValue->find("removed");
+            if(removedIterator != module.second->structValue->end())
             {
-                auto familyIdIterator = module.second->structValue->find("familyId");
-                if(familyIdIterator == module.second->structValue->end() || familyIdIterator->second->integerValue64 != MY_FAMILY_ID) continue;
-
-                auto removedIterator = module.second->structValue->find("removed");
-                if(removedIterator != module.second->structValue->end())
+                std::unique_lock<std::mutex> interfaceGuard(_physicalInterfacesMutex);
+                auto interfaceIterator = _physicalInterfaces.find(module.first);
+                if(interfaceIterator != _physicalInterfaces.end())
                 {
-                    auto interface = _physicalInterfaces.find(module.first);
-                    if(interface != _physicalInterfaces.end())
-                    {
-                        interface->second->stopListening();
-                        continue;
-                    }
+                    auto interface = interfaceIterator->second;
+                    interfaceGuard.unlock();
+                    interface->stopListening();
+                    continue;
                 }
+            }
 
-                auto restartedIterator = module.second->structValue->find("restarted");
-                if(restartedIterator != module.second->structValue->end())
+            auto restartedIterator = module.second->structValue->find("restarted");
+            if(restartedIterator != module.second->structValue->end())
+            {
+                std::unique_lock<std::mutex> interfaceGuard(_physicalInterfacesMutex);
+                auto interfaceIterator = _physicalInterfaces.find(module.first);
+                if(interfaceIterator != _physicalInterfaces.end())
                 {
-                    auto interfaceBase = _physicalInterfaces.find(module.first);
-                    if(interfaceBase != _physicalInterfaces.end())
-                    {
-                        std::shared_ptr<Hgdc> interface(std::dynamic_pointer_cast<Hgdc>(interfaceBase->second));
-                        if(!interface) continue;
-                        interface->init();
-                        continue;
-                    }
+                    std::shared_ptr<Hgdc> interface(std::dynamic_pointer_cast<Hgdc>(interfaceIterator->second));
+                    interfaceGuard.unlock();
+                    if(!interface) continue;
+                    interface->init();
+                    continue;
                 }
+            }
 
-                auto addedIterator = module.second->structValue->find("added");
-                if(addedIterator != module.second->structValue->end())
+            auto addedIterator = module.second->structValue->find("added");
+            if(addedIterator != module.second->structValue->end())
+            {
+                std::unique_lock<std::mutex> interfaceGuard(_physicalInterfacesMutex);
+                auto interfaceIterator = _physicalInterfaces.find(module.first);
+                if(interfaceIterator == _physicalInterfaces.end())
                 {
-                    auto interfaceBase = _physicalInterfaces.find(module.first);
-                    if(interfaceBase == _physicalInterfaces.end())
+                    interfaceGuard.unlock();
+                    std::shared_ptr<IEnOceanInterface> device;
+                    GD::out.printDebug("Debug: Creating HGDC device.");
+                    auto settings = std::make_shared<Systems::PhysicalInterfaceSettings>();
+                    settings->type = "hgdc";
+                    settings->id = module.first;
+                    settings->serialNumber = settings->id;
+                    device = std::make_shared<Hgdc>(settings);
+
+                    if(_physicalInterfaces.find(settings->id) != _physicalInterfaces.end()) GD::out.printError("Error: id used for two devices: " + settings->id);
+                    _physicalInterfaces[settings->id] = device;
+                    if(settings->isDefault || !_defaultPhysicalInterface || _defaultPhysicalInterface->getID().empty()) _defaultPhysicalInterface = device;
+
+                    addedModules->push_back(device);
+                }
+                else
+                {
+                    auto interface = interfaceIterator->second;
+                    interfaceGuard.unlock();
+                    if(interface->getType() == "hgdc" && !interface->isOpen())
                     {
-                        std::shared_ptr<IEnOceanInterface> device;
-                        GD::out.printDebug("Debug: Creating HGDC device.");
-                        auto settings = std::make_shared<Systems::PhysicalInterfaceSettings>();
-                        settings->type = "hgdc";
-                        settings->id = module.first;
-                        settings->serialNumber = settings->id;
-                        device = std::make_shared<Hgdc>(settings);
-
-                        if(_physicalInterfaces.find(settings->id) != _physicalInterfaces.end()) GD::out.printError("Error: id used for two devices: " + settings->id);
-                        _physicalInterfaces[settings->id] = device;
-                        if(settings->isDefault || !_defaultPhysicalInterface || _defaultPhysicalInterface->getID().empty()) _defaultPhysicalInterface = device;
-
-                        addedModules->push_back(device);
+                        interface->startListening();
                     }
                 }
             }
