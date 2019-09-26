@@ -33,13 +33,14 @@ protected:
     BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink* _central = nullptr;
     std::shared_ptr<IEnOceanInterface> _defaultPhysicalInterface;
     std::map<std::string, PEventHandler> _physicalInterfaceEventhandlers;
-    std::thread _modulesAddedThread;
+    std::thread _workerThread;
 
 	void create() override;
     void hgdcReconnected();
     void createHgdcInterfaces(bool reconnected);
 	void hgdcModuleUpdate(const BaseLib::PVariable& modules);
-	void hgdcModulesAdded(std::shared_ptr<std::list<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>> addedModules);
+    void hgdcReconnectedThread();
+    void hgdcModulesAddedThread(BaseLib::PVariable modules);
 };
 
 }

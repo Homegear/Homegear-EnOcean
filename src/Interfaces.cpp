@@ -119,7 +119,7 @@ void Interfaces::stopListening()
             GD::bl->hgdc->unregisterModuleUpdateEventHandler(_hgdcReconnectedEventHandlerId);
         }
 
-        GD::bl->threadManager.join(_modulesAddedThread);
+        GD::bl->threadManager.join(_workerThread);
 
         PhysicalInterfaces::stopListening();
     }
@@ -182,7 +182,7 @@ void Interfaces::hgdcReconnected()
             if(_stopped) return;
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-        createHgdcInterfaces(true);
+        GD::bl->threadManager.start(_workerThread, true, &Interfaces::hgdcReconnectedThread, this);
     }
     catch(const std::exception& ex)
     {
@@ -240,6 +240,30 @@ void Interfaces::createHgdcInterfaces(bool reconnected)
 }
 
 void Interfaces::hgdcModuleUpdate(const BaseLib::PVariable& modules)
+{
+    try
+    {
+        GD::bl->threadManager.start(_workerThread, true, &Interfaces::hgdcModulesAddedThread, this, modules);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
+void Interfaces::hgdcReconnectedThread()
+{
+    try
+    {
+        createHgdcInterfaces(true);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
+void Interfaces::hgdcModulesAddedThread(BaseLib::PVariable modules)
 {
     try
     {
@@ -313,18 +337,6 @@ void Interfaces::hgdcModuleUpdate(const BaseLib::PVariable& modules)
             }
         }
 
-        GD::bl->threadManager.start(_modulesAddedThread, true, &Interfaces::hgdcModulesAdded, this, addedModules);
-    }
-    catch(const std::exception& ex)
-    {
-        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-    }
-}
-
-void Interfaces::hgdcModulesAdded(std::shared_ptr<std::list<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>> addedModules)
-{
-    try
-    {
         for(auto& module : *addedModules)
         {
             if(_central)
