@@ -48,6 +48,8 @@ void Hgdc::stopListening()
         IPhysicalInterface::stopListening();
         GD::bl->hgdc->unregisterReconnectedEventHandler(_reconnectedEventHandlerId);
         GD::bl->hgdc->unregisterPacketReceivedEventHandler(_packetReceivedEventHandlerId);
+        _reconnectedEventHandlerId = -1;
+        _packetReceivedEventHandlerId = -1;
     }
     catch(const std::exception& ex)
     {

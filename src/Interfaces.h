@@ -37,7 +37,7 @@ protected:
 
 	void create() override;
     void hgdcReconnected();
-    void createHgdcInterfaces();
+    void createHgdcInterfaces(bool reconnected);
 	void hgdcModuleUpdate(const BaseLib::PVariable& modules);
 	void hgdcModulesAdded(std::shared_ptr<std::list<std::shared_ptr<BaseLib::Systems::IPhysicalInterface>>> addedModules);
 };

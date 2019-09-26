@@ -96,7 +96,7 @@ void Interfaces::startListening()
             _hgdcModuleUpdateEventHandlerId = GD::bl->hgdc->registerModuleUpdateEventHandler(std::function<void(const BaseLib::PVariable&)>(std::bind(&Interfaces::hgdcModuleUpdate, this, std::placeholders::_1)));
             _hgdcReconnectedEventHandlerId = GD::bl->hgdc->registerReconnectedEventHandler(std::function<void()>(std::bind(&Interfaces::hgdcReconnected, this)));
 
-            createHgdcInterfaces();
+            createHgdcInterfaces(false);
         }
 
         PhysicalInterfaces::startListening();
@@ -182,7 +182,7 @@ void Interfaces::hgdcReconnected()
             if(_stopped) return;
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-        createHgdcInterfaces();
+        createHgdcInterfaces(true);
     }
     catch(const std::exception& ex)
     {
@@ -190,7 +190,7 @@ void Interfaces::hgdcReconnected()
     }
 }
 
-void Interfaces::createHgdcInterfaces()
+void Interfaces::createHgdcInterfaces(bool reconnected)
 {
     try
     {
@@ -212,14 +212,23 @@ void Interfaces::createHgdcInterfaces()
                 settings->serialNumber = settings->id;
                 device = std::make_shared<Hgdc>(settings);
 
-                if(_physicalInterfaces.find(settings->id) != _physicalInterfaces.end()) GD::out.printError("Error: id used for two devices: " + settings->id);
-                _physicalInterfaces[settings->id] = device;
-                if(settings->isDefault || !_defaultPhysicalInterface || _defaultPhysicalInterface->getID().empty()) _defaultPhysicalInterface = device;
-
-                if(_central)
+                if(_physicalInterfaces.find(settings->id) == _physicalInterfaces.end())
                 {
-                    if(_physicalInterfaceEventhandlers.find(settings->id) != _physicalInterfaceEventhandlers.end()) continue;
-                    _physicalInterfaceEventhandlers[settings->id] = device->addEventHandler(_central);
+                    _physicalInterfaces[settings->id] = device;
+                    if(settings->isDefault || !_defaultPhysicalInterface || _defaultPhysicalInterface->getID().empty()) _defaultPhysicalInterface = device;
+
+                    if(_central)
+                    {
+                        if(_physicalInterfaceEventhandlers.find(settings->id) != _physicalInterfaceEventhandlers.end()) continue;
+                        _physicalInterfaceEventhandlers[settings->id] = device->addEventHandler(_central);
+                    }
+
+                    if(reconnected) device->startListening();
+                }
+                else if(reconnected)
+                {
+                    std::shared_ptr<Hgdc> interface(std::dynamic_pointer_cast<Hgdc>(_physicalInterfaces.at(settings->id)));
+                    if(interface) interface->init();
                 }
             }
         }
