@@ -118,6 +118,7 @@ void EnOceanCentral::worker()
 				}
 
 				if(peer && !peer->deleting) peer->worker();
+				GD::interfaces->worker();
 				counter++;
 			}
 			catch(const std::exception& ex)

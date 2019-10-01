@@ -27,6 +27,8 @@ void Hgdc::startListening()
 {
     try
     {
+        GD::bl->hgdc->unregisterReconnectedEventHandler(_reconnectedEventHandlerId);
+        GD::bl->hgdc->unregisterPacketReceivedEventHandler(_packetReceivedEventHandlerId);
         _packetReceivedEventHandlerId = GD::bl->hgdc->registerPacketReceivedEventHandler(MY_FAMILY_ID, std::function<void(int64_t, const std::string&, const std::vector<uint8_t>&)>(std::bind(&Hgdc::processPacket, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
         _reconnectedEventHandlerId = GD::bl->hgdc->registerReconnectedEventHandler(std::function<void()>(std::bind(&Hgdc::reconnected, this)));
         IPhysicalInterface::startListening();
