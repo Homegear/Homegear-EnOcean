@@ -27,13 +27,11 @@ public:
     void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet) override;
 protected:
     int32_t _packetReceivedEventHandlerId = -1;
-    int32_t _reconnectedEventHandlerId = -1;
     std::atomic_bool _initComplete{false};
     std::thread _initThread;
 
     void rawSend(std::vector<uint8_t>& packet) override;
     void processPacket(int64_t familyId, const std::string& serialNumber, const std::vector<uint8_t>& data);
-    void reconnected();
 };
 
 }

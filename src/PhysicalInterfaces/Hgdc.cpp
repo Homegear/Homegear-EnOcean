@@ -27,10 +27,8 @@ void Hgdc::startListening()
 {
     try
     {
-        GD::bl->hgdc->unregisterReconnectedEventHandler(_reconnectedEventHandlerId);
         GD::bl->hgdc->unregisterPacketReceivedEventHandler(_packetReceivedEventHandlerId);
         _packetReceivedEventHandlerId = GD::bl->hgdc->registerPacketReceivedEventHandler(MY_FAMILY_ID, std::function<void(int64_t, const std::string&, const std::vector<uint8_t>&)>(std::bind(&Hgdc::processPacket, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3)));
-        _reconnectedEventHandlerId = GD::bl->hgdc->registerReconnectedEventHandler(std::function<void()>(std::bind(&Hgdc::reconnected, this)));
         IPhysicalInterface::startListening();
 
         _stopped = false;
@@ -48,26 +46,13 @@ void Hgdc::stopListening()
     {
         _stopped = true;
         IPhysicalInterface::stopListening();
-        GD::bl->hgdc->unregisterReconnectedEventHandler(_reconnectedEventHandlerId);
         GD::bl->hgdc->unregisterPacketReceivedEventHandler(_packetReceivedEventHandlerId);
-        _reconnectedEventHandlerId = -1;
         _packetReceivedEventHandlerId = -1;
     }
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-}
-
-void Hgdc::reconnected()
-{
-    int32_t cycles = BaseLib::HelperFunctions::getRandomNumber(40, 100);
-    for(int32_t i = 0; i < cycles; i++)
-    {
-        if(_stopped) return;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    init();
 }
 
 void Hgdc::init()

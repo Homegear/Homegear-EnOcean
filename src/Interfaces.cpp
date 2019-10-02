@@ -202,16 +202,17 @@ void Interfaces::createHgdcInterfaces(bool reconnected)
             }
             for(auto& module : *modules->arrayValue)
             {
-                std::shared_ptr<IEnOceanInterface> device;
-                GD::out.printDebug("Debug: Creating HGDC device.");
-                auto settings = std::make_shared<Systems::PhysicalInterfaceSettings>();
-                settings->type = "hgdc";
-                settings->id = module->structValue->at("serialNumber")->stringValue;
-                settings->serialNumber = settings->id;
-                device = std::make_shared<Hgdc>(settings);
+                auto deviceId = module->structValue->at("serialNumber")->stringValue;;
 
-                if(_physicalInterfaces.find(settings->id) == _physicalInterfaces.end())
+                if(_physicalInterfaces.find(deviceId) == _physicalInterfaces.end())
                 {
+                    std::shared_ptr<IEnOceanInterface> device;
+                    GD::out.printDebug("Debug: Creating HGDC device.");
+                    auto settings = std::make_shared<Systems::PhysicalInterfaceSettings>();
+                    settings->type = "hgdc";
+                    settings->id = deviceId;
+                    settings->serialNumber = settings->id;
+                    device = std::make_shared<Hgdc>(settings);
                     _physicalInterfaces[settings->id] = device;
                     if(settings->isDefault || !_defaultPhysicalInterface || _defaultPhysicalInterface->getID().empty()) _defaultPhysicalInterface = device;
 
@@ -225,7 +226,7 @@ void Interfaces::createHgdcInterfaces(bool reconnected)
                 }
                 else if(reconnected)
                 {
-                    std::shared_ptr<Hgdc> interface(std::dynamic_pointer_cast<Hgdc>(_physicalInterfaces.at(settings->id)));
+                    std::shared_ptr<Hgdc> interface(std::dynamic_pointer_cast<Hgdc>(_physicalInterfaces.at(deviceId)));
                     if(interface) interface->init();
                 }
             }
