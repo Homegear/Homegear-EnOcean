@@ -77,7 +77,7 @@ void Hgdc::init()
             break;
         }
 
-        _out.printInfo("Info: Base address set to 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + ". Remaining changes: " + std::to_string(response[11]));
+        _out.printInfo("Info: Init complete. Base address is 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + ". Remaining changes: " + std::to_string(response[11]));
 
         _initComplete = true;
     }
