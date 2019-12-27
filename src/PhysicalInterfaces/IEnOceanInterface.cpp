@@ -104,7 +104,7 @@ void IEnOceanInterface::raisePacketReceived(std::shared_ptr<BaseLib::Systems::Pa
 {
     try
     {
-        PMyPacket myPacket(std::dynamic_pointer_cast<EnOceanPacket>(packet));
+        PEnOceanPacket myPacket(std::dynamic_pointer_cast<EnOceanPacket>(packet));
         if(!myPacket) return;
 
         if(myPacket->senderAddress() != (int32_t)_baseAddress)

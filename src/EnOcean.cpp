@@ -1,3 +1,5 @@
+#include <memory>
+
 /*
  * Copyright (C) 2013-2018 Homegear UG (haftungsbeschränkt). All rights reserved.
  *
@@ -24,7 +26,8 @@ EnOcean::EnOcean(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink*
 	GD::out.init(bl);
 	GD::out.setPrefix(std::string("Module ") + MY_FAMILY_NAME + ": ");
 	GD::out.printDebug("Debug: Loading module...");
-	_physicalInterfaces.reset(new Interfaces(bl, _settings->getPhysicalInterfaceSettings()));
+    GD::interfaces = std::make_shared<Interfaces>(bl, _settings->getPhysicalInterfaceSettings());
+	_physicalInterfaces = GD::interfaces;
 }
 
 EnOcean::~EnOcean()
@@ -36,8 +39,9 @@ void EnOcean::dispose()
 {
 	if(_disposed) return;
 	DeviceFamily::dispose();
-
 	_central.reset();
+    GD::interfaces.reset();
+    _physicalInterfaces.reset();
 }
 
 void EnOcean::createCentral()
@@ -55,7 +59,7 @@ void EnOcean::createCentral()
 
 std::shared_ptr<BaseLib::Systems::ICentral> EnOcean::initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber)
 {
-	return std::shared_ptr<EnOceanCentral>(new EnOceanCentral(deviceId, serialNumber, this));
+	return std::make_shared<EnOceanCentral>(deviceId, serialNumber, this);
 }
 
 PVariable EnOcean::getPairingInfo()

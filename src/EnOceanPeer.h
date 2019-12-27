@@ -42,7 +42,7 @@ public:
 
 	void worker();
 	virtual std::string handleCliCommand(std::string command);
-	void packetReceived(PMyPacket& packet);
+	void packetReceived(PEnOceanPacket& packet);
 
 	virtual bool load(BaseLib::Systems::ICentral* central);
     virtual void savePeers() {}
@@ -99,7 +99,7 @@ protected:
 		std::string responseId;
 
 		std::atomic_bool wait;
-		PMyPacket packet;
+		PEnOceanPacket packet;
 		uint32_t maxResends = 0;
 		uint32_t resends = 0;
 		uint32_t resendTimeout = 0;
@@ -126,7 +126,7 @@ protected:
 	std::mutex _rfChannelsMutex;
 	std::unordered_map<int32_t, int32_t> _rfChannels;
 
-	PMyPacket _lastPacket;
+	PEnOceanPacket _lastPacket;
 
 	bool _forceEncryption = false;
 	PSecurity _security;
@@ -164,11 +164,11 @@ protected:
 
 	virtual std::shared_ptr<BaseLib::Systems::ICentral> getCentral();
 
-	void getValuesFromPacket(PMyPacket packet, std::vector<FrameValues>& frameValue);
+	void getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameValues>& frameValue);
 
 	virtual PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type);
 
-	void sendPacket(PMyPacket packet, std::string responseId, int32_t delay, bool wait);
+	void sendPacket(PEnOceanPacket packet, std::string responseId, int32_t delay, bool wait);
 
     void updateBlindSpeed();
 

@@ -39,11 +39,7 @@ void EnOceanCentral::dispose(bool wait)
 		GD::bl->threadManager.join(_workerThread);
 
 		GD::out.printDebug("Removing device " + std::to_string(_deviceId) + " from physical device's event queue...");
-		for(std::map<std::string, std::shared_ptr<IEnOceanInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); ++i)
-		{
-			//Just to make sure cycle through all physical devices. If event handler is not removed => segfault
-			i->second->removeEventHandler(_physicalInterfaceEventhandlers[i->first]);
-		}
+        GD::interfaces->removeEventHandlers();
 	}
     catch(const std::exception& ex)
     {
@@ -61,11 +57,7 @@ void EnOceanCentral::init()
 		_stopPairingModeThread = false;
 		_stopWorkerThread = false;
 		_timeLeftInPairingMode = 0;
-
-		for(std::map<std::string, std::shared_ptr<IEnOceanInterface>>::iterator i = GD::physicalInterfaces.begin(); i != GD::physicalInterfaces.end(); ++i)
-		{
-			_physicalInterfaceEventhandlers[i->first] = i->second->addEventHandler((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
-		}
+        GD::interfaces->addEventHandlers((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink*)this);
 
 		GD::bl->threadManager.start(_workerThread, true, _bl->settings.workerThreadPriority(), _bl->settings.workerThreadPolicy(), &EnOceanCentral::worker, this);
 	}
@@ -126,6 +118,7 @@ void EnOceanCentral::worker()
 				}
 
 				if(peer && !peer->deleting) peer->worker();
+				GD::interfaces->worker();
 				counter++;
 			}
 			catch(const std::exception& ex)
@@ -275,7 +268,7 @@ bool EnOceanCentral::onPacketReceived(std::string& senderId, std::shared_ptr<Bas
 	try
 	{
 		if(_disposing) return false;
-		PMyPacket myPacket(std::dynamic_pointer_cast<EnOceanPacket>(packet));
+		PEnOceanPacket myPacket(std::dynamic_pointer_cast<EnOceanPacket>(packet));
 		if(!myPacket) return false;
 
 		if(_bl->debugLevel >= 4) _bl->out.printInfo(BaseLib::HelperFunctions::getTimeString(myPacket->getTimeReceived()) + " EnOcean packet received (" + senderId + std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" + "): " + BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) + " - Sender address (= EnOcean ID): 0x" + BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8));
@@ -315,7 +308,7 @@ bool EnOceanCentral::onPacketReceived(std::string& senderId, std::shared_ptr<Bas
             std::string settingName = "roaming";
             auto roamingSetting = GD::family->getFamilySetting(settingName);
             bool roaming = roamingSetting ? roamingSetting->integerValue : true;
-			if(roaming && senderId != peer->getPhysicalInterfaceId() && peer->getPhysicalInterface()->getBaseAddress() == GD::physicalInterfaces.at(senderId)->getBaseAddress())
+			if(roaming && senderId != peer->getPhysicalInterfaceId() && peer->getPhysicalInterface()->getBaseAddress() == GD::interfaces->getInterface(senderId)->getBaseAddress())
 			{
                 if(myPacket->getRssi() > peer->getPhysicalInterface()->getRssi(peer->getAddress(), peer->isWildcardPeer()) + 6)
                 {
@@ -352,16 +345,13 @@ std::string EnOceanCentral::getFreeSerialNumber(int32_t address)
 	return serial;
 }
 
-bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PMyPacket packet)
+bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PEnOceanPacket packet)
 {
 	try
 	{
         std::lock_guard<std::mutex> pairingGuard(_pairingMutex);
 
-		auto physicalInterfaceIterator = GD::physicalInterfaces.find(interfaceId);
-		if(physicalInterfaceIterator == GD::physicalInterfaces.end()) return false;
-		std::shared_ptr<IEnOceanInterface> physicalInterface = physicalInterfaceIterator->second;
-		if(!physicalInterface) return false;
+		std::shared_ptr<IEnOceanInterface> physicalInterface = GD::interfaces->getInterface(interfaceId);
 
 		std::vector<uint8_t> payload = packet->getData();
 		if(packet->getRorg() == 0xD4) //UTE
@@ -458,7 +448,7 @@ bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PMyPacket pa
 			if(responseExpected)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-				PMyPacket response(new EnOceanPacket((EnOceanPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, packet->senderAddress()));
+				PEnOceanPacket response(new EnOceanPacket((EnOceanPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, packet->senderAddress()));
 				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 8);
 				responsePayload.at(1) = (responsePayload.at(1) & 0x80) | 0x11; // Command 1 => teach-in response
@@ -518,7 +508,7 @@ bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PMyPacket pa
 
                 if(peer->hasRfChannel(0))
                 {
-                    PMyPacket response(new EnOceanPacket((EnOceanPacket::Type) 1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0), 0xFFFFFFFF));
+                    PEnOceanPacket response(new EnOceanPacket((EnOceanPacket::Type) 1, packet->getRorg(), physicalInterface->getBaseAddress() | peer->getRfChannel(0), 0xFFFFFFFF));
                     std::vector<uint8_t> responsePayload;
                     responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
                     responsePayload.back() = 0xF0;
@@ -554,7 +544,7 @@ bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PMyPacket pa
 						break;
 					}
 				}
-				PMyPacket response(new EnOceanPacket((EnOceanPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, 0xFFFFFFFF));
+				PEnOceanPacket response(new EnOceanPacket((EnOceanPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, 0xFFFFFFFF));
 				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
 				responsePayload.back() = 0xF0;
@@ -741,7 +731,7 @@ std::string EnOceanCentral::handleCliCommand(std::string command)
 			}
 
 			std::string interfaceId = arguments.at(0);
-			if(GD::physicalInterfaces.find(interfaceId) == GD::physicalInterfaces.end()) return "Unknown physical interface.\n";
+			if(!GD::interfaces->hasInterface(interfaceId)) return "Unknown physical interface.\n";
 			int32_t deviceType = BaseLib::Math::getNumber(arguments.at(1), true);
 			if(deviceType == 0) return "Invalid device type. Device type has to be provided in hexadecimal format.\n";
 			int32_t address = BaseLib::Math::getNumber(arguments.at(2), true);
@@ -1014,10 +1004,10 @@ std::string EnOceanCentral::handleCliCommand(std::string command)
 			}
 
 			std::string interfaceId = arguments.at(0);
-			if(GD::physicalInterfaces.find(interfaceId) == GD::physicalInterfaces.end()) return "Unknown physical interface.\n";
+			if(!GD::interfaces->hasInterface(interfaceId)) return "Unknown physical interface.\n";
 			uint32_t address = BaseLib::Math::getUnsignedNumber(arguments.at(1), true) & 0xFFFFFF80;
 
-			int32_t result = GD::physicalInterfaces.at(interfaceId)->setBaseAddress(address);
+			int32_t result = GD::interfaces->getInterface(interfaceId)->setBaseAddress(address);
 
 			if(result == -1) stringStream << "Error setting base address. See error log for more details." << std::endl;
 			else stringStream << "Base address set to 0x" << BaseLib::HelperFunctions::getHexString(address) << ". Remaining changes: " << result << std::endl;
@@ -1037,14 +1027,13 @@ std::string EnOceanCentral::handleCliCommand(std::string command)
 			}
 
 			std::string interfaceId = arguments.at(0);
-			auto interfaceIterator = GD::physicalInterfaces.find(interfaceId);
-			if(interfaceIterator == GD::physicalInterfaces.end()) return "Unknown physical interface.\n";
+			if(!GD::interfaces->hasInterface(interfaceId)) return "Unknown physical interface.\n";
 
 			std::vector<uint8_t> rawPacket = _bl->hf.getUBinary(arguments.at(1));
-			PMyPacket packet = std::make_shared<EnOceanPacket>(rawPacket);
+			PEnOceanPacket packet = std::make_shared<EnOceanPacket>(rawPacket);
 			if(packet->getType() == EnOceanPacket::Type::RADIO_ERP1 || packet->getType() == EnOceanPacket::Type::RADIO_ERP2)
 			{
-				if((packet->senderAddress() & 0xFFFFFF80) != interfaceIterator->second->getBaseAddress())
+				if((packet->senderAddress() & 0xFFFFFF80) != GD::interfaces->getInterface(interfaceId)->getBaseAddress())
 				{
 					onPacketReceived(interfaceId, packet);
 					stringStream << "Processed packet " << BaseLib::HelperFunctions::getHexString(packet->getBinary()) << std::endl;
@@ -1089,11 +1078,10 @@ PVariable EnOceanCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32
 		std::string serial = getFreeSerialNumber(address);
 		if(peerExists(deviceType, address)) return Variable::createError(-5, "This peer is already paired to this central.");
 
-		if(!interfaceId.empty() && GD::physicalInterfaces.find(interfaceId) == GD::physicalInterfaces.end()) return Variable::createError(-6, "Unknown physical interface.");
+		if(!interfaceId.empty() && !GD::interfaces->hasInterface(interfaceId)) return Variable::createError(-6, "Unknown physical interface.");
         if(interfaceId.empty())
         {
-            if(GD::physicalInterfaces.size() > 1) return Variable::createError(-7, "Please specify the ID of the physical interface (= communication module) to use.");
-            interfaceId = GD::physicalInterfaces.begin()->second->getID();
+            if(GD::interfaces->count() > 1) return Variable::createError(-7, "Please specify the ID of the physical interface (= communication module) to use.");
         }
 
 		std::shared_ptr<EnOceanPeer> peer = createPeer(deviceType, address, serial, false);

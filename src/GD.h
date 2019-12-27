@@ -8,7 +8,7 @@
 
 #include <homegear-base/BaseLib.h>
 #include "EnOcean.h"
-#include "PhysicalInterfaces/IEnOceanInterface.h"
+#include "Interfaces.h"
 
 namespace EnOcean
 {
@@ -20,8 +20,7 @@ public:
 
 	static BaseLib::SharedObjects* bl;
 	static EnOcean* family;
-	static std::map<std::string, std::shared_ptr<IEnOceanInterface>> physicalInterfaces;
-	static std::shared_ptr<IEnOceanInterface> defaultPhysicalInterface;
+    static std::shared_ptr<Interfaces> interfaces;
 	static BaseLib::Output out;
 private:
 	GD();
