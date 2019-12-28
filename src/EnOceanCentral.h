@@ -48,7 +48,7 @@ public:
 protected:
 	bool _sniff = false;
 	std::mutex _sniffedPacketsMutex;
-	std::map<int32_t, std::vector<PMyPacket>> _sniffedPackets;
+	std::map<int32_t, std::vector<PEnOceanPacket>> _sniffedPackets;
 
 	std::map<int32_t, std::list<PMyPeer>> _peers;
 	std::mutex _wildcardPeersMutex;
@@ -73,7 +73,7 @@ protected:
 	void deletePeer(uint64_t id);
 
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);
-	bool handlePairingRequest(std::string& interfaceId, PMyPacket packet);
+	bool handlePairingRequest(std::string& interfaceId, PEnOceanPacket packet);
 };
 
 }

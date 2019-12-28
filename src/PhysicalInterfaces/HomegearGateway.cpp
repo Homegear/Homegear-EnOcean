@@ -357,6 +357,8 @@ void HomegearGateway::processPacket(std::vector<uint8_t>& data)
             return;
         }
 
+        _lastPacketReceived = BaseLib::HelperFunctions::getTime();
+
         uint8_t packetType = data[4];
         std::unique_lock<std::mutex> requestsGuard(_requestsMutex);
         auto requestIterator = _requests.find(packetType);
@@ -374,7 +376,7 @@ void HomegearGateway::processPacket(std::vector<uint8_t>& data)
         }
         else requestsGuard.unlock();
 
-        PMyPacket packet(new EnOceanPacket(data));
+        PEnOceanPacket packet(new EnOceanPacket(data));
         if(packet->getType() == EnOceanPacket::Type::RADIO_ERP1 || packet->getType() == EnOceanPacket::Type::RADIO_ERP2)
         {
             if((packet->senderAddress() & 0xFFFFFF80) == _baseAddress) _out.printInfo("Info: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));

@@ -262,7 +262,7 @@ void Usb300::listen()
 						data.clear();
 						continue;
 					}
-					size = ((data[1] << 8) | data[2]) + data[3];
+					size = (((uint16_t)data[1] << 8) | data[2]) + data[3];
 					if(size == 0)
 					{
 						_out.printError("Error: Header has invalid size information: " + BaseLib::HelperFunctions::getHexString(data));
@@ -333,7 +333,7 @@ void Usb300::processPacket(std::vector<uint8_t>& data)
 		}
 		else requestsGuard.unlock();
 
-		PMyPacket packet = std::make_shared<EnOceanPacket>(data);
+		PEnOceanPacket packet = std::make_shared<EnOceanPacket>(data);
 		if(packet->getType() == EnOceanPacket::Type::RADIO_ERP1 || packet->getType() == EnOceanPacket::Type::RADIO_ERP2)
 		{
 			if((packet->senderAddress() & 0xFFFFFF80) == _baseAddress) _out.printInfo("Info: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
