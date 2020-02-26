@@ -339,6 +339,10 @@ void Usb300::processPacket(std::vector<uint8_t>& data)
 			if((packet->senderAddress() & 0xFFFFFF80) == _baseAddress) _out.printInfo("Info: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
 			else raisePacketReceived(packet);
 		}
+        else
+        {
+            _out.printInfo("Info: Not processing packet: " + BaseLib::HelperFunctions::getHexString(data));
+        }
 	}
 	catch(const std::exception& ex)
     {

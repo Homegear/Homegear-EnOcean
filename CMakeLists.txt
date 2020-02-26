@@ -24,7 +24,7 @@ set(SOURCE_FILES
         src/EnOceanPeer.h
         src/Security.cpp
         src/Security.h
-        config.h src/PhysicalInterfaces/HomegearGateway.cpp src/PhysicalInterfaces/HomegearGateway.h src/PhysicalInterfaces/Hgdc.cpp src/PhysicalInterfaces/Hgdc.h)
+        src/PhysicalInterfaces/HomegearGateway.cpp src/PhysicalInterfaces/HomegearGateway.h src/PhysicalInterfaces/Hgdc.cpp src/PhysicalInterfaces/Hgdc.h)
 
 add_custom_target(homegear COMMAND ../../makeAll.sh SOURCES ${SOURCE_FILES})
 
