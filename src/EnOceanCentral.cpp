@@ -473,7 +473,7 @@ bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PEnOceanPack
 					GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
 					return false;
 				}
-				GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(manufacturerEep) + ". If nothing happens, the EEP is not yet supported.");
+				GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(manufacturerEep) + ".");
 				std::shared_ptr<EnOceanPeer> peer = createPeer(manufacturerEep, packet->senderAddress(), serial, false);
 				if(!peer || !peer->getRpcDevice())
                 {
@@ -552,6 +552,26 @@ bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PEnOceanPack
 				physicalInterface->sendPacket(response);
 			}
 		}
+		else if(_remoteCommissioningEep != 0)
+        {
+		    if(!peerExists(packet->senderAddress()))
+            {
+                auto setLinkTableEntry1 = std::make_shared<EnOceanPacket>((EnOceanPacket::Type)1, 0xC5, physicalInterface->getBaseAddress(), packet->senderAddress());
+                std::vector<uint8_t> responsePayload1;
+                responsePayload1.reserve(9);
+                responsePayload1.push_back(0x40);
+                responsePayload1.push_back(0x05);
+                responsePayload1.push_back(0x7F);
+                responsePayload1.push_back((uint8_t)(char)0xF2);
+                responsePayload1.push_back(0x12);
+                responsePayload1.push_back(0x00);
+                responsePayload1.push_back(physicalInterface->getBaseAddress());
+                responsePayload1.push_back(0x40);
+                responsePayload1.push_back(0x40);
+                setLinkTableEntry1->setData(responsePayload1);
+                physicalInterface->sendPacket(setLinkTableEntry1);
+            }
+        }
 		return true;
 	}
 	catch(const std::exception& ex)
@@ -1310,12 +1330,20 @@ std::shared_ptr<Variable> EnOceanCentral::setInstallMode(BaseLib::PRpcClientInfo
 		_stopPairingModeThread = true;
 		_bl->threadManager.join(_pairingModeThread);
 		_stopPairingModeThread = false;
+        _remoteCommissioningEep = 0;
 
         if(metadata)
         {
             auto metadataIterator = metadata->structValue->find("interface");
             if(metadataIterator != metadata->structValue->end()) _pairingInterface = metadataIterator->second->stringValue;
             else _pairingInterface = "";
+
+            metadataIterator = metadata->structValue->find("type");
+            if(metadataIterator != metadata->structValue->end() && metadataIterator->second->stringValue == "remoteCommissioning")
+            {
+                metadataIterator = metadata->structValue->find("eep");
+                if(metadataIterator != metadata->structValue->end()) _remoteCommissioningEep = BaseLib::Math::getUnsignedNumber(metadataIterator->second->stringValue, true);
+            }
         }
         else _pairingInterface = "";
 
@@ -1331,7 +1359,7 @@ std::shared_ptr<Variable> EnOceanCentral::setInstallMode(BaseLib::PRpcClientInfo
 			_timeLeftInPairingMode = duration; //It's important to set it here, because the thread often doesn't completely initialize before getInstallMode requests _timeLeftInPairingMode
 			_bl->threadManager.start(_pairingModeThread, true, &EnOceanCentral::pairingModeTimer, this, duration, debugOutput);
 		}
-		return PVariable(new Variable(VariableType::tVoid));
+		return std::make_shared<Variable>(VariableType::tVoid);
 	}
 	catch(const std::exception& ex)
     {
@@ -1360,13 +1388,13 @@ PVariable EnOceanCentral::startSniffing(BaseLib::PRpcClientInfo clientInfo)
 	std::lock_guard<std::mutex> sniffedPacketsGuard(_sniffedPacketsMutex);
 	_sniffedPackets.clear();
 	_sniff = true;
-	return PVariable(new Variable());
+	return std::make_shared<Variable>();
 }
 
 PVariable EnOceanCentral::stopSniffing(BaseLib::PRpcClientInfo clientInfo)
 {
 	_sniff = false;
-	return PVariable(new Variable());
+	return std::make_shared<Variable>();
 }
 
 }

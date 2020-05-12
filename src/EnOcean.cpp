@@ -107,7 +107,29 @@ PVariable EnOcean::getPairingInfo()
 			//{{{ setInstallMode
 			PVariable setInstallModeMetadata = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
 			PVariable setInstallModeMetadataInfo = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
 			setInstallModeMetadataInfo->structValue->emplace("interfaceSelector", std::make_shared<BaseLib::Variable>(true));
+
+            PVariable typeSelector = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+            PVariable typeSelectorBidcos = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            typeSelectorBidcos->structValue->emplace("name", std::make_shared<BaseLib::Variable>("Teach-in packet from device"));
+            typeSelectorBidcos->structValue->emplace("additionalFields", std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct));
+            typeSelector->structValue->emplace("teachIn", typeSelectorBidcos);
+
+            PVariable typeSelectorRc = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            typeSelectorRc->structValue->emplace("name", std::make_shared<BaseLib::Variable>("Remote Commissioning"));
+            PVariable typeSelectorRcFields = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            PVariable typeSelectorRcEep = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            typeSelectorRcEep->structValue->emplace("name", std::make_shared<BaseLib::Variable>(std::string("l10n.enocean.pairingInfo.eep")));
+            typeSelectorRcEep->structValue->emplace("description", std::make_shared<BaseLib::Variable>(std::string("l10n.enocean.pairingInfo.eepHelp")));
+            typeSelectorRcEep->structValue->emplace("pos", std::make_shared<BaseLib::Variable>(0));
+            typeSelectorRcEep->structValue->emplace("type", std::make_shared<BaseLib::Variable>(std::string("string")));
+            typeSelectorRcFields->structValue->emplace("eep", typeSelectorRcEep);
+            typeSelectorRc->structValue->emplace("additionalFields", typeSelectorRcFields);
+            typeSelector->structValue->emplace("remoteCommissioning", typeSelectorRc);
+
+            setInstallModeMetadataInfo->structValue->emplace("typeSelector", typeSelector);
 			setInstallModeMetadata->structValue->emplace("metadataInfo", setInstallModeMetadataInfo);
 
 			pairingMethods->structValue->emplace("setInstallMode", setInstallModeMetadata);

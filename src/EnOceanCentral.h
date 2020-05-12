@@ -58,6 +58,7 @@ protected:
 	std::atomic_bool _stopPairingModeThread;
 	std::mutex _pairingModeThreadMutex;
 	std::thread _pairingModeThread;
+	std::atomic_int _remoteCommissioningEep{0};
 
 	std::atomic_bool _stopWorkerThread;
 	std::thread _workerThread;

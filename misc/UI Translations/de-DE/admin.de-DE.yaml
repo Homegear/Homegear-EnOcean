@@ -4,4 +4,6 @@ l10n.enocean.pairingInfo.id: 'ID'
 l10n.enocean.pairingInfo.hostname: 'Hostname'
 l10n.enocean.pairingInfo.password: 'Kennwort'
 l10n.enocean.pairingInfo.device: 'Gerät'
+l10n.enocean.pairingInfo.eep: 'EEP'
+l10n.enocean.pairingInfo.eepHelp: 'Diese EEP wird dem remotekommissionierten Gerät in Homegear zugewiesen.'
 # }}}
