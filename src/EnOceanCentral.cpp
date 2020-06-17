@@ -1105,6 +1105,8 @@ std::shared_ptr<EnOceanPeer> EnOceanCentral::buildPeer(uint64_t eep, int32_t add
         }
 
         GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
+
+        return peer;
     }
     catch(const std::exception& ex)
     {
@@ -1392,7 +1394,16 @@ void EnOceanCentral::handleRemoteCommissioningQueue()
                 auto queryId = std::make_shared<QueryIdPacket>(deviceAddress);
                 auto response = interface->sendAndReceivePacket(queryId, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{0x06, 0x04},
                                                                                                                                                  {0x07, 0x04}});
-                if(!response) return;
+                if(!response)
+                {
+                    if(_remoteCommissioningSecurityCode != 0)
+                    {
+                        auto lock = std::make_shared<Lock>(deviceAddress, _remoteCommissioningSecurityCode);
+                        interface->sendEnoceanPacket(lock);
+                        interface->sendEnoceanPacket(lock);
+                    }
+                    return;
+                }
 
                 GD::out.printInfo("Info: Got query ID response.");
                 auto queryIdData = response->getData();
@@ -1413,6 +1424,13 @@ void EnOceanCentral::handleRemoteCommissioningQueue()
 
         if(peerExists(deviceAddress, eep))
         {
+            if(_remoteCommissioningSecurityCode != 0)
+            {
+                auto lock = std::make_shared<Lock>(deviceAddress, _remoteCommissioningSecurityCode);
+                interface->sendEnoceanPacket(lock);
+                interface->sendEnoceanPacket(lock);
+            }
+
             GD::out.printInfo("Info: Peer is already paired to this central.");
             return;
         }
@@ -1422,6 +1440,12 @@ void EnOceanCentral::handleRemoteCommissioningQueue()
         if(!rpcDevice)
         {
             GD::out.printWarning("Warning: No device description found for EEP " + BaseLib::HelperFunctions::getHexString(eep) + " or EEP "  + BaseLib::HelperFunctions::getHexString(eep & 0xFFFFFFu) + ". Aborting pairing.");
+            if(_remoteCommissioningSecurityCode != 0)
+            {
+                auto lock = std::make_shared<Lock>(deviceAddress, _remoteCommissioningSecurityCode);
+                interface->sendEnoceanPacket(lock);
+                interface->sendEnoceanPacket(lock);
+            }
             return;
         }
 
@@ -1594,11 +1618,42 @@ void EnOceanCentral::handleRemoteCommissioningQueue()
         }
         //}}}
 
-        auto lock = std::make_shared<Lock>(deviceAddress, _remoteCommissioningSecurityCode);
-        interface->sendEnoceanPacket(lock);
-        interface->sendEnoceanPacket(lock);
+        if(_remoteCommissioningSecurityCode != 0)
+        {
+            auto lock = std::make_shared<Lock>(deviceAddress, _remoteCommissioningSecurityCode);
+            interface->sendEnoceanPacket(lock);
+            interface->sendEnoceanPacket(lock);
+        }
 
-        if(pairingSuccessful) buildPeer(eep, deviceAddress, interface->getID(), rfChannel);
+        if(pairingSuccessful)
+        {
+            auto peer = buildPeer(eep, deviceAddress, interface->getID(), rfChannel);
+            if(peer)
+            {
+                if(_remoteCommissioningSecurityCode != 0)
+                {
+                    auto channelIterator = peer->configCentral.find(0);
+                    if(channelIterator != peer->configCentral.end())
+                    {
+                        auto variableIterator = channelIterator->second.find("SECURITY_CODE");
+                        if(variableIterator != channelIterator->second.end() && variableIterator->second.rpcParameter)
+                        {
+                            auto securityCode = std::make_shared<BaseLib::Variable>(_remoteCommissioningSecurityCode);
+                            std::vector<uint8_t> parameterData;
+                            variableIterator->second.rpcParameter->convertToPacket(securityCode, variableIterator->second.mainRole(), parameterData);
+                            variableIterator->second.setBinaryData(parameterData);
+                            if(variableIterator->second.databaseId > 0) peer->saveParameter(variableIterator->second.databaseId, parameterData);
+                            else peer->saveParameter(0, ParameterGroup::Type::Enum::config, channelIterator->first, variableIterator->first, parameterData);
+                        }
+                    }
+                }
+
+                if(!peer->updateConfiguration())
+                {
+                    GD::out.printError("Error: Could not read current device configuration.");
+                }
+            }
+        }
     }
     catch(const std::exception& ex)
     {

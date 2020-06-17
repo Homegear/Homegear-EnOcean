@@ -8,6 +8,12 @@
 namespace EnOcean
 {
 
+class GetDeviceConfiguration : public EnOceanPacket
+{
+public:
+    GetDeviceConfiguration(int32_t destinationAddress, uint16_t startIndex, uint16_t endIndex, uint8_t length);
+};
+
 class Lock : public EnOceanPacket
 {
 public:
@@ -30,6 +36,12 @@ class QueryStatusPacket : public EnOceanPacket
 {
 public:
     QueryStatusPacket(int32_t destinationAddress);
+};
+
+class SetDeviceConfiguration : public EnOceanPacket
+{
+public:
+    SetDeviceConfiguration(int32_t destinationAddress, const std::map<uint32_t, std::vector<uint8_t>>& configuration);
 };
 
 class SetLinkTable : public EnOceanPacket

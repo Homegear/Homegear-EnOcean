@@ -5,6 +5,7 @@
 #include "GD.h"
 #include "EnOceanPacket.h"
 #include "EnOceanCentral.h"
+#include "EnOceanPackets.h"
 
 #include <iomanip>
 
@@ -233,7 +234,6 @@ void EnOceanPeer::homegearShuttingDown()
 {
 	try
 	{
-		_shuttingDown = true;
 		Peer::homegearShuttingDown();
 	}
 	catch(const std::exception& ex)
@@ -1216,7 +1216,7 @@ bool EnOceanPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter paramet
 			{
 				std::vector<uint8_t> parameterData;
                 auto& rpcConfigurationParameter = valuesCentral[channel][parameter->id];
-				parameter->convertToPacket(PVariable(new Variable((int32_t)_peerID)), rpcConfigurationParameter.mainRole(), parameterData);
+				parameter->convertToPacket(std::make_shared<Variable>((int32_t)_peerID), rpcConfigurationParameter.mainRole(), parameterData);
                 rpcConfigurationParameter.setBinaryData(parameterData);
 			}
 		}
@@ -1226,6 +1226,114 @@ bool EnOceanPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter paramet
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     return false;
+}
+
+bool EnOceanPeer::updateConfiguration()
+{
+    try
+    {
+        uint32_t deviceConfigurationSize = 0xFF;
+
+        if(_rpcDevice->metadata)
+        {
+            auto metadataIterator = _rpcDevice->metadata->structValue->find("remoteManagementInfo");
+            if(metadataIterator != _rpcDevice->metadata->structValue->end() && !metadataIterator->second->arrayValue->empty())
+            {
+                auto remoteManagementInfo = metadataIterator->second->arrayValue->at(0);
+                auto infoIterator = remoteManagementInfo->structValue->find("features");
+                if(infoIterator != metadataIterator->second->structValue->end() && !infoIterator->second->arrayValue->empty())
+                {
+                    auto features = infoIterator->second->arrayValue->at(0);
+                    auto featureIterator = features->structValue->find("deviceConfigurationSize");
+                    if(featureIterator != features->structValue->end())
+                    {
+                        deviceConfigurationSize = featureIterator->second->integerValue;
+                    }
+
+                    featureIterator = features->structValue->find("getDeviceConfiguration");
+                    if(featureIterator != features->structValue->end() && !featureIterator->second->booleanValue)
+                    {
+                        GD::out.printInfo("Info: Device does not support getDeviceConfiguration.");
+                        return true;
+                    }
+                }
+            }
+        }
+
+        remoteManagementUnlock();
+
+        auto getDeviceConfiguration = std::make_shared<GetDeviceConfiguration>(_address, 0, deviceConfigurationSize, 0xFF);
+        setBestInterface();
+        auto response = _physicalInterface->sendAndReceivePacket(getDeviceConfiguration, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::getDeviceConfigurationResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::getDeviceConfigurationResponse}});
+        if(!response)
+        {
+            GD::out.printError("Error: Could not set device configuration on device.");
+        }
+
+        remoteManagementLock();
+
+        auto rawConfig = response->getData();
+        std::unordered_map<uint32_t, std::vector<uint8_t>> config;
+        uint32_t pos = 32;
+        while(pos < rawConfig.size() * 8)
+        {
+            auto index = BitReaderWriter::getPosition16(rawConfig, pos, 16);
+            pos += 16;
+            auto length = ((uint32_t)BitReaderWriter::getPosition8(rawConfig, pos, 8)) * 8;
+            pos += 8;
+            auto data = BitReaderWriter::getPosition(rawConfig, pos, length);
+            pos += length;
+            config.emplace(index, data);
+        }
+
+        bool configChanged = false;
+        auto channelIterator = configCentral.find(0);
+        if(channelIterator != configCentral.end())
+        {
+            for(auto& variableIterator : channelIterator->second)
+            {
+                if(!variableIterator.second.rpcParameter) continue;
+                if(variableIterator.second.rpcParameter->physical->type != IPhysical::Type::tInteger || variableIterator.second.rpcParameter->physical->bitSize <= 0) continue;
+
+                auto configIterator = config.find(variableIterator.second.rpcParameter->physical->memoryIndex);
+                if(configIterator != config.end() && (variableIterator.second.getBinaryDataSize() != configIterator->second.size() || !std::equal(configIterator->second.begin(), configIterator->second.end(), variableIterator.second.getBinaryData().begin())))
+                {
+                    variableIterator.second.setBinaryData(configIterator->second);
+                    if(variableIterator.second.databaseId > 0) saveParameter(variableIterator.second.databaseId, configIterator->second);
+                    else saveParameter(0, ParameterGroup::Type::Enum::config, channelIterator->first, variableIterator.first, configIterator->second);
+                    configChanged = true;
+                    GD::out.printInfo("Info: Parameter " + variableIterator.first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channelIterator->first) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(configIterator->second) + ".");
+                }
+            }
+        }
+
+        if(configChanged) raiseRPCUpdateDevice(_peerID, 0, _serialNumber, 0);
+
+        return true;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return false;
+}
+
+PVariable EnOceanPeer::forceConfigUpdate(PRpcClientInfo clientInfo)
+{
+    try
+    {
+        if(!updateConfiguration())
+        {
+            return Variable::createError(-1, "Error updating configuration.");
+        }
+
+        return std::make_shared<BaseLib::Variable>();
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return Variable::createError(-32500, "Unknown application error.");
 }
 
 PVariable EnOceanPeer::getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields)
@@ -1243,7 +1351,7 @@ PVariable EnOceanPeer::getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::ma
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
-    return PVariable();
+    return Variable::createError(-32500, "Unknown application error.");
 }
 
 PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool checkAcls, bool onlyPushing)
@@ -1253,12 +1361,12 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
 		if(_disposing) return Variable::createError(-32500, "Peer is disposing.");
 		if(channel < 0) channel = 0;
 		if(remoteChannel < 0) remoteChannel = 0;
-		Functions::iterator functionIterator = _rpcDevice->functions.find(channel);
+		auto functionIterator = _rpcDevice->functions.find(channel);
 		if(functionIterator == _rpcDevice->functions.end()) return Variable::createError(-2, "Unknown channel.");
 		if(type == ParameterGroup::Type::none) type = ParameterGroup::Type::link;
 		PParameterGroup parameterGroup = functionIterator->second->getParameterGroup(type);
 		if(!parameterGroup) return Variable::createError(-3, "Unknown parameter set.");
-		if(variables->structValue->empty()) return PVariable(new Variable(VariableType::tVoid));
+		if(variables->structValue->empty()) return std::make_shared<Variable>(VariableType::tVoid);
 
         auto central = getCentral();
         if(!central) return Variable::createError(-32500, "Could not get central.");
@@ -1267,47 +1375,53 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
 		{
 			bool parameterChanged = false;
 
-			std::map<uint32_t, std::pair<uint32_t, std::vector<uint8_t>>> updatedParameters;
-			for(Struct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
+			std::map<uint32_t, std::vector<uint8_t>> updatedParameters;
+			for(auto& variable : *variables->structValue)
 			{
-				if(i->first.empty() || !i->second) continue;
-				if(configCentral[channel].find(i->first) == configCentral[channel].end()) continue;
-				BaseLib::Systems::RpcConfigurationParameter& parameter = configCentral[channel][i->first];
+				if(variable.first.empty() || !variable.second) continue;
+				if(configCentral[channel].find(variable.first) == configCentral[channel].end()) continue;
+				BaseLib::Systems::RpcConfigurationParameter& parameter = configCentral[channel][variable.first];
 				if(!parameter.rpcParameter) continue;
-				if(parameter.rpcParameter->password && i->second->stringValue.empty()) continue; //Don't safe password if empty
+				if(parameter.rpcParameter->password && variable.second->stringValue.empty()) continue; //Don't safe password if empty
 				std::vector<uint8_t> parameterData;
-				parameter.rpcParameter->convertToPacket(i->second, parameter.mainRole(), parameterData);
+				parameter.rpcParameter->convertToPacket(variable.second, parameter.mainRole(), parameterData);
 				parameter.setBinaryData(parameterData);
 				if(parameter.databaseId > 0) saveParameter(parameter.databaseId, parameterData);
-				else saveParameter(0, ParameterGroup::Type::Enum::config, channel, i->first, parameterData);
+				else saveParameter(0, ParameterGroup::Type::Enum::config, channel, variable.first, parameterData);
 
-				if(channel == 0 && i->first == "ENCRYPTION" && i->second->booleanValue != _forceEncryption) _forceEncryption = i->second->booleanValue;
+				if(channel == 0 && variable.first == "ENCRYPTION" && variable.second->booleanValue != _forceEncryption) _forceEncryption = variable.second->booleanValue;
 
 				parameterChanged = true;
-				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + ".");
+				GD::out.printInfo("Info: Parameter " + variable.first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + ".");
 
 				if(parameter.rpcParameter->physical->type != IPhysical::Type::tInteger || parameter.rpcParameter->physical->bitSize <= 0) continue;
 
-                updatedParameters.emplace((uint32_t)parameter.rpcParameter->physical->memoryIndex, std::make_pair(parameter.rpcParameter->physical->bitSize, parameterData));
+				if((unsigned)parameter.rpcParameter->physical->bitSize & 7u)
+                {
+				    GD::out.printInfo("Info: Configuration parameters are only supported in multiples of 8 bits.");
+				    continue;
+                }
+
+                uint32_t byteSize = parameter.rpcParameter->physical->bitSize / 8;
+                if(parameterData.size() > byteSize)
+                {
+                    parameterData.erase(parameterData.begin(), parameterData.begin() + (parameterData.size() - byteSize));
+                }
+                updatedParameters.emplace((uint32_t)parameter.rpcParameter->physical->memoryIndex, parameterData);
 			}
 
             { //Build and send packet
-                std::vector<uint8_t> payload;
-                uint32_t currentBitPosition = 0;
-                payload.reserve(updatedParameters.size() * 7); //Assume an average 4 byte parameter size.
-                for(auto& updatedParameter : updatedParameters)
+                remoteManagementUnlock();
+
+                auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(_address, updatedParameters);
+                setBestInterface();
+                auto response = _physicalInterface->sendAndReceivePacket(setDeviceConfiguration, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                if(!response)
                 {
-                    auto byteSize = (uint8_t)(updatedParameter.second.first / 8);
-                    if(byteSize == 0) continue;
-                    BitReaderWriter::setPositionBE(currentBitPosition, 16, payload, {(uint8_t)updatedParameter.first, (uint8_t)(updatedParameter.first >> 8u)});
-                    currentBitPosition += 16;
-                    BitReaderWriter::setPositionBE(currentBitPosition, 8, payload, {byteSize});
-                    currentBitPosition += 8;
-                    BitReaderWriter::setPositionBE(currentBitPosition, byteSize * 8, payload, updatedParameter.second.second);
-                    currentBitPosition += byteSize * 8;
+                    GD::out.printError("Error: Could not set device configuration on device.");
                 }
 
-                GD::out.printInfo("Moin: " + BaseLib::HelperFunctions::getHexString(payload));
+                remoteManagementLock();
             }
 
 			if(parameterChanged) raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
@@ -1354,7 +1468,7 @@ PVariable EnOceanPeer::setInterface(BaseLib::PRpcClientInfo clientInfo, std::str
     return Variable::createError(-32500, "Unknown application error.");
 }
 
-void EnOceanPeer::sendPacket(PEnOceanPacket packet, std::string responseId, int32_t delay, bool wait)
+void EnOceanPeer::sendPacket(const PEnOceanPacket& packet, const std::string& responseId, int32_t delay, bool wait)
 {
 	try
 	{
@@ -1365,7 +1479,7 @@ void EnOceanPeer::sendPacket(PEnOceanPacket packet, std::string responseId, int3
 			auto channelIterator = configCentral.find(0);
 			if(channelIterator != configCentral.end())
 			{
-				std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("RESENDS_WHEN_NO_ACK");
+				auto parameterIterator = channelIterator->second.find("RESENDS_WHEN_NO_ACK");
 				if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
 				{
 					std::vector<uint8_t> parameterData = parameterIterator->second.getBinaryData();
@@ -1425,7 +1539,11 @@ void EnOceanPeer::sendPacket(PEnOceanPacket packet, std::string responseId, int3
 				else _physicalInterface->sendEnoceanPacket(packet);
 			}
 		}
-		else _physicalInterface->sendEnoceanPacket(packet);
+		else
+        {
+            setBestInterface();
+            _physicalInterface->sendEnoceanPacket(packet);
+        }
 		if(delay > 0) std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 	}
 	catch(const std::exception& ex)
@@ -1751,6 +1869,82 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     return Variable::createError(-32500, "Unknown application error. See error log for more details.");
+}
+
+bool EnOceanPeer::remoteManagementUnlock()
+{
+    try
+    {
+        uint32_t securityCode = 0;
+
+        auto channelIterator = configCentral.find(0);
+        if(channelIterator != configCentral.end())
+        {
+            auto variableIterator = channelIterator->second.find("SECURITY_CODE");
+            if(variableIterator != channelIterator->second.end() && variableIterator->second.rpcParameter)
+            {
+                securityCode = (uint32_t)variableIterator->second.rpcParameter->convertFromPacket(variableIterator->second.getBinaryData(), variableIterator->second.mainRole(), false)->integerValue;
+            }
+        }
+
+        if(securityCode != 0)
+        {
+            setBestInterface();
+            auto unlock = std::make_shared<Unlock>(_address, securityCode);
+            _physicalInterface->sendEnoceanPacket(unlock);
+            _physicalInterface->sendEnoceanPacket(unlock);
+
+            auto queryStatus = std::make_shared<QueryStatusPacket>(_address);
+            auto response = _physicalInterface->sendAndReceivePacket(queryStatus, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse}});
+
+            if(!response) return false;
+            auto queryStatusData = response->getData();
+
+            bool codeSet = queryStatusData.at(4) & 0x80u;
+            auto lastFunctionNumber = (uint16_t)((uint16_t)(queryStatusData.at(5) & 0x0Fu) << 8u) | queryStatusData.at(6);
+            if(lastFunctionNumber != (uint16_t)EnOceanPacket::RemoteManagementFunction::unlock || (codeSet && queryStatusData.at(7) != (uint8_t)EnOceanPacket::QueryStatusReturnCode::ok))
+            {
+                GD::out.printWarning("Warning: Error unlocking device.");
+                return false;
+            }
+        }
+
+        return true;
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return false;
+}
+
+void EnOceanPeer::remoteManagementLock()
+{
+    try
+    {
+        uint32_t securityCode = 0;
+
+        auto channelIterator = configCentral.find(0);
+        if(channelIterator != configCentral.end())
+        {
+            auto variableIterator = channelIterator->second.find("SECURITY_CODE");
+            if(variableIterator != channelIterator->second.end() && variableIterator->second.rpcParameter)
+            {
+                securityCode = (uint32_t)variableIterator->second.rpcParameter->convertFromPacket(variableIterator->second.getBinaryData(), variableIterator->second.mainRole(), false)->integerValue;
+            }
+        }
+
+        if(securityCode != 0)
+        {
+            auto lock = std::make_shared<Lock>(_address, securityCode);
+            _physicalInterface->sendEnoceanPacket(lock);
+            _physicalInterface->sendEnoceanPacket(lock);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
 }
 
 }

@@ -5,6 +5,19 @@
 namespace EnOcean
 {
 
+GetDeviceConfiguration::GetDeviceConfiguration(int32_t destinationAddress, uint16_t startIndex, uint16_t endIndex, uint8_t length) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, 0, destinationAddress)
+{
+    _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::getDeviceConfiguration >> 8u));
+    _data.push_back((uint8_t)RemoteManagementFunction::getDeviceConfiguration);
+    _data.push_back(0x07); //Manufacturer MSB
+    _data.push_back(0xFF); //Manufacturer LSB
+    _data.push_back(startIndex >> 8u);
+    _data.push_back(startIndex);
+    _data.push_back(endIndex >> 8u);
+    _data.push_back(endIndex);
+    _data.push_back(length);
+}
+
 Lock::Lock(int32_t destinationAddress, uint32_t securityCode) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, 0, destinationAddress)
 {
     _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::lock >> 8u));
@@ -42,6 +55,25 @@ QueryStatusPacket::QueryStatusPacket(int32_t destinationAddress) : EnOceanPacket
     _data.push_back((uint8_t)RemoteManagementFunction::queryStatus);
     _data.push_back(0x07); //Manufacturer MSB
     _data.push_back(0xFF); //Manufacturer LSB
+}
+
+SetDeviceConfiguration::SetDeviceConfiguration(int32_t destinationAddress, const std::map<uint32_t, std::vector<uint8_t>>& configuration) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, 0, destinationAddress)
+{
+    _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::setDeviceConfiguration >> 8u));
+    _data.push_back((uint8_t)RemoteManagementFunction::setDeviceConfiguration);
+    _data.push_back(0x07); //Manufacturer MSB
+    _data.push_back(0xFF); //Manufacturer LSB
+    uint32_t currentBitPosition = _data.size() * 8;
+    for(auto& element : configuration)
+    {
+        if(element.second.empty()) continue;
+        BaseLib::BitReaderWriter::setPositionBE(currentBitPosition, 16, _data, {(uint8_t)(element.first >> 8u), (uint8_t)element.first});
+        currentBitPosition += 16;
+        BaseLib::BitReaderWriter::setPositionBE(currentBitPosition, 8, _data, {(uint8_t)element.second.size()});
+        currentBitPosition += 8;
+        BaseLib::BitReaderWriter::setPositionBE(currentBitPosition, element.second.size() * 8, _data, element.second);
+        currentBitPosition += element.second.size() * 8;
+    }
 }
 
 SetLinkTable::SetLinkTable(int32_t destinationAddress, bool inbound, const std::vector<uint8_t>& table) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, 0, destinationAddress)
