@@ -5,6 +5,7 @@
 
 #include <homegear-base/BaseLib.h>
 #include <queue>
+#include "../EnOceanPacket.h"
 
 namespace EnOcean
 {
@@ -12,32 +13,49 @@ namespace EnOcean
 class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface
 {
 public:
-	IEnOceanInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
-	virtual ~IEnOceanInterface();
+    enum class EnOceanRequestFilterType
+    {
+        senderAddress,
+        remoteManagementFunction
+    };
 
-	int32_t getAddress() { return _baseAddress; }
-	uint32_t getBaseAddress() { return _baseAddress; }
+	explicit IEnOceanInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
+	~IEnOceanInterface() override;
+
+	int32_t getAddress() override { return _baseAddress; }
+	uint32_t getBaseAddress() const { return _baseAddress; }
     int32_t getRssi(int32_t address, bool wildcardPeer);
-	void decrementRssi(int32_t address, bool wildcardPeer);
+	void decrementRssi(uint32_t address, bool wildcardPeer);
 	virtual int32_t setBaseAddress(uint32_t value)  { return -1; };
 
-	virtual void startListening() {}
-	virtual void stopListening() {}
+	void startListening() override {}
+	void stopListening() override {}
 
-	virtual void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet) {}
+	void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet) override { throw BaseLib::Exception("Not implemented."); }
+
+    virtual bool sendEnoceanPacket(const PEnOceanPacket& packet) { return false; };
+
+    PEnOceanPacket sendAndReceivePacket(const std::shared_ptr<EnOceanPacket>& packet, uint32_t retries = 0, EnOceanRequestFilterType filterType = EnOceanRequestFilterType::senderAddress, const std::vector<std::vector<uint8_t>>& filterData = std::vector<std::vector<uint8_t>>());
 protected:
-	class Request
+	struct SerialRequest
 	{
-	public:
 		std::mutex mutex;
 		std::condition_variable conditionVariable;
 		bool mutexReady = false;
 		std::vector<uint8_t> response;
-
-		Request() {}
-		virtual ~Request() {}
-	private:
 	};
+
+    struct EnOceanRequest
+    {
+        EnOceanRequestFilterType filterType = EnOceanRequestFilterType::senderAddress;
+
+        std::vector<std::vector<uint8_t>> filterData;
+
+        std::mutex mutex;
+        std::condition_variable conditionVariable;
+        bool mutexReady = false;
+        PEnOceanPacket response;
+    };
 
 	const uint8_t _crc8Table[256] = {
 		0x00, 0x07, 0x0e, 0x09, 0x1c, 0x1b, 0x12, 0x15,
@@ -89,17 +107,24 @@ protected:
 	std::mutex _sendPacketMutex;
 	std::mutex _getResponseMutex;
 
-	std::mutex _requestsMutex;
-	std::map<uint8_t, std::shared_ptr<Request>> _requests;
+	std::mutex _serialRequestsMutex;
+	std::unordered_map<uint32_t, std::shared_ptr<SerialRequest>> _serialRequests;
+
+	std::mutex _enoceanRequestsMutex;
+    std::unordered_map<uint8_t, std::shared_ptr<EnOceanRequest>> _enoceanRequests;
+
     std::mutex _rssiMutex;
-    std::unordered_map<int32_t, DeviceInfo> _wildcardRssi;
-	std::unordered_map<int32_t, DeviceInfo> _rssi;
+    std::unordered_map<uint32_t, DeviceInfo> _wildcardRssi;
+	std::unordered_map<uint32_t, DeviceInfo> _rssi;
 
 	void getResponse(uint8_t packetType, std::vector<uint8_t>& requestPacket, std::vector<uint8_t>& responsePacket);
+	bool checkForSerialRequest(const std::vector<uint8_t>& packet);
+    bool checkForEnOceanRequest(PEnOceanPacket& packet);
 	virtual void rawSend(std::vector<uint8_t>& packet) {}
 	void addCrc8(std::vector<uint8_t>& packet);
 
-	virtual void raisePacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet);
+
+	void raisePacketReceived(std::shared_ptr<BaseLib::Systems::Packet> packet) override;
 };
 
 }

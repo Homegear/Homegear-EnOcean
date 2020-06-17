@@ -25,7 +25,7 @@ public:
 	std::string handleCliCommand(std::string command);
 	virtual bool onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib::Systems::Packet> packet);
 
-	int32_t getFreeRfChannel(std::string& interfaceId);
+	int32_t getFreeRfChannel(const std::string& interfaceId);
 
 	uint64_t getPeerIdFromSerial(std::string& serialNumber) { std::shared_ptr<EnOceanPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
 	PMyPeer getPeer(uint64_t id);
@@ -34,7 +34,7 @@ public:
 
 	bool peerExists(uint64_t id);
 	bool peerExists(std::string serialNumber);
-	bool peerExists(int32_t address, int32_t eep);
+	bool peerExists(int32_t address, uint64_t eep);
 
 	virtual PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId);
 	virtual PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags);
@@ -53,12 +53,21 @@ protected:
 	std::map<int32_t, std::list<PMyPeer>> _peers;
 	std::mutex _wildcardPeersMutex;
 	std::map<int32_t, std::list<PMyPeer>> _wildcardPeers;
+
+	//{{{ Pairing
     std::mutex _pairingMutex;
     std::string _pairingInterface;
 	std::atomic_bool _stopPairingModeThread;
 	std::mutex _pairingModeThreadMutex;
 	std::thread _pairingModeThread;
-	std::atomic_int _remoteCommissioningEep{0};
+	std::mutex _processedAddressesMutex;
+	std::unordered_set<int32_t> _processedAddresses;
+	std::atomic<uint32_t> _remoteCommissioningSecurityCode{0};
+    std::atomic<uint32_t> _remoteCommissioningGatewayAddress{0};
+	std::atomic<uint32_t> _remoteCommissioningDeviceAddress{0};
+	std::atomic<uint64_t> _remoteCommissioningEep{0};
+	std::queue<std::pair<std::string, uint32_t>> _remoteCommissioningAddressQueue;
+	//}}}
 
 	std::atomic_bool _stopWorkerThread;
 	std::thread _workerThread;
@@ -70,10 +79,12 @@ protected:
 	virtual void savePeers(bool full);
 	virtual void loadVariables() {}
 	virtual void saveVariables() {}
-	std::shared_ptr<EnOceanPeer> createPeer(uint32_t deviceType, int32_t address, std::string serialNumber, bool save = true);
+	std::shared_ptr<EnOceanPeer> createPeer(uint64_t eep, int32_t address, std::string serialNumber, bool save = true);
+    std::shared_ptr<EnOceanPeer> buildPeer(uint64_t eep, int32_t address, const std::string& interfaceId, int32_t rfChannel);
 	void deletePeer(uint64_t id);
 
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);
+	void handleRemoteCommissioningQueue();
 	bool handlePairingRequest(std::string& interfaceId, PEnOceanPacket packet);
 };
 

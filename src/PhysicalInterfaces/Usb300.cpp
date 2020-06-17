@@ -316,24 +316,10 @@ void Usb300::processPacket(std::vector<uint8_t>& data)
 			return;
 		}
 
-		uint8_t packetType = data[4];
-        std::unique_lock<std::mutex> requestsGuard(_requestsMutex);
-		std::map<uint8_t, std::shared_ptr<Request>>::iterator requestIterator = _requests.find(packetType);
-		if(requestIterator != _requests.end())
-		{
-			std::shared_ptr<Request> request = requestIterator->second;
-            requestsGuard.unlock();
-			request->response = data;
-			{
-				std::lock_guard<std::mutex> lock(request->mutex);
-				request->mutexReady = true;
-			}
-			request->conditionVariable.notify_one();
-			return;
-		}
-		else requestsGuard.unlock();
+        if(checkForSerialRequest(data)) return;
 
 		PEnOceanPacket packet = std::make_shared<EnOceanPacket>(data);
+        if(checkForEnOceanRequest(packet)) return;
 		if(packet->getType() == EnOceanPacket::Type::RADIO_ERP1 || packet->getType() == EnOceanPacket::Type::RADIO_ERP2)
 		{
 			if((packet->senderAddress() & 0xFFFFFF80) == _baseAddress) _out.printInfo("Info: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
@@ -350,25 +336,22 @@ void Usb300::processPacket(std::vector<uint8_t>& data)
     }
 }
 
-void Usb300::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool Usb300::sendEnoceanPacket(const PEnOceanPacket& packet)
 {
 	try
 	{
-		std::shared_ptr<EnOceanPacket> myPacket(std::dynamic_pointer_cast<EnOceanPacket>(packet));
-		if(!myPacket) return;
-
 		if(!_initComplete)
 		{
 			_out.printInfo("Info: Waiting one second, because init is not complete.");
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			if(!_initComplete)
 			{
-				_out.printWarning("Warning: !!!Not!!! sending packet " + BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) + ", because init is not complete.");
-				return;
+				_out.printWarning("Warning: !!!Not!!! sending packet " + BaseLib::HelperFunctions::getHexString(packet->getBinary()) + ", because init is not complete.");
+				return false;
 			}
 		}
 
-		std::vector<uint8_t> data = std::move(myPacket->getBinary());
+		std::vector<uint8_t> data = std::move(packet->getBinary());
 		addCrc8(data);
 		std::vector<uint8_t> response;
 		getResponse(0x02, data, response);
@@ -376,19 +359,21 @@ void Usb300::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
 		{
 			if(response.size() >= 7 && response[6] != 0)
 			{
-				std::map<uint8_t, std::string>::iterator statusIterator = _responseStatusCodes.find(response[6]);
+				auto statusIterator = _responseStatusCodes.find(response[6]);
 				if(statusIterator != _responseStatusCodes.end()) _out.printError("Error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\": " + statusIterator->second);
 				else _out.printError("Unknown error (" + std::to_string(response[6]) + ") sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
 			}
 			else _out.printError("Unknown error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
-			return;
+			return false;
 		}
 		_lastPacketSent = BaseLib::HelperFunctions::getTime();
+		return true;
 	}
 	catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
+    return false;
 }
 
 void Usb300::rawSend(std::vector<uint8_t>& packet)

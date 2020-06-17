@@ -94,7 +94,7 @@ void EnOceanPeer::worker()
                     }
 
                     setBestInterface();
-                    _physicalInterface->sendPacket(request.second->packet);
+                    _physicalInterface->sendEnoceanPacket(request.second->packet);
                     request.second->lastResend = BaseLib::HelperFunctions::getTime();
                     request.second->resends++;
                 }
@@ -1143,7 +1143,7 @@ void EnOceanPeer::packetReceived(PEnOceanPacket& packet)
                             if(!paramFound) GD::out.printError("Error constructing packet. param \"" + (*i)->parameterId + "\" not found. Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + responseFrame->id);
                         }
 
-                        _physicalInterface->sendPacket(packet);
+                        _physicalInterface->sendEnoceanPacket(packet);
                     }
                 }
             }
@@ -1266,6 +1266,8 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
 		if(type == ParameterGroup::Type::Enum::config)
 		{
 			bool parameterChanged = false;
+
+			std::map<uint32_t, std::pair<uint32_t, std::vector<uint8_t>>> updatedParameters;
 			for(Struct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i)
 			{
 				if(i->first.empty() || !i->second) continue;
@@ -1283,7 +1285,30 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
 
 				parameterChanged = true;
 				GD::out.printInfo("Info: Parameter " + i->first + " of peer " + std::to_string(_peerID) + " and channel " + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + ".");
+
+				if(parameter.rpcParameter->physical->type != IPhysical::Type::tInteger || parameter.rpcParameter->physical->bitSize <= 0) continue;
+
+                updatedParameters.emplace((uint32_t)parameter.rpcParameter->physical->memoryIndex, std::make_pair(parameter.rpcParameter->physical->bitSize, parameterData));
 			}
+
+            { //Build and send packet
+                std::vector<uint8_t> payload;
+                uint32_t currentBitPosition = 0;
+                payload.reserve(updatedParameters.size() * 7); //Assume an average 4 byte parameter size.
+                for(auto& updatedParameter : updatedParameters)
+                {
+                    auto byteSize = (uint8_t)(updatedParameter.second.first / 8);
+                    if(byteSize == 0) continue;
+                    BitReaderWriter::setPositionBE(currentBitPosition, 16, payload, {(uint8_t)updatedParameter.first, (uint8_t)(updatedParameter.first >> 8u)});
+                    currentBitPosition += 16;
+                    BitReaderWriter::setPositionBE(currentBitPosition, 8, payload, {byteSize});
+                    currentBitPosition += 8;
+                    BitReaderWriter::setPositionBE(currentBitPosition, byteSize * 8, payload, updatedParameter.second.second);
+                    currentBitPosition += byteSize * 8;
+                }
+
+                GD::out.printInfo("Moin: " + BaseLib::HelperFunctions::getHexString(payload));
+            }
 
 			if(parameterChanged) raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
 		}
@@ -1302,7 +1327,7 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
 		{
 			return Variable::createError(-3, "Parameter set type is not supported.");
 		}
-		return PVariable(new Variable(VariableType::tVoid));
+		return std::make_shared<Variable>(VariableType::tVoid);
 	}
 	catch(const std::exception& ex)
     {
@@ -1320,7 +1345,7 @@ PVariable EnOceanPeer::setInterface(BaseLib::PRpcClientInfo clientInfo, std::str
 			return Variable::createError(-5, "Unknown physical interface.");
 		}
 		setPhysicalInterfaceId(interfaceId);
-		return PVariable(new Variable(VariableType::tVoid));
+		return std::make_shared<Variable>(VariableType::tVoid);
 	}
 	catch(const std::exception& ex)
     {
@@ -1358,7 +1383,7 @@ void EnOceanPeer::sendPacket(PEnOceanPacket packet, std::string responseId, int3
 				}
 			}
             setBestInterface();
-			if(resends == 0) _physicalInterface->sendPacket(packet);
+			if(resends == 0) _physicalInterface->sendEnoceanPacket(packet);
 			else
 			{
 				PRpcRequest rpcRequest = std::make_shared<RpcRequest>();
@@ -1387,7 +1412,7 @@ void EnOceanPeer::sendPacket(PEnOceanPacket packet, std::string responseId, int3
 					std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
 					for(int32_t i = 0; i < resends + 1; i++)
 					{
-						_physicalInterface->sendPacket(packet);
+						_physicalInterface->sendEnoceanPacket(packet);
 						if(rpcRequest->conditionVariable.wait_for(conditionVariableGuard, std::chrono::milliseconds(resendTimeout)) == std::cv_status::no_timeout || rpcRequest->abort) break;
 						if(i == resends) serviceMessages->setUnreach(true, false);
 					}
@@ -1397,10 +1422,10 @@ void EnOceanPeer::sendPacket(PEnOceanPacket packet, std::string responseId, int3
 						_rpcRequests.erase(rpcRequest->responseId);
 					}
 				}
-				else _physicalInterface->sendPacket(packet);
+				else _physicalInterface->sendEnoceanPacket(packet);
 			}
 		}
-		else _physicalInterface->sendPacket(packet);
+		else _physicalInterface->sendEnoceanPacket(packet);
 		if(delay > 0) std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 	}
 	catch(const std::exception& ex)
@@ -1653,7 +1678,7 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
 				if((*i)->constValueInteger > -1)
 				{
 					std::vector<uint8_t> data;
-					_bl->hf.memcpyBigEndian(data, (*i)->constValueInteger);
+					BaseLib::HelperFunctions::memcpyBigEndian(data, (*i)->constValueInteger);
 					packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
 					continue;
 				}

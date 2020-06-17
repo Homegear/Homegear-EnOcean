@@ -236,12 +236,11 @@ void HomegearGateway::listen()
     }
 }
 
-void HomegearGateway::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet)
+bool HomegearGateway::sendEnoceanPacket(const PEnOceanPacket& packet)
 {
     try
     {
-        std::shared_ptr<EnOceanPacket> myPacket(std::dynamic_pointer_cast<EnOceanPacket>(packet));
-        if(!myPacket || !_tcpSocket) return;
+        if(!_tcpSocket) return false;
 
         if(_stopped || !_tcpSocket->connected())
         {
@@ -249,12 +248,12 @@ void HomegearGateway::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packe
             std::this_thread::sleep_for(std::chrono::milliseconds(2000));
             if(_stopped || !_tcpSocket->connected())
             {
-                _out.printWarning("Warning: !!!Not!!! sending packet " + BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) + ", because init is not complete.");
-                return;
+                _out.printWarning("Warning: !!!Not!!! sending packet " + BaseLib::HelperFunctions::getHexString(packet->getBinary()) + ", because init is not complete.");
+                return false;
             }
         }
 
-        std::vector<uint8_t> data = std::move(myPacket->getBinary());
+        std::vector<uint8_t> data = std::move(packet->getBinary());
         addCrc8(data);
         std::vector<uint8_t> response;
         getResponse(0x02, data, response);
@@ -267,14 +266,16 @@ void HomegearGateway::sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packe
                 else _out.printError("Unknown error (" + std::to_string(response[6]) + ") sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
             }
             else _out.printError("Unknown error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
-            return;
+            return false;
         }
         _lastPacketSent = BaseLib::HelperFunctions::getTime();
+        return true;
     }
     catch(const std::exception& ex)
     {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
+    return false;
 }
 
 void HomegearGateway::rawSend(std::vector<uint8_t>& packet)
@@ -359,24 +360,10 @@ void HomegearGateway::processPacket(std::vector<uint8_t>& data)
 
         _lastPacketReceived = BaseLib::HelperFunctions::getTime();
 
-        uint8_t packetType = data[4];
-        std::unique_lock<std::mutex> requestsGuard(_requestsMutex);
-        auto requestIterator = _requests.find(packetType);
-        if(requestIterator != _requests.end())
-        {
-            auto request = requestIterator->second;
-            requestsGuard.unlock();
-            request->response = data;
-            {
-                std::lock_guard<std::mutex> lock(request->mutex);
-                request->mutexReady = true;
-            }
-            request->conditionVariable.notify_one();
-            return;
-        }
-        else requestsGuard.unlock();
+        if(checkForSerialRequest(data)) return;
 
         PEnOceanPacket packet(new EnOceanPacket(data));
+        if(checkForEnOceanRequest(packet)) return;
         if(packet->getType() == EnOceanPacket::Type::RADIO_ERP1 || packet->getType() == EnOceanPacket::Type::RADIO_ERP2)
         {
             if((packet->senderAddress() & 0xFFFFFF80) == _baseAddress) _out.printInfo("Info: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));

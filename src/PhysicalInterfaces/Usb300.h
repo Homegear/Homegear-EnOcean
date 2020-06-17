@@ -24,7 +24,7 @@ public:
 
 	virtual bool isOpen() { return _serial && _serial->isOpen() && !_stopped; }
 
-	virtual void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
+	virtual bool sendEnoceanPacket(const PEnOceanPacket& packet);
 protected:
 	std::unique_ptr<BaseLib::SerialReaderWriter> _serial;
     std::atomic_bool _initComplete;

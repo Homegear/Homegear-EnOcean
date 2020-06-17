@@ -2,6 +2,7 @@
 
 #include "EnOceanCentral.h"
 #include "GD.h"
+#include "EnOceanPackets.h"
 
 #include <iomanip>
 
@@ -226,17 +227,17 @@ bool EnOceanCentral::peerExists(std::string serialNumber)
 	return ICentral::peerExists(serialNumber);
 }
 
-bool EnOceanCentral::peerExists(int32_t address, int32_t eep)
+bool EnOceanCentral::peerExists(int32_t address, uint64_t eep)
 {
 	std::list<PMyPeer> peers = getPeer(address);
 	for(auto& peer : peers)
 	{
-		if(peer->getDeviceType() == (uint32_t)eep) return true;
+		if(peer->getDeviceType() == eep) return true;
 	}
 	return false;
 }
 
-int32_t EnOceanCentral::getFreeRfChannel(std::string& interfaceId)
+int32_t EnOceanCentral::getFreeRfChannel(const std::string& interfaceId)
 {
 	try
 	{
@@ -358,78 +359,30 @@ bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PEnOceanPack
 		{
 			if(payload.size() < 8) return false;
 
-			int32_t eep = ((int32_t)(uint8_t)payload.at(7) << 16) | (((int32_t)(uint8_t)payload.at(6)) << 8) | ((uint8_t)payload.at(5));
-			std::string serial = getFreeSerialNumber(packet->senderAddress());
+			uint64_t eep = ((uint64_t)(uint8_t)payload.at(7) << 16u) | (((uint64_t)(uint8_t)payload.at(6)) << 8u) | ((uint8_t)payload.at(5));
+			uint64_t manufacturer = (((uint64_t)(uint8_t)payload.at(4) & 0x07u) << 8u) | (uint8_t)payload.at(3);
+			uint64_t manufacturerEep = (manufacturer << 24u) | eep;
 
 			uint8_t byte1 = payload.at(1);
-			if((byte1 & 0x0F) != 0) return false; //Command 0 => teach-in request
-			if(!(byte1 & 0x80))
+			if((byte1 & 0x0Fu) != 0) return false; //Command 0 => teach-in request
+			if(!(byte1 & 0x80u))
 			{
 				std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
 				_pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedUnidirectionalCommunication"));
 				GD::out.printWarning("Warning: Could not teach-in device as it expects currently unsupported unidirectional communication.");
 				return false;
 			}
-			bool responseExpected = !(byte1 & 0x40);
-			if((byte1 & 0x30) == 0x10)
+			bool responseExpected = !(byte1 & 0x40u);
+			if((byte1 & 0x30u) == 0x10)
 			{
 				GD::out.printWarning("Warning: Could not teach-out device as the teach-out request is currently unsupported.");
 				return false;
 			}
 
 			int32_t rfChannel = 0;
-			if(!peerExists(packet->senderAddress(), eep))
+			if(!peerExists(packet->senderAddress(), eep) && !peerExists(packet->senderAddress(), manufacturerEep))
 			{
-				rfChannel = getFreeRfChannel(interfaceId);
-				if(rfChannel == -1)
-				{
-					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
-                    _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.noFreeRfChannels"));
-					GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
-					return false;
-				}
-				GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ". If nothing happens, the EEP is not yet supported.");
-				std::shared_ptr<EnOceanPeer> peer = createPeer(eep, packet->senderAddress(), serial, false);
-				if(!peer || !peer->getRpcDevice())
-				{
-					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
-					_pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedEep", std::list<std::string>{ BaseLib::HelperFunctions::getHexString(eep) }));
-					GD::out.printWarning("Warning: The EEP " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
-					return false;
-				}
-				try
-				{
-					std::unique_lock<std::mutex> peersGuard(_peersMutex);
-					if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
-					peersGuard.unlock();
-					peer->save(true, true, false);
-					peer->initializeCentralConfig();
-					peer->setPhysicalInterfaceId(interfaceId);
-					peer->setRfChannel(0, rfChannel);
-					peersGuard.lock();
-					_peers[peer->getAddress()].push_back(peer);
-					_peersById[peer->getID()] = peer;
-					peersGuard.unlock();
-				}
-				catch(const std::exception& ex)
-				{
-					GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
-				}
-
-				PVariable deviceDescriptions(new Variable(VariableType::tArray));
-				deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
-				std::vector<uint64_t> newIds{ peer->getID() };
-				raiseRPCNewDevices(newIds, deviceDescriptions);
-
-				{
-					auto pairingState = std::make_shared<PairingState>();
-					pairingState->peerId = peer->getID();
-					pairingState->state = "success";
-					std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
-					_newPeers[BaseLib::HelperFunctions::getTime()].emplace_back(std::move(pairingState));
-				}
-
-				GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
+				buildPeer(manufacturerEep, packet->senderAddress(), interfaceId, -1);
 			}
 			else
 			{
@@ -437,7 +390,7 @@ bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PEnOceanPack
 				if(peers.empty()) return false;
 				for(auto& peer : peers)
 				{
-					if(peer->getDeviceType() == (uint32_t)eep)
+					if(peer->getDeviceType() == eep || peer->getDeviceType() == manufacturerEep)
 					{
 						rfChannel = peer->getRfChannel(0);
 						break;
@@ -451,19 +404,22 @@ bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PEnOceanPack
 				PEnOceanPacket response(new EnOceanPacket((EnOceanPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, packet->senderAddress()));
 				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 8);
-				responsePayload.at(1) = (responsePayload.at(1) & 0x80) | 0x11; // Command 1 => teach-in response
+				responsePayload.at(1) = (responsePayload.at(1) & 0x80u) | 0x11u; // Command 1 => teach-in response
 				response->setData(responsePayload);
-				physicalInterface->sendPacket(response);
+				physicalInterface->sendEnoceanPacket(response);
 			}
+            return true;
 		}
-		else if(payload.size() >= 5 && packet->getRorg() == 0xA5 && (payload.at(4) & 0x88) == 0x80) //4BS teach-in, variant 3; LRN type bit needs to be set and LRN bit unset (= LRN telegram)
+		else if(payload.size() >= 5 && packet->getRorg() == 0xA5 && (payload.at(4) & 0x88u) == 0x80) //4BS teach-in, variant 3; LRN type bit needs to be set and LRN bit unset (= LRN telegram)
 		{
-			int32_t eep = ((int32_t)(uint8_t)payload.at(0) << 16) | (((int32_t)(uint8_t)payload.at(1) >> 2) << 8) | (((uint8_t)payload.at(1) & 3) << 5) | ((uint8_t)payload.at(2) >> 3);
-            int32_t manufacturer = (((int32_t)(uint8_t)(payload.at(2) & 7)) << 8) | (uint8_t)payload.at(3);
-            int32_t manufacturerEep = ((manufacturer & 0xFF) << 24) | ((manufacturer >> 9) << 14) | (((manufacturer >> 8) & 1) << 7) | eep;
+			uint64_t eep = ((uint32_t)(uint8_t)payload.at(0) << 16u) | (((uint32_t)(uint8_t)payload.at(1) >> 2u) << 8u) | (((uint8_t)payload.at(1) & 3u) << 5u) | (uint8_t)((uint8_t)payload.at(2) >> 3u);
+            uint64_t manufacturer = (((uint32_t)(uint8_t)(payload.at(2) & 7u)) << 8u) | (uint8_t)payload.at(3);
+            uint64_t manufacturerEep = (manufacturer << 24u) | eep;
+            //In EEP version 3 we need the full bytes for the eep, so the following is deprecated
+            uint64_t manufacturerEepOld = ((manufacturer & 0xFFu) << 24u) | ((manufacturer >> 9u) << 14u) | (((manufacturer >> 8u) & 1u) << 7u) | eep;
 			std::string serial = getFreeSerialNumber(packet->senderAddress());
 
-			if(!peerExists(packet->senderAddress(), eep) && !peerExists(packet->senderAddress(), manufacturerEep))
+			if(!peerExists(packet->senderAddress(), eep) && !peerExists(packet->senderAddress(), manufacturerEep) && !peerExists(packet->senderAddress(), manufacturerEepOld))
 			{
 				int32_t rfChannel = getFreeRfChannel(interfaceId);
 				if(rfChannel == -1)
@@ -478,12 +434,12 @@ bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PEnOceanPack
 				if(!peer || !peer->getRpcDevice())
                 {
                     GD::out.printInfo("Info: Trying to pair peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + ".");
-                    peer = createPeer(eep, packet->senderAddress(), serial, false);
+                    peer = createPeer(manufacturerEepOld, packet->senderAddress(), serial, false);
                     if(!peer || !peer->getRpcDevice())
                     {
 						std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
                         _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedEep", std::list<std::string>{ BaseLib::HelperFunctions::getHexString(eep) }));
-                        GD::out.printWarning("Warning: The EEP " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
+                        GD::out.printWarning("Warning: The EEP " + BaseLib::HelperFunctions::getHexString(manufacturerEepOld) + " is currently not supported.");
                         return false;
                     }
                 }
@@ -513,7 +469,7 @@ bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PEnOceanPack
                     responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
                     responsePayload.back() = 0xF0;
                     response->setData(responsePayload);
-                    physicalInterface->sendPacket(response);
+                    physicalInterface->sendEnoceanPacket(response);
                 }
 
 				PVariable deviceDescriptions(new Variable(VariableType::tArray));
@@ -533,46 +489,45 @@ bool EnOceanCentral::handlePairingRequest(std::string& interfaceId, PEnOceanPack
 			}
 			else
 			{
-				int32_t rfChannel = 0;
+				uint32_t rfChannel = 0;
 				std::list<PMyPeer> peers = getPeer(packet->senderAddress());
 				if(peers.empty()) return false;
 				for(auto& peer : peers)
 				{
-					if(peer->getDeviceType() == (uint32_t)eep)
+					if(peer->getDeviceType() == eep || peer->getDeviceType() == manufacturerEep || peer->getDeviceType() == manufacturerEepOld)
 					{
 						rfChannel = peer->getRfChannel(0);
 						break;
 					}
 				}
-				PEnOceanPacket response(new EnOceanPacket((EnOceanPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, 0xFFFFFFFF));
+				PEnOceanPacket response(new EnOceanPacket((EnOceanPacket::Type)1, packet->getRorg(), (unsigned)physicalInterface->getBaseAddress() | rfChannel, 0xFFFFFFFF));
 				std::vector<uint8_t> responsePayload;
 				responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 5);
 				responsePayload.back() = 0xF0;
 				response->setData(responsePayload);
-				physicalInterface->sendPacket(response);
+				physicalInterface->sendEnoceanPacket(response);
 			}
+			return true;
 		}
-		else if(_remoteCommissioningEep != 0)
+		else
         {
+            {
+                std::lock_guard<std::mutex> processedAddressesGuard(_processedAddressesMutex);
+                if(_processedAddresses.find(packet->senderAddress()) != _processedAddresses.end()) return false;
+                _processedAddresses.emplace(packet->senderAddress());
+            }
+
+		    //Try remote commissioning
 		    if(!peerExists(packet->senderAddress()))
             {
-                auto setLinkTableEntry1 = std::make_shared<EnOceanPacket>((EnOceanPacket::Type)1, 0xC5, physicalInterface->getBaseAddress(), packet->senderAddress());
-                std::vector<uint8_t> responsePayload1;
-                responsePayload1.reserve(9);
-                responsePayload1.push_back(0x40);
-                responsePayload1.push_back(0x05);
-                responsePayload1.push_back(0x7F);
-                responsePayload1.push_back((uint8_t)(char)0xF2);
-                responsePayload1.push_back(0x12);
-                responsePayload1.push_back(0x00);
-                responsePayload1.push_back(physicalInterface->getBaseAddress());
-                responsePayload1.push_back(0x40);
-                responsePayload1.push_back(0x40);
-                setLinkTableEntry1->setData(responsePayload1);
-                physicalInterface->sendPacket(setLinkTableEntry1);
+                if(_remoteCommissioningDeviceAddress == 0 || _remoteCommissioningDeviceAddress == (unsigned)packet->senderAddress())
+                {
+                    GD::out.printInfo("Info: Pushing address 0x" + BaseLib::HelperFunctions::getHexString(packet->senderAddress(), 8) + " to remote commissioning queue.");
+                    _remoteCommissioningAddressQueue.push(std::make_pair(interfaceId, packet->senderAddress()));
+                }
             }
         }
-		return true;
+		return false;
 	}
 	catch(const std::exception& ex)
     {
@@ -752,9 +707,9 @@ std::string EnOceanCentral::handleCliCommand(std::string command)
 
 			std::string interfaceId = arguments.at(0);
 			if(!GD::interfaces->hasInterface(interfaceId)) return "Unknown physical interface.\n";
-			int32_t deviceType = BaseLib::Math::getNumber(arguments.at(1), true);
+			uint64_t deviceType = BaseLib::Math::getUnsignedNumber64(arguments.at(1), true);
 			if(deviceType == 0) return "Invalid device type. Device type has to be provided in hexadecimal format.\n";
-			int32_t address = BaseLib::Math::getNumber(arguments.at(2), true);
+			uint32_t address = BaseLib::Math::getNumber(arguments.at(2), true);
 			std::string serial = getFreeSerialNumber(address);
 
 			if(peerExists(address, deviceType)) stringStream << "A peer with this address and EEP is already paired to this central." << std::endl;
@@ -764,7 +719,7 @@ std::string EnOceanCentral::handleCliCommand(std::string command)
 				if(!peer || !peer->getRpcDevice()) return "Device type not supported.\n";
 				try
 				{
-					if(peer->getRpcDevice()->addressSize == 25) peer->setAddress(address & 0xFFFFFF80);
+					if(peer->getRpcDevice()->addressSize == 25) peer->setAddress(address & 0xFFFFFF80u);
 					_peersMutex.lock();
 					if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
 					_peersMutex.unlock();
@@ -1071,15 +1026,19 @@ std::string EnOceanCentral::handleCliCommand(std::string command)
     return "Error executing command. See log file for more details.\n";
 }
 
-std::shared_ptr<EnOceanPeer> EnOceanCentral::createPeer(uint32_t deviceType, int32_t address, std::string serialNumber, bool save)
+std::shared_ptr<EnOceanPeer> EnOceanCentral::createPeer(uint64_t eep, int32_t address, std::string serialNumber, bool save)
 {
 	try
 	{
+	    auto rpcDevice = GD::family->getRpcDevices()->find(eep, 0x10, -1);
+	    if(!rpcDevice) rpcDevice = GD::family->getRpcDevices()->find(eep & 0xFFFFFFu, 0x10, -1);
+	    if(!rpcDevice) return std::shared_ptr<EnOceanPeer>();
+
 		std::shared_ptr<EnOceanPeer> peer(new EnOceanPeer(_deviceId, this));
-		peer->setDeviceType(deviceType);
+		peer->setDeviceType(eep);
 		peer->setAddress(address);
 		peer->setSerialNumber(serialNumber);
-		peer->setRpcDevice(GD::family->getRpcDevices()->find(deviceType, 0x10, -1));
+		peer->setRpcDevice(rpcDevice);
 		if(!peer->getRpcDevice()) return std::shared_ptr<EnOceanPeer>();
 		if(save) peer->save(true, true, false); //Save and create peerID
 		return peer;
@@ -1087,6 +1046,69 @@ std::shared_ptr<EnOceanPeer> EnOceanCentral::createPeer(uint32_t deviceType, int
     catch(const std::exception& ex)
     {
     	GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return std::shared_ptr<EnOceanPeer>();
+}
+
+std::shared_ptr<EnOceanPeer> EnOceanCentral::buildPeer(uint64_t eep, int32_t address, const std::string& interfaceId, int32_t rfChannel)
+{
+    try
+    {
+        std::string serial = getFreeSerialNumber(address);
+        if(rfChannel == -1) rfChannel = getFreeRfChannel(interfaceId);
+        if(rfChannel == -1)
+        {
+            std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+            _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.noFreeRfChannels"));
+            GD::out.printError("Error: Could not pair peer, because there are no free RF channels.");
+            return std::shared_ptr<EnOceanPeer>();
+        }
+        GD::out.printInfo("Info: Trying to create peer with EEP " + BaseLib::HelperFunctions::getHexString(eep) + " or EEP " + BaseLib::HelperFunctions::getHexString(eep) + ".");
+        std::shared_ptr<EnOceanPeer> peer = createPeer(eep, address, serial, false);
+        if(!peer || !peer->getRpcDevice())
+        {
+            std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+            _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedEep", std::list<std::string>{ BaseLib::HelperFunctions::getHexString(eep) }));
+            GD::out.printWarning("Warning: The EEP " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
+            return std::shared_ptr<EnOceanPeer>();
+        }
+        try
+        {
+            std::unique_lock<std::mutex> peersGuard(_peersMutex);
+            if(!peer->getSerialNumber().empty()) _peersBySerial[peer->getSerialNumber()] = peer;
+            peersGuard.unlock();
+            peer->save(true, true, false);
+            peer->initializeCentralConfig();
+            peer->setPhysicalInterfaceId(interfaceId);
+            peer->setRfChannel(0, rfChannel);
+            peersGuard.lock();
+            _peers[peer->getAddress()].push_back(peer);
+            _peersById[peer->getID()] = peer;
+            peersGuard.unlock();
+        }
+        catch(const std::exception& ex)
+        {
+            GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+        }
+
+        PVariable deviceDescriptions(new Variable(VariableType::tArray));
+        deviceDescriptions->arrayValue = peer->getDeviceDescriptions(nullptr, true, std::map<std::string, bool>());
+        std::vector<uint64_t> newIds{ peer->getID() };
+        raiseRPCNewDevices(newIds, deviceDescriptions);
+
+        {
+            auto pairingState = std::make_shared<PairingState>();
+            pairingState->peerId = peer->getID();
+            pairingState->state = "success";
+            std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
+            _newPeers[BaseLib::HelperFunctions::getTime()].emplace_back(std::move(pairingState));
+        }
+
+        GD::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
     return std::shared_ptr<EnOceanPeer>();
 }
@@ -1310,12 +1332,275 @@ void EnOceanCentral::pairingModeTimer(int32_t duration, bool debugOutput)
 			std::this_thread::sleep_for(std::chrono::milliseconds(250));
 			timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - startTime;
 			_timeLeftInPairingMode = duration - (timePassed / 1000);
+            handleRemoteCommissioningQueue();
 		}
 		_timeLeftInPairingMode = 0;
 		_pairing = false;
 		if(debugOutput) GD::out.printInfo("Info: Pairing mode disabled.");
 	}
 	catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+}
+
+void EnOceanCentral::handleRemoteCommissioningQueue()
+{
+    try
+    {
+        std::lock_guard<std::mutex> pairingGuard(_pairingMutex);
+
+        int32_t deviceAddress = 0;
+        uint64_t eep = 0;
+
+        std::shared_ptr<IEnOceanInterface> interface;
+        if(!_pairingInterface.empty()) interface = GD::interfaces->getInterface(_pairingInterface);
+
+        if(!_remoteCommissioningAddressQueue.empty())
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            deviceAddress = _remoteCommissioningAddressQueue.front().second;
+            auto interfaceId = _remoteCommissioningAddressQueue.front().first;
+            _remoteCommissioningAddressQueue.pop();
+
+            if(!interface) interface = GD::interfaces->getInterface(interfaceId);
+            if(!interface) interface = GD::interfaces->getDefaultInterface();
+
+            if(_remoteCommissioningSecurityCode != 0)
+            {
+                auto unlock = std::make_shared<Unlock>(deviceAddress, _remoteCommissioningSecurityCode);
+                interface->sendEnoceanPacket(unlock);
+                interface->sendEnoceanPacket(unlock);
+
+                auto queryStatus = std::make_shared<QueryStatusPacket>(deviceAddress);
+                auto response = interface->sendAndReceivePacket(queryStatus, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse}});
+
+                if(!response) return;
+                auto queryStatusData = response->getData();
+
+                bool codeSet = queryStatusData.at(4) & 0x80u;
+                auto lastFunctionNumber = (uint16_t)((uint16_t)(queryStatusData.at(5) & 0x0Fu) << 8u) | queryStatusData.at(6);
+                if(lastFunctionNumber != (uint16_t)EnOceanPacket::RemoteManagementFunction::unlock || (codeSet && queryStatusData.at(7) != (uint8_t)EnOceanPacket::QueryStatusReturnCode::ok))
+                {
+                    GD::out.printWarning("Warning: Error unlocking device.");
+                    return;
+                }
+            }
+
+            {
+                auto queryId = std::make_shared<QueryIdPacket>(deviceAddress);
+                auto response = interface->sendAndReceivePacket(queryId, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{0x06, 0x04},
+                                                                                                                                                 {0x07, 0x04}});
+                if(!response) return;
+
+                GD::out.printInfo("Info: Got query ID response.");
+                auto queryIdData = response->getData();
+                eep = ((uint64_t)response->getRemoteManagementManufacturer() << 24u) | (unsigned)((uint32_t)queryIdData.at(4) << 16u) | (unsigned)((uint16_t)(queryIdData.at(5) >> 2u) << 8u) | (((uint8_t)queryIdData.at(5) & 3u) << 5u) | (uint8_t)((uint8_t)queryIdData.at(6) >> 3u);
+            }
+        }
+        else if(_remoteCommissioningDeviceAddress != 0 && _remoteCommissioningEep != 0)
+        {
+            _stopPairingModeThread = true;
+            deviceAddress = _remoteCommissioningDeviceAddress;
+            eep = _remoteCommissioningEep;
+        }
+        else return;
+
+        if(!interface) interface = GD::interfaces->getDefaultInterface();
+
+        GD::out.printInfo("Info: Trying to pair device with address " + BaseLib::HelperFunctions::getHexString(deviceAddress, 8) + " and EEP " + BaseLib::HelperFunctions::getHexString(eep) + "...");
+
+        if(peerExists(deviceAddress, eep))
+        {
+            GD::out.printInfo("Info: Peer is already paired to this central.");
+            return;
+        }
+
+        auto rpcDevice = GD::family->getRpcDevices()->find(eep, 0x10, -1);
+        if(!rpcDevice) rpcDevice = GD::family->getRpcDevices()->find(eep & 0xFFFFFFu, 0x10, -1);
+        if(!rpcDevice)
+        {
+            GD::out.printWarning("Warning: No device description found for EEP " + BaseLib::HelperFunctions::getHexString(eep) + " or EEP "  + BaseLib::HelperFunctions::getHexString(eep & 0xFFFFFFu) + ". Aborting pairing.");
+            return;
+        }
+
+        bool sendsAck = false;
+        bool setLinkTableHasIndex = true;
+        uint32_t setInboundLinkTableSize = 1u;
+        uint32_t setOutboundLinkTableSize = 0u;
+        uint32_t linkTableGatewayEep = 0xA53808u;
+        bool hasSetRepeaterFunctions = false;
+
+        if(rpcDevice->metadata)
+        {
+            auto metadataIterator = rpcDevice->metadata->structValue->find("remoteManagementInfo");
+            if(metadataIterator != rpcDevice->metadata->structValue->end() && !metadataIterator->second->arrayValue->empty())
+            {
+                auto remoteManagementInfo = metadataIterator->second->arrayValue->at(0);
+                auto infoIterator = remoteManagementInfo->structValue->find("features");
+                if(infoIterator != metadataIterator->second->structValue->end() && !infoIterator->second->arrayValue->empty())
+                {
+                    auto features = infoIterator->second->arrayValue->at(0);
+                    auto featureIterator = features->structValue->find("setLinkTable");
+                    if(featureIterator == features->structValue->end() || !featureIterator->second->booleanValue)
+                    {
+                        GD::out.printWarning("Warning: EEP " + BaseLib::HelperFunctions::getHexString(eep) + " does not support \"Set Link Table\". Cannot pair.");
+                        return;
+                    }
+
+                    featureIterator = features->structValue->find("sendsAck");
+                    if(featureIterator != features->structValue->end()) sendsAck = featureIterator->second->booleanValue;
+
+                    featureIterator = features->structValue->find("setLinkTableHasIndex");
+                    if(featureIterator != features->structValue->end()) setLinkTableHasIndex = featureIterator->second->booleanValue;
+
+                    featureIterator = features->structValue->find("setInboundLinkTableSize");
+                    if(featureIterator != features->structValue->end()) setInboundLinkTableSize = featureIterator->second->integerValue;
+
+                    featureIterator = features->structValue->find("setOutboundLinkTableSize");
+                    if(featureIterator != features->structValue->end()) setOutboundLinkTableSize = featureIterator->second->integerValue;
+
+                    featureIterator = features->structValue->find("linkTableGatewayEep");
+                    if(featureIterator != features->structValue->end()) linkTableGatewayEep = BaseLib::Math::getUnsignedNumber(featureIterator->second->stringValue, true);
+
+                    featureIterator = features->structValue->find("setRepeaterFunctions");
+                    if(featureIterator != features->structValue->end()) hasSetRepeaterFunctions = featureIterator->second->booleanValue;
+                }
+            }
+        }
+
+        if(sendsAck) GD::out.printInfo("Info: EEP " + BaseLib::HelperFunctions::getHexString(eep) + " supports remote management ACKs.");
+        else  GD::out.printInfo("Info: EEP " + BaseLib::HelperFunctions::getHexString(eep) + " does not support remote management ACKs. Using \"Query Status\" instead.");
+
+        if(!setLinkTableHasIndex) GD::out.printInfo("Info: Using \"Set Link Table\" without index.");
+
+        if(_remoteCommissioningSecurityCode != 0)
+        {
+            auto unlock = std::make_shared<Unlock>(deviceAddress, _remoteCommissioningSecurityCode);
+            interface->sendEnoceanPacket(unlock);
+            interface->sendEnoceanPacket(unlock);
+
+            auto queryStatus = std::make_shared<QueryStatusPacket>(deviceAddress);
+            auto response = interface->sendAndReceivePacket(queryStatus, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse}});
+
+            if(!response) return;
+            auto queryStatusData = response->getData();
+
+            bool codeSet = queryStatusData.at(4) & 0x80u;
+            auto lastFunctionNumber = (uint16_t)((uint16_t)(queryStatusData.at(5) & 0x0Fu) << 8u) | queryStatusData.at(6);
+            if(lastFunctionNumber != (uint16_t)EnOceanPacket::RemoteManagementFunction::unlock || (codeSet && queryStatusData.at(7) != (uint8_t)EnOceanPacket::QueryStatusReturnCode::ok))
+            {
+                GD::out.printWarning("Warning: Error unlocking device.");
+                return;
+            }
+        }
+
+        bool pairingSuccessful = false;
+        int32_t rfChannel = -1;
+
+        //{{{ //Set inbound link table (pairing)
+        {
+            rfChannel = getFreeRfChannel(interface->getID());
+            if(rfChannel == -1)
+            {
+                GD::out.printError("Error: Could not get free RF channel.");
+                return;
+            }
+
+            std::vector<uint8_t> linkTable{};
+            linkTable.reserve(9 * setInboundLinkTableSize);
+            if(setLinkTableHasIndex) linkTable.push_back(0);
+            auto gatewayAddress = (_remoteCommissioningGatewayAddress == 0u) ? (uint32_t)GD::interfaces->getDefaultInterface()->getAddress() : _remoteCommissioningGatewayAddress.load();
+            linkTable.push_back(gatewayAddress >> 24u);
+            linkTable.push_back(gatewayAddress >> 16u);
+            linkTable.push_back(gatewayAddress >> 8u);
+            linkTable.push_back(gatewayAddress | (uint8_t)rfChannel);
+            linkTable.push_back(linkTableGatewayEep >> 16u);
+            linkTable.push_back(linkTableGatewayEep >> 8u);
+            linkTable.push_back(linkTableGatewayEep);
+            linkTable.push_back(0);
+            for(uint32_t i = 1; i < setInboundLinkTableSize; i++)
+            {
+                if(setLinkTableHasIndex) linkTable.push_back(i);
+                linkTable.push_back(0xFFu);
+                linkTable.push_back(0xFFu);
+                linkTable.push_back(0xFFu);
+                linkTable.push_back(0xFFu);
+                linkTable.push_back(0);
+                linkTable.push_back(0);
+                linkTable.push_back(0);
+                linkTable.push_back(0);
+            }
+            auto setLinkTable = std::make_shared<SetLinkTable>(deviceAddress, true, linkTable);
+
+            if(sendsAck)
+            {
+                auto response = interface->sendAndReceivePacket(setLinkTable, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                pairingSuccessful = (bool)response;
+            }
+            else
+            {
+                //Remote commissioning ACK in response to query status is needed for Laights actuators
+                interface->sendEnoceanPacket(setLinkTable);
+                auto queryStatus = std::make_shared<QueryStatusPacket>(deviceAddress);
+                auto response = interface->sendAndReceivePacket(queryStatus, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse >> 8u,    (uint8_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse},
+                                                                                                                                                     {(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                if(response)
+                {
+                    auto responseData = response->getData();
+                    if((response->getRemoteManagementFunction() == (uint16_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse && responseData.size() >= 8 && responseData.at(5) == ((uint16_t)EnOceanPacket::RemoteManagementFunction::setLinkTable >> 8u) && responseData.at(6) == (uint8_t)EnOceanPacket::RemoteManagementFunction::setLinkTable && responseData.at(7) == 0) ||
+                       response->getRemoteManagementFunction() == (uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck)
+                    {
+                        pairingSuccessful = true;
+                    }
+                }
+            }
+        }
+        //}}}
+
+        //{{{ Set outbound link table
+        if(setOutboundLinkTableSize != 0)
+        {
+            std::vector<uint8_t> linkTable{};
+            linkTable.reserve(9 * setOutboundLinkTableSize);
+            for(uint32_t i = 0; i < setOutboundLinkTableSize; i++)
+            {
+                if(setLinkTableHasIndex) linkTable.push_back(i);
+                linkTable.push_back(0xFFu);
+                linkTable.push_back(0xFFu);
+                linkTable.push_back(0xFFu);
+                linkTable.push_back(0xFFu);
+                linkTable.push_back(0);
+                linkTable.push_back(0);
+                linkTable.push_back(0);
+                linkTable.push_back(0);
+            }
+            auto setLinkTable = std::make_shared<SetLinkTable>(deviceAddress, false, linkTable);
+
+            if(sendsAck)
+            {
+                auto response = interface->sendAndReceivePacket(setLinkTable, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                pairingSuccessful = (bool)response;
+            }
+        }
+        //}}}
+
+        //{{{ Set repeater functions
+        if(hasSetRepeaterFunctions)
+        {
+            auto setRepeaterFunctions = std::make_shared<SetRepeaterFunctions>(deviceAddress, 0, 1, 0);
+            auto response = interface->sendAndReceivePacket(setRepeaterFunctions, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+        }
+        //}}}
+
+        auto lock = std::make_shared<Lock>(deviceAddress, _remoteCommissioningSecurityCode);
+        interface->sendEnoceanPacket(lock);
+        interface->sendEnoceanPacket(lock);
+
+        if(pairingSuccessful) buildPeer(eep, deviceAddress, interface->getID(), rfChannel);
+    }
+    catch(const std::exception& ex)
     {
         GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
     }
@@ -1330,7 +1615,13 @@ std::shared_ptr<Variable> EnOceanCentral::setInstallMode(BaseLib::PRpcClientInfo
 		_stopPairingModeThread = true;
 		_bl->threadManager.join(_pairingModeThread);
 		_stopPairingModeThread = false;
-        _remoteCommissioningEep = 0;
+        {
+            std::lock_guard<std::mutex> processedAddressesGuard(_processedAddressesMutex);
+            _processedAddresses.clear();
+        }
+        _remoteCommissioningDeviceAddress = 0;
+        _remoteCommissioningGatewayAddress = 0;
+        _remoteCommissioningSecurityCode = 0;
 
         if(metadata)
         {
@@ -1341,8 +1632,14 @@ std::shared_ptr<Variable> EnOceanCentral::setInstallMode(BaseLib::PRpcClientInfo
             metadataIterator = metadata->structValue->find("type");
             if(metadataIterator != metadata->structValue->end() && metadataIterator->second->stringValue == "remoteCommissioning")
             {
+                metadataIterator = metadata->structValue->find("deviceAddress");
+                if(metadataIterator != metadata->structValue->end()) _remoteCommissioningDeviceAddress = metadataIterator->second->integerValue;
+                metadataIterator = metadata->structValue->find("gatewayAddress");
+                if(metadataIterator != metadata->structValue->end()) _remoteCommissioningGatewayAddress = metadataIterator->second->integerValue;
                 metadataIterator = metadata->structValue->find("eep");
-                if(metadataIterator != metadata->structValue->end()) _remoteCommissioningEep = BaseLib::Math::getUnsignedNumber(metadataIterator->second->stringValue, true);
+                if(metadataIterator != metadata->structValue->end()) _remoteCommissioningEep = metadataIterator->second->integerValue64;
+                metadataIterator = metadata->structValue->find("securityCode");
+                if(metadataIterator != metadata->structValue->end()) _remoteCommissioningSecurityCode = metadataIterator->second->integerValue;
             }
         }
         else _pairingInterface = "";

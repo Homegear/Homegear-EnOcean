@@ -120,12 +120,20 @@ PVariable EnOcean::getPairingInfo()
             PVariable typeSelectorRc = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             typeSelectorRc->structValue->emplace("name", std::make_shared<BaseLib::Variable>("Remote Commissioning"));
             PVariable typeSelectorRcFields = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
-            PVariable typeSelectorRcEep = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            /*PVariable typeSelectorRcEep = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             typeSelectorRcEep->structValue->emplace("name", std::make_shared<BaseLib::Variable>(std::string("l10n.enocean.pairingInfo.eep")));
             typeSelectorRcEep->structValue->emplace("description", std::make_shared<BaseLib::Variable>(std::string("l10n.enocean.pairingInfo.eepHelp")));
             typeSelectorRcEep->structValue->emplace("pos", std::make_shared<BaseLib::Variable>(0));
             typeSelectorRcEep->structValue->emplace("type", std::make_shared<BaseLib::Variable>(std::string("string")));
-            typeSelectorRcFields->structValue->emplace("eep", typeSelectorRcEep);
+            typeSelectorRcEep->structValue->emplace("optional", std::make_shared<BaseLib::Variable>(true));
+            typeSelectorRcFields->structValue->emplace("eep", typeSelectorRcEep);*/
+            PVariable typeSelectorRcSecurityCode = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            typeSelectorRcSecurityCode->structValue->emplace("name", std::make_shared<BaseLib::Variable>(std::string("l10n.enocean.pairingInfo.securityCode")));
+            typeSelectorRcSecurityCode->structValue->emplace("description", std::make_shared<BaseLib::Variable>(std::string("l10n.enocean.pairingInfo.securityCodeHelp")));
+            typeSelectorRcSecurityCode->structValue->emplace("pos", std::make_shared<BaseLib::Variable>(1));
+            typeSelectorRcSecurityCode->structValue->emplace("type", std::make_shared<BaseLib::Variable>(std::string("integer")));
+            typeSelectorRcSecurityCode->structValue->emplace("optional", std::make_shared<BaseLib::Variable>(true));
+            typeSelectorRcFields->structValue->emplace("securityCode", typeSelectorRcSecurityCode);
             typeSelectorRc->structValue->emplace("additionalFields", typeSelectorRcFields);
             typeSelector->structValue->emplace("remoteCommissioning", typeSelectorRc);
 
