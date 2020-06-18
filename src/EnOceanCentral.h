@@ -19,8 +19,8 @@ class EnOceanCentral : public BaseLib::Systems::ICentral
 public:
 	EnOceanCentral(ICentralEventSink* eventHandler);
 	EnOceanCentral(uint32_t deviceType, std::string serialNumber, ICentralEventSink* eventHandler);
-	virtual ~EnOceanCentral();
-	virtual void dispose(bool wait = true);
+	~EnOceanCentral() override;
+	void dispose(bool wait = true) override;
 
 	std::string handleCliCommand(std::string command);
 	virtual bool onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib::Systems::Packet> packet);
@@ -36,15 +36,17 @@ public:
 	bool peerExists(std::string serialNumber);
 	bool peerExists(int32_t address, uint64_t eep);
 
-	virtual PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId);
-	virtual PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags);
-	virtual PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags);
-	virtual PVariable getSniffedDevices(BaseLib::PRpcClientInfo clientInfo);
-    virtual PVariable getPairingState(BaseLib::PRpcClientInfo clientInfo);
-	virtual PVariable setInstallMode(BaseLib::PRpcClientInfo clientInfo, bool on, uint32_t duration, BaseLib::PVariable metadata, bool debugOutput = true);
-	virtual PVariable setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string interfaceId);
-	virtual PVariable startSniffing(BaseLib::PRpcClientInfo clientInfo);
-	virtual PVariable stopSniffing(BaseLib::PRpcClientInfo clientInfo);
+    PVariable addLink(BaseLib::PRpcClientInfo clientInfo, uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description) override;
+	PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId) override;
+	PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags) override;
+	PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags) override;
+	PVariable getSniffedDevices(BaseLib::PRpcClientInfo clientInfo) override;
+    PVariable getPairingState(BaseLib::PRpcClientInfo clientInfo) override;
+    PVariable removeLink(BaseLib::PRpcClientInfo clientInfo, uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel) override;
+	PVariable setInstallMode(BaseLib::PRpcClientInfo clientInfo, bool on, uint32_t duration, BaseLib::PVariable metadata, bool debugOutput = true) override;
+	PVariable setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string interfaceId) override;
+	PVariable startSniffing(BaseLib::PRpcClientInfo clientInfo) override;
+	PVariable stopSniffing(BaseLib::PRpcClientInfo clientInfo) override;
 protected:
 	bool _sniff = false;
 	std::mutex _sniffedPacketsMutex;
@@ -73,12 +75,12 @@ protected:
 	std::thread _workerThread;
 
 	std::string getFreeSerialNumber(int32_t address);
-	virtual void init();
-	virtual void worker();
-	virtual void loadPeers();
-	virtual void savePeers(bool full);
-	virtual void loadVariables() {}
-	virtual void saveVariables() {}
+	void init();
+	void worker();
+	void loadPeers() override;
+	void savePeers(bool full) override;
+	void loadVariables() override {}
+	void saveVariables() override {}
 	std::shared_ptr<EnOceanPeer> createPeer(uint64_t eep, int32_t address, std::string serialNumber, bool save = true);
     std::shared_ptr<EnOceanPeer> buildPeer(uint64_t eep, int32_t address, const std::string& interfaceId, int32_t rfChannel);
 	void deletePeer(uint64_t id);

@@ -31,6 +31,8 @@ public:
 	//{{{ In table variables
 	std::string getPhysicalInterfaceId();
 	void setPhysicalInterfaceId(std::string);
+	uint32_t getGatewayAddress();
+	void setGatewayAddress(uint32_t value);
 	//}}}
 
 	std::shared_ptr<IEnOceanInterface>& getPhysicalInterface() { return _physicalInterface; }
@@ -45,9 +47,14 @@ public:
 	void packetReceived(PEnOceanPacket& packet);
 
 	bool load(BaseLib::Systems::ICentral* central) override;
-    void savePeers() override {}
+    void serializePeers(std::vector<uint8_t>& encodedData);
+    void unserializePeers(std::shared_ptr<std::vector<char>> serializedData);
+    void savePeers() override;
     void initializeCentralConfig() override;
 
+    void addPeer(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer);
+    void removePeer(int32_t channel, int32_t address, int32_t remoteChannel);
+    uint32_t getLinkCount();
 	int32_t getChannelGroupedWith(int32_t channel) override { return -1; }
 	int32_t getNewFirmwareVersion() override { return 0; }
 	std::string getFirmwareVersionString(int32_t firmwareVersion) override { return "1.0"; }
@@ -68,6 +75,7 @@ public:
     void homegearShuttingDown() override;
 
     bool updateConfiguration();
+    bool sendInboundLinkTable();
 
 	//RPC methods
     PVariable forceConfigUpdate(PRpcClientInfo clientInfo) override;
@@ -120,6 +128,7 @@ protected:
 	int32_t _cmacSize = -1;
 	bool _rollingCodeInTx = false;
 	int32_t _rollingCodeSize = -1;
+	uint32_t _gatewayAddress = 0;
 	//End
 
 	std::shared_ptr<IEnOceanInterface> _physicalInterface;

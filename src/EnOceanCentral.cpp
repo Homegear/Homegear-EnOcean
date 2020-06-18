@@ -1115,6 +1115,160 @@ std::shared_ptr<EnOceanPeer> EnOceanCentral::buildPeer(uint64_t eep, int32_t add
     return std::shared_ptr<EnOceanPeer>();
 }
 
+PVariable EnOceanCentral::addLink(BaseLib::PRpcClientInfo clientInfo, uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex, std::string name, std::string description)
+{
+    try
+    {
+        if(senderID == 0) return Variable::createError(-2, "Sender id is not set.");
+        if(receiverID == 0) return Variable::createError(-2, "Receiver is not set.");
+        if(senderID == receiverID) return Variable::createError(-2, "Sender and receiver are the same device.");
+        auto sender = getPeer(senderID);
+        auto receiver = getPeer(receiverID);
+        if(!sender) return Variable::createError(-2, "Sender device not found.");
+        if(!receiver) return Variable::createError(-2, "Receiver device not found.");
+        if(senderChannelIndex < 0) senderChannelIndex = 0;
+        if(receiverChannelIndex < 0) receiverChannelIndex = 0;
+        auto senderRpcDevice = sender->getRpcDevice();
+        auto receiverRpcDevice = receiver->getRpcDevice();
+        auto senderFunctionIterator = senderRpcDevice->functions.find(senderChannelIndex);
+        if(senderFunctionIterator == senderRpcDevice->functions.end()) return Variable::createError(-2, "Sender channel not found.");
+        auto receiverFunctionIterator = receiverRpcDevice->functions.find(receiverChannelIndex);
+        if(receiverFunctionIterator == receiverRpcDevice->functions.end()) return Variable::createError(-2, "Receiver channel not found.");
+        auto senderFunction = senderFunctionIterator->second;
+        auto receiverFunction = receiverFunctionIterator->second;
+        if(senderFunction->linkSenderFunctionTypes.empty() || receiverFunction->linkReceiverFunctionTypes.empty()) return Variable::createError(-6, "Link not supported.");
+        bool validLink = false;
+        for(auto& senderFunctionType : senderFunction->linkSenderFunctionTypes)
+        {
+            for(auto& receiverFunctionType : receiverFunction->linkReceiverFunctionTypes)
+            {
+                if(senderFunctionType == receiverFunctionType)
+                {
+                    validLink = true;
+                    break;
+                }
+            }
+            if(validLink) break;
+        }
+        if(!validLink) return Variable::createError(-6, "Link not supported.");
+
+        bool supportsSetLinkTable = false;
+        if(receiverRpcDevice->metadata)
+        {
+            auto metadataIterator = receiverRpcDevice->metadata->structValue->find("remoteManagementInfo");
+            if(metadataIterator != receiverRpcDevice->metadata->structValue->end() && !metadataIterator->second->arrayValue->empty())
+            {
+                auto remoteManagementInfo = metadataIterator->second->arrayValue->at(0);
+                auto infoIterator = remoteManagementInfo->structValue->find("features");
+                if(infoIterator != metadataIterator->second->structValue->end() && !infoIterator->second->arrayValue->empty())
+                {
+                    auto features = infoIterator->second->arrayValue->at(0);
+                    auto featureIterator = features->structValue->find("setLinkTable");
+                    if(featureIterator != features->structValue->end() && featureIterator->second->booleanValue)
+                    {
+                        supportsSetLinkTable = true;
+                    }
+                    featureIterator = features->structValue->find("setInboundLinkTableSize");
+                    if(featureIterator != features->structValue->end())
+                    {
+                        uint32_t inboundLinkTableSize = featureIterator->second->integerValue;
+                        if(receiver->getLinkCount() + 1u > inboundLinkTableSize)
+                        {
+                            return Variable::createError(-3, "Can't link more devices. You need to unlink a device first.");
+                        }
+                    }
+                }
+            }
+        }
+        if(!supportsSetLinkTable)
+        {
+            return Variable::createError(-1, "Device does not support links.");
+        }
+
+        std::shared_ptr<BaseLib::Systems::BasicPeer> senderPeer(new BaseLib::Systems::BasicPeer());
+        senderPeer->address = sender->getAddress();
+        senderPeer->channel = senderChannelIndex;
+        senderPeer->id = sender->getID();
+        senderPeer->serialNumber = sender->getSerialNumber();
+        senderPeer->isSender = true;
+        senderPeer->linkDescription = description;
+        senderPeer->linkName = name;
+
+        std::shared_ptr<BaseLib::Systems::BasicPeer> receiverPeer(new BaseLib::Systems::BasicPeer());
+        receiverPeer->address = receiver->getAddress();
+        receiverPeer->channel = receiverChannelIndex;
+        receiverPeer->id = receiver->getID();
+        receiverPeer->serialNumber = receiver->getSerialNumber();
+        receiverPeer->linkDescription = description;
+        receiverPeer->linkName = name;
+
+        sender->addPeer(senderChannelIndex, receiverPeer);
+        receiver->addPeer(receiverChannelIndex, senderPeer);
+
+        if(!receiver->sendInboundLinkTable())
+        {
+            sender->removePeer(senderChannelIndex, receiverPeer->address, receiverChannelIndex);
+            receiver->removePeer(receiverChannelIndex, senderPeer->address, senderChannelIndex);
+            return Variable::createError(-4, "Error updating link table on device.");
+        }
+
+        raiseRPCUpdateDevice(sender->getID(), senderChannelIndex, sender->getSerialNumber() + ":" + std::to_string(senderChannelIndex), 1);
+        raiseRPCUpdateDevice(receiver->getID(), receiverChannelIndex, receiver->getSerialNumber() + ":" + std::to_string(receiverChannelIndex), 1);
+
+        return std::make_shared<Variable>(VariableType::tVoid);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return Variable::createError(-32500, "Unknown application error.");
+}
+
+PVariable EnOceanCentral::removeLink(BaseLib::PRpcClientInfo clientInfo, uint64_t senderID, int32_t senderChannelIndex, uint64_t receiverID, int32_t receiverChannelIndex)
+{
+    try
+    {
+        if(senderID == 0) return Variable::createError(-2, "Sender id is not set.");
+        if(receiverID == 0) return Variable::createError(-2, "Receiver id is not set.");
+        auto sender = getPeer(senderID);
+        auto receiver = getPeer(receiverID);
+        if(!sender) return Variable::createError(-2, "Sender device not found.");
+        if(!receiver) return Variable::createError(-2, "Receiver device not found.");
+        if(senderChannelIndex < 0) senderChannelIndex = 0;
+        if(receiverChannelIndex < 0) receiverChannelIndex = 0;
+        std::string senderSerialNumber = sender->getSerialNumber();
+        std::string receiverSerialNumber = receiver->getSerialNumber();
+        std::shared_ptr<HomegearDevice> senderRpcDevice = sender->getRpcDevice();
+        std::shared_ptr<HomegearDevice> receiverRpcDevice = receiver->getRpcDevice();
+        if(senderRpcDevice->functions.find(senderChannelIndex) == senderRpcDevice->functions.end()) return Variable::createError(-2, "Sender channel not found.");
+        if(receiverRpcDevice->functions.find(receiverChannelIndex) == receiverRpcDevice->functions.end()) return Variable::createError(-2, "Receiver channel not found.");
+        if(!sender->getPeer(senderChannelIndex, receiver->getAddress()) && !receiver->getPeer(receiverChannelIndex, sender->getAddress())) return Variable::createError(-6, "Devices are not paired to each other.");
+
+        auto receiverPeer = sender->getPeer(senderChannelIndex, receiver->getAddress(), receiverChannelIndex);
+        auto senderPeer = receiver->getPeer(receiverChannelIndex, sender->getAddress(), senderChannelIndex);
+
+        sender->removePeer(senderChannelIndex, receiver->getAddress(), receiverChannelIndex);
+        receiver->removePeer(receiverChannelIndex, sender->getAddress(), senderChannelIndex);
+
+        if(!receiver->sendInboundLinkTable())
+        {
+            sender->addPeer(senderChannelIndex, receiverPeer);
+            receiver->addPeer(receiverChannelIndex, senderPeer);
+            return Variable::createError(-4, "Error updating link table on device.");
+        }
+
+        raiseRPCUpdateDevice(sender->getID(), senderChannelIndex, senderSerialNumber + ":" + std::to_string(senderChannelIndex), 1);
+        raiseRPCUpdateDevice(receiver->getID(), receiverChannelIndex, receiverSerialNumber + ":" + std::to_string(receiverChannelIndex), 1);
+
+        return std::make_shared<Variable>(VariableType::tVoid);
+    }
+    catch(const std::exception& ex)
+    {
+        GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    }
+    return Variable::createError(-32500, "Unknown application error.");
+}
+
 PVariable EnOceanCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId)
 {
 	try
@@ -1630,6 +1784,10 @@ void EnOceanCentral::handleRemoteCommissioningQueue()
             auto peer = buildPeer(eep, deviceAddress, interface->getID(), rfChannel);
             if(peer)
             {
+                if(_remoteCommissioningGatewayAddress != 0)
+                {
+                    peer->setGatewayAddress(_remoteCommissioningGatewayAddress);
+                }
                 if(_remoteCommissioningSecurityCode != 0)
                 {
                     auto channelIterator = peer->configCentral.find(0);

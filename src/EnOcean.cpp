@@ -126,7 +126,14 @@ PVariable EnOcean::getPairingInfo()
             typeSelectorRcEep->structValue->emplace("pos", std::make_shared<BaseLib::Variable>(0));
             typeSelectorRcEep->structValue->emplace("type", std::make_shared<BaseLib::Variable>(std::string("string")));
             typeSelectorRcEep->structValue->emplace("optional", std::make_shared<BaseLib::Variable>(true));
-            typeSelectorRcFields->structValue->emplace("eep", typeSelectorRcEep);*/
+            typeSelectorRcFields->structValue->emplace("eep", typeSelectorRcEep);
+            PVariable typeSelectorRcDeviceAddress = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+            typeSelectorRcEep->structValue->emplace("name", std::make_shared<BaseLib::Variable>(std::string("l10n.enocean.pairingInfo.deviceAddress")));
+            typeSelectorRcEep->structValue->emplace("description", std::make_shared<BaseLib::Variable>(std::string("l10n.enocean.pairingInfo.deviceAddressHelp")));
+            typeSelectorRcEep->structValue->emplace("pos", std::make_shared<BaseLib::Variable>(0));
+            typeSelectorRcEep->structValue->emplace("type", std::make_shared<BaseLib::Variable>(std::string("string")));
+            typeSelectorRcEep->structValue->emplace("optional", std::make_shared<BaseLib::Variable>(true));
+            typeSelectorRcFields->structValue->emplace("deviceAddress", typeSelectorRcDeviceAddress);*/
             PVariable typeSelectorRcSecurityCode = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
             typeSelectorRcSecurityCode->structValue->emplace("name", std::make_shared<BaseLib::Variable>(std::string("l10n.enocean.pairingInfo.securityCode")));
             typeSelectorRcSecurityCode->structValue->emplace("description", std::make_shared<BaseLib::Variable>(std::string("l10n.enocean.pairingInfo.securityCodeHelp")));
