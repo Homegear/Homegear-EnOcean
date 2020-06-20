@@ -38,6 +38,7 @@ public:
 
     PVariable addLink(BaseLib::PRpcClientInfo clientInfo, uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description) override;
 	PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId) override;
+    PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, const std::string& code) override;
 	PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags) override;
 	PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags) override;
 	PVariable getSniffedDevices(BaseLib::PRpcClientInfo clientInfo) override;
@@ -87,6 +88,8 @@ protected:
 
 	void pairingModeTimer(int32_t duration, bool debugOutput = true);
 	void handleRemoteCommissioningQueue();
+	uint64_t remoteCommissionPeer(const std::shared_ptr<IEnOceanInterface>& interface, uint32_t deviceAddress, uint64_t eep, uint32_t securityCode = 0, uint32_t gatewayAddress = 0);
+	static uint64_t remoteManagementGetEep(const std::shared_ptr<IEnOceanInterface>& interface, uint32_t deviceAddress, uint32_t securityCode = 0);
 	bool handlePairingRequest(std::string& interfaceId, PEnOceanPacket packet);
 };
 

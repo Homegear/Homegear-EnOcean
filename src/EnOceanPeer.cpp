@@ -718,33 +718,33 @@ void EnOceanPeer::serializePeers(std::vector<uint8_t>& encodedData)
     }
 }
 
-void EnOceanPeer::unserializePeers(std::shared_ptr<std::vector<char>> serializedData)
+void EnOceanPeer::unserializePeers(const std::shared_ptr<std::vector<char>>& serializedData)
 {
     try
     {
         std::lock_guard<std::mutex> peersGuard(_peersMutex);
         BaseLib::BinaryDecoder decoder;
         uint32_t position = 0;
-        uint32_t version = decoder.decodeInteger(*serializedData, position);
+        BaseLib::BinaryDecoder::decodeInteger(*serializedData, position); //version
         uint32_t peersSize = 0;
-        peersSize = decoder.decodeInteger(*serializedData, position);
+        peersSize = BaseLib::BinaryDecoder::decodeInteger(*serializedData, position);
         for(uint32_t i = 0; i < peersSize; i++)
         {
-            uint32_t channel = decoder.decodeInteger(*serializedData, position);
-            uint32_t peerCount = decoder.decodeInteger(*serializedData, position);
+            uint32_t channel = BaseLib::BinaryDecoder::decodeInteger(*serializedData, position);
+            uint32_t peerCount = BaseLib::BinaryDecoder::decodeInteger(*serializedData, position);
             for(uint32_t j = 0; j < peerCount; j++)
             {
                 std::shared_ptr<BaseLib::Systems::BasicPeer> basicPeer(new BaseLib::Systems::BasicPeer());
-                basicPeer->isSender = decoder.decodeBoolean(*serializedData, position);
-                basicPeer->id = decoder.decodeInteger(*serializedData, position);
-                basicPeer->address = decoder.decodeInteger(*serializedData, position);
-                basicPeer->channel = decoder.decodeInteger(*serializedData, position);
+                basicPeer->isSender = BaseLib::BinaryDecoder::decodeBoolean(*serializedData, position);
+                basicPeer->id = BaseLib::BinaryDecoder::decodeInteger(*serializedData, position);
+                basicPeer->address = BaseLib::BinaryDecoder::decodeInteger(*serializedData, position);
+                basicPeer->channel = BaseLib::BinaryDecoder::decodeInteger(*serializedData, position);
                 basicPeer->serialNumber = decoder.decodeString(*serializedData, position);
-                basicPeer->isVirtual = decoder.decodeBoolean(*serializedData, position);
+                basicPeer->isVirtual = BaseLib::BinaryDecoder::decodeBoolean(*serializedData, position);
                 _peers[channel].push_back(basicPeer);
                 basicPeer->linkName = decoder.decodeString(*serializedData, position);
                 basicPeer->linkDescription = decoder.decodeString(*serializedData, position);
-                uint32_t dataSize = decoder.decodeInteger(*serializedData, position);
+                uint32_t dataSize = BaseLib::BinaryDecoder::decodeInteger(*serializedData, position);
                 if(position + dataSize <= serializedData->size()) basicPeer->data.insert(basicPeer->data.end(), serializedData->begin() + position, serializedData->begin() + position + dataSize);
                 position += dataSize;
             }
@@ -777,9 +777,9 @@ void EnOceanPeer::setRssiDevice(uint8_t rssi)
 		{
 			_lastRssiDevice = time;
 
-			std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>>::iterator channelIterator = valuesCentral.find(0);
+			auto channelIterator = valuesCentral.find(0);
 			if(channelIterator == valuesCentral.end()) return;
-			std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("RSSI_DEVICE");
+			auto parameterIterator = channelIterator->second.find("RSSI_DEVICE");
 			if(parameterIterator == channelIterator->second.end()) return;
 
 			BaseLib::Systems::RpcConfigurationParameter& parameter = parameterIterator->second;
@@ -859,10 +859,10 @@ void EnOceanPeer::setRfChannel(int32_t channel, int32_t rfChannel)
 	{
 		if(rfChannel < 0 || rfChannel > 127) return;
 		BaseLib::PVariable value(new BaseLib::Variable(rfChannel));
-		std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>>::iterator channelIterator = valuesCentral.find(channel);
+		auto channelIterator = valuesCentral.find(channel);
 		if(channelIterator != valuesCentral.end())
 		{
-			std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator parameterIterator = channelIterator->second.find("RF_CHANNEL");
+			auto parameterIterator = channelIterator->second.find("RF_CHANNEL");
 			if(parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter)
 			{
 				std::vector<uint8_t> parameterData;
@@ -897,7 +897,7 @@ void EnOceanPeer::getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameVa
 		if(_rpcDevice->packetsByMessageType.find(packet->getRorg()) == _rpcDevice->packetsByMessageType.end()) return;
 		std::pair<PacketsByMessageType::iterator, PacketsByMessageType::iterator> range = _rpcDevice->packetsByMessageType.equal_range((uint32_t)packet->getRorg());
 		if(range.first == _rpcDevice->packetsByMessageType.end()) return;
-		PacketsByMessageType::iterator i = range.first;
+		auto i = range.first;
 		do
 		{
 			FrameValues currentFrameValues;
@@ -909,14 +909,14 @@ void EnOceanPeer::getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameVa
 			int32_t channelIndex = frame->channelIndex;
 			int32_t channel = -1;
 			if(channelIndex >= 0 && channelIndex < (signed)erpPacket.size()) channel = erpPacket.at(channelIndex);
-			if(channel > -1 && frame->channelSize < 8.0) channel &= (0xFF >> (8 - std::lround(frame->channelSize)));
+			if(channel > -1 && frame->channelSize < 8.0) channel &= (0xFFu >> (unsigned)(8u - std::lround(frame->channelSize)));
 			channel += frame->channelIndexOffset;
 			if(frame->channel > -1) channel = frame->channel;
 			if(channel == -1) continue;
 			currentFrameValues.frameID = frame->id;
 			bool abort = false;
 
-			for(BinaryPayloads::iterator j = frame->binaryPayloads.begin(); j != frame->binaryPayloads.end(); ++j)
+			for(auto j = frame->binaryPayloads.begin(); j != frame->binaryPayloads.end(); ++j)
 			{
 				std::vector<uint8_t> data;
 				if((*j)->bitSize > 0 && (*j)->bitIndex > 0)
@@ -927,7 +927,7 @@ void EnOceanPeer::getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameVa
 					if((*j)->constValueInteger > -1)
 					{
 						int32_t intValue = 0;
-						_bl->hf.memcpyBigEndian(intValue, data);
+						BaseLib::HelperFunctions::memcpyBigEndian(intValue, data);
 						if(intValue != (*j)->constValueInteger)
 						{
 							abort = true;
@@ -938,11 +938,11 @@ void EnOceanPeer::getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameVa
 				}
 				else if((*j)->constValueInteger > -1)
 				{
-					_bl->hf.memcpyBigEndian(data, (*j)->constValueInteger);
+					BaseLib::HelperFunctions::memcpyBigEndian(data, (*j)->constValueInteger);
 				}
 				else continue;
 
-                for(std::vector<PParameter>::iterator k = frame->associatedVariables.begin(); k != frame->associatedVariables.end(); ++k)
+                for(auto k = frame->associatedVariables.begin(); k != frame->associatedVariables.end(); ++k)
 				{
 					if((*k)->physical->groupId != (*j)->parameterId) continue;
 					currentFrameValues.parameterSetType = (*k)->parent()->type();
@@ -960,7 +960,7 @@ void EnOceanPeer::getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameVa
 						else endChannel = startChannel;
 						for(int32_t l = startChannel; l <= endChannel; l++)
 						{
-							Functions::iterator functionIterator = _rpcDevice->functions.find(l);
+							auto functionIterator = _rpcDevice->functions.find(l);
 							if(functionIterator == _rpcDevice->functions.end()) continue;
 							PParameterGroup parameterGroup = functionIterator->second->getParameterGroup(currentFrameValues.parameterSetType);
 							if(!parameterGroup || parameterGroup->parameters.find((*k)->id) == parameterGroup->parameters.end()) continue;
@@ -973,7 +973,7 @@ void EnOceanPeer::getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameVa
 					{
 						for(std::list<uint32_t>::const_iterator l = currentFrameValues.paramsetChannels.begin(); l != currentFrameValues.paramsetChannels.end(); ++l)
 						{
-							Functions::iterator functionIterator = _rpcDevice->functions.find(*l);
+							auto functionIterator = _rpcDevice->functions.find(*l);
 							if(functionIterator == _rpcDevice->functions.end()) continue;
 							PParameterGroup parameterGroup = functionIterator->second->getParameterGroup(currentFrameValues.parameterSetType);
 							if(!parameterGroup || parameterGroup->parameters.find((*k)->id) == parameterGroup->parameters.end()) continue;

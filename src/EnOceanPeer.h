@@ -48,7 +48,7 @@ public:
 
 	bool load(BaseLib::Systems::ICentral* central) override;
     void serializePeers(std::vector<uint8_t>& encodedData);
-    void unserializePeers(std::shared_ptr<std::vector<char>> serializedData);
+    void unserializePeers(const std::shared_ptr<std::vector<char>>& serializedData);
     void savePeers() override;
     void initializeCentralConfig() override;
 
