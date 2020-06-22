@@ -1544,6 +1544,35 @@ bool EnOceanPeer::sendInboundLinkTable()
             uint32_t index = 1;
             for(auto& channel : _peers)
             {
+                uint64_t outputSelectorBitField = 0;
+                uint32_t outputSelectorMemoryIndex = 0;
+                uint32_t outputSelectorBitSize = 0;
+                bool outputSelectorValue = false;
+
+                {
+                    auto functionIterator = _rpcDevice->functions.find(channel.first);
+                    if(functionIterator != _rpcDevice->functions.end())
+                    {
+                        auto attributeIterator = functionIterator->second->linkReceiverAttributes.find("outputSelectorMemoryIndex");
+                        if(attributeIterator != functionIterator->second->linkReceiverAttributes.end())
+                        {
+                            outputSelectorMemoryIndex = (uint32_t)attributeIterator->second->integerValue;
+
+                            attributeIterator = functionIterator->second->linkReceiverAttributes.find("outputSelectorBitSize");
+                            if(attributeIterator != functionIterator->second->linkReceiverAttributes.end())
+                            {
+                                outputSelectorBitSize = (uint32_t)attributeIterator->second->integerValue;
+                            }
+                        }
+
+                        attributeIterator = functionIterator->second->linkReceiverAttributes.find("outputSelectorValue");
+                        if(attributeIterator != functionIterator->second->linkReceiverAttributes.end())
+                        {
+                            outputSelectorValue = (bool)attributeIterator->second->integerValue;
+                        }
+                    }
+                }
+
                 for(auto& peer : channel.second)
                 {
                     if(!peer->isSender) continue;
@@ -1560,6 +1589,10 @@ bool EnOceanPeer::sendInboundLinkTable()
                             senderChannel = (uint8_t)senderChannelIterator->second->integerValue;
                         }
                     }
+                    if(outputSelectorBitSize != 0 && outputSelectorValue)
+                    {
+                        outputSelectorBitField |= (1u << index);
+                    }
 
                     if(setLinkTableHasIndex) linkTable.push_back(index);
                     linkTable.push_back((uint32_t)peer->address >> 24u);
@@ -1572,6 +1605,31 @@ bool EnOceanPeer::sendInboundLinkTable()
                     linkTable.push_back(senderChannel);
                     index++;
                 }
+
+                //{{{ Set device configuration
+                std::map<uint32_t, std::vector<uint8_t>> selectorData;
+                std::vector<uint8_t> outputSelectorRawData;
+                BaseLib::HelperFunctions::memcpyBigEndian(outputSelectorRawData, (int64_t)outputSelectorBitField);
+                uint32_t byteSize = outputSelectorBitSize / 8;
+                if(outputSelectorRawData.size() > byteSize)
+                {
+                    outputSelectorRawData.erase(outputSelectorRawData.begin(), outputSelectorRawData.begin() + (outputSelectorRawData.size() - byteSize));
+                }
+                else if(outputSelectorRawData.size() < byteSize)
+                {
+                    std::vector<uint8_t> fill(byteSize - outputSelectorRawData.size(), 0);
+                    outputSelectorRawData.insert(outputSelectorRawData.begin(), fill.begin(), fill.end());
+                }
+                selectorData.emplace(outputSelectorMemoryIndex, outputSelectorRawData);
+                auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(_address, selectorData);
+                setBestInterface();
+                auto response = _physicalInterface->sendAndReceivePacket(setDeviceConfiguration, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                if(!response)
+                {
+                    GD::out.printError("Error: Could not set device configuration on device.");
+                    return false;
+                }
+                //}}}
             }
             for(uint32_t i = index; i < setInboundLinkTableSize; i++)
             {
@@ -1701,6 +1759,11 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
                 if(parameterData.size() > byteSize)
                 {
                     parameterData.erase(parameterData.begin(), parameterData.begin() + (parameterData.size() - byteSize));
+                }
+                else if(parameterData.size() < byteSize)
+                {
+                    std::vector<uint8_t> fill(byteSize - parameterData.size(), 0);
+                    parameterData.insert(parameterData.begin(), fill.begin(), fill.end());
                 }
                 updatedParameters.emplace((uint32_t)parameter.rpcParameter->physical->memoryIndex, parameterData);
 			}
@@ -2200,7 +2263,7 @@ bool EnOceanPeer::remoteManagementUnlock()
             auto variableIterator = channelIterator->second.find("SECURITY_CODE");
             if(variableIterator != channelIterator->second.end() && variableIterator->second.rpcParameter)
             {
-                securityCode = (uint32_t)variableIterator->second.rpcParameter->convertFromPacket(variableIterator->second.getBinaryData(), variableIterator->second.mainRole(), false)->integerValue;
+                securityCode = BaseLib::Math::getUnsignedNumber(variableIterator->second.rpcParameter->convertFromPacket(variableIterator->second.getBinaryData(), variableIterator->second.mainRole(), false)->stringValue, true);
             }
         }
 
@@ -2247,7 +2310,7 @@ void EnOceanPeer::remoteManagementLock()
             auto variableIterator = channelIterator->second.find("SECURITY_CODE");
             if(variableIterator != channelIterator->second.end() && variableIterator->second.rpcParameter)
             {
-                securityCode = (uint32_t)variableIterator->second.rpcParameter->convertFromPacket(variableIterator->second.getBinaryData(), variableIterator->second.mainRole(), false)->integerValue;
+                securityCode = BaseLib::Math::getUnsignedNumber(variableIterator->second.rpcParameter->convertFromPacket(variableIterator->second.getBinaryData(), variableIterator->second.mainRole(), false)->stringValue, true);
             }
         }
 

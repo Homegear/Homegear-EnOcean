@@ -1343,7 +1343,11 @@ PVariable EnOceanCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, const
 
         GD::out.printInfo("Info: OPUS BRiDGE QR code detected.");
 
-        //OPUS BRiDGE QR code looks like this: 30S0000050BFB53+1P004000000006+10Z00+11Z6FEC6172
+        //OPUS BRiDGE QR code looks like this:
+        // - Actuators:     30S0000050BFB53+1P004000000006+10Z00+11Z6FEC6172
+        // - Motion sensor: 30S0000050E71BB+1P004000000009+10Z00+11Z535A4C2C+S---
+        // - Remote:        30S00000035E6E4+1P00401000000A
+
         uint32_t address = BaseLib::Math::getUnsignedNumber(code.substr(7, 8), true);
         uint32_t securityCode = BaseLib::Math::getUnsignedNumber(code.substr(40, 8), true);
 
@@ -1642,7 +1646,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         if(!interface) return 0;
         GD::out.printInfo("Info: Trying to pair device with address " + BaseLib::HelperFunctions::getHexString(deviceAddress, 8) + " and EEP " + BaseLib::HelperFunctions::getHexString(eep) + "...");
 
-        if(peerExists(deviceAddress, eep))
+        if(peerExists((int32_t)deviceAddress, eep))
         {
             if(securityCode != 0)
             {
@@ -1652,7 +1656,8 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
             }
 
             GD::out.printInfo("Info: Peer is already paired to this central.");
-            return 0;
+            auto peer = getPeer((int32_t)deviceAddress);
+            return !peer.empty() ? peer.front()->getID() : 0;
         }
 
         auto rpcDevice = GD::family->getRpcDevices()->find(eep, 0x10, -1);
@@ -1862,7 +1867,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
                         auto variableIterator = channelIterator->second.find("SECURITY_CODE");
                         if(variableIterator != channelIterator->second.end() && variableIterator->second.rpcParameter)
                         {
-                            auto rpcSecurityCode = std::make_shared<BaseLib::Variable>(securityCode);
+                            auto rpcSecurityCode = std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getHexString(securityCode, 8));
                             std::vector<uint8_t> parameterData;
                             variableIterator->second.rpcParameter->convertToPacket(rpcSecurityCode, variableIterator->second.mainRole(), parameterData);
                             variableIterator->second.setBinaryData(parameterData);
