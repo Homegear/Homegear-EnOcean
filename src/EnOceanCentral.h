@@ -60,19 +60,21 @@ protected:
 	//{{{ Pairing
     std::mutex _pairingMutex;
     std::string _pairingInterface;
-	std::atomic_bool _stopPairingModeThread;
+	std::atomic_bool _stopPairingModeThread{false};
 	std::mutex _pairingModeThreadMutex;
 	std::thread _pairingModeThread;
 	std::mutex _processedAddressesMutex;
 	std::unordered_set<int32_t> _processedAddresses;
+    std::atomic_bool _remoteCommissioning{false};
 	std::atomic<uint32_t> _remoteCommissioningSecurityCode{0};
     std::atomic<uint32_t> _remoteCommissioningGatewayAddress{0};
 	std::atomic<uint32_t> _remoteCommissioningDeviceAddress{0};
 	std::atomic<uint64_t> _remoteCommissioningEep{0};
+    std::atomic_bool _remoteCommissioningWaitForSignal{false};
 	std::queue<std::pair<std::string, uint32_t>> _remoteCommissioningAddressQueue;
 	//}}}
 
-	std::atomic_bool _stopWorkerThread;
+	std::atomic_bool _stopWorkerThread{false};
 	std::thread _workerThread;
 
 	std::string getFreeSerialNumber(int32_t address);

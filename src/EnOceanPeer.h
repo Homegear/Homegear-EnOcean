@@ -48,7 +48,7 @@ public:
 
 	bool load(BaseLib::Systems::ICentral* central) override;
     void serializePeers(std::vector<uint8_t>& encodedData);
-    void unserializePeers(const std::shared_ptr<std::vector<char>>& serializedData);
+    void unserializePeers(const std::vector<char>& serializedData);
     void savePeers() override;
     void initializeCentralConfig() override;
 
@@ -74,7 +74,10 @@ public:
 	 */
     void homegearShuttingDown() override;
 
-    bool updateConfiguration();
+    void queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>>& updatedParameters);
+    void queueGetDeviceConfiguration();
+    bool getDeviceConfiguration();
+    bool setDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>>& updatedParameters);
     bool sendInboundLinkTable();
 
 	//RPC methods
@@ -149,7 +152,7 @@ protected:
 	// }}}
 
 	// {{{ Variables for blinds
-		std::atomic<int32_t> _blindSignalDuration;
+		std::atomic<int32_t> _blindTransitionTime;
         std::atomic<int64_t> _blindStateResetTime;
 		std::atomic_bool _blindUp;
 		std::atomic<int64_t> _lastBlindPositionUpdate;
@@ -159,8 +162,17 @@ protected:
         std::atomic<int32_t> _blindPosition;
 	// }}}
 
+	// {{{ Remote management variables
+	    std::mutex _updatedParametersMutex;
+        std::map<uint32_t, std::vector<uint8_t>> _updatedParameters;
+        std::atomic_bool _remoteManagementQueueGetDeviceConfiguration{false};
+        std::atomic_bool _remoteManagementQueueSetDeviceConfiguration{false};
+	// }}}
+
 	void loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows) override;
     void saveVariables() override;
+    void loadUpdatedParameters(const std::vector<char>& encodedData);
+    void saveUpdatedParameters();
 
     void setRollingCode(int32_t value) { _rollingCode = value; saveVariable(20, value); }
     void setAesKey(std::vector<uint8_t>& value) { _aesKey = value; saveVariable(21, value); }
