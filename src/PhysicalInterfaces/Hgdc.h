@@ -24,7 +24,7 @@ public:
 
     bool isOpen() override { return !_stopped && _initComplete; }
 
-    void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet) override;
+    bool sendEnoceanPacket(const PEnOceanPacket& packet) override;
 protected:
     int32_t _packetReceivedEventHandlerId = -1;
     std::atomic_bool _initComplete{false};

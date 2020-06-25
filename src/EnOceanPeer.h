@@ -20,17 +20,19 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
 public:
 	EnOceanPeer(uint32_t parentID, IPeerEventSink* eventHandler);
 	EnOceanPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, IPeerEventSink* eventHandler);
-	virtual ~EnOceanPeer();
+	~EnOceanPeer() override;
 	void init();
-	void dispose();
+	void dispose() override;
 
 	//Features
-	virtual bool wireless() { return true; }
+	bool wireless() override { return true; }
 	//End features
 
 	//{{{ In table variables
 	std::string getPhysicalInterfaceId();
 	void setPhysicalInterfaceId(std::string);
+	uint32_t getGatewayAddress();
+	void setGatewayAddress(uint32_t value);
 	//}}}
 
 	std::shared_ptr<IEnOceanInterface>& getPhysicalInterface() { return _physicalInterface; }
@@ -41,17 +43,22 @@ public:
 	void setRfChannel(int32_t channel, int32_t value);
 
 	void worker();
-	virtual std::string handleCliCommand(std::string command);
+	std::string handleCliCommand(std::string command) override;
 	void packetReceived(PEnOceanPacket& packet);
 
-	virtual bool load(BaseLib::Systems::ICentral* central);
-    virtual void savePeers() {}
-    virtual void initializeCentralConfig();
+	bool load(BaseLib::Systems::ICentral* central) override;
+    void serializePeers(std::vector<uint8_t>& encodedData);
+    void unserializePeers(const std::vector<char>& serializedData);
+    void savePeers() override;
+    void initializeCentralConfig() override;
 
-	virtual int32_t getChannelGroupedWith(int32_t channel) { return -1; }
-	virtual int32_t getNewFirmwareVersion() { return 0; }
-	virtual std::string getFirmwareVersionString(int32_t firmwareVersion) { return "1.0"; }
-    virtual bool firmwareUpdateAvailable() { return false; }
+    void addPeer(int32_t channel, std::shared_ptr<BaseLib::Systems::BasicPeer> peer);
+    void removePeer(int32_t channel, int32_t address, int32_t remoteChannel);
+    uint32_t getLinkCount();
+	int32_t getChannelGroupedWith(int32_t channel) override { return -1; }
+	int32_t getNewFirmwareVersion() override { return 0; }
+	std::string getFirmwareVersionString(int32_t firmwareVersion) override { return "1.0"; }
+    bool firmwareUpdateAvailable() override { return false; }
 
     bool isWildcardPeer() { return _rpcDevice->addressSize == 25; }
 
@@ -60,19 +67,26 @@ public:
     /**
 	 * {@inheritDoc}
 	 */
-    virtual void homegearStarted();
+    void homegearStarted() override;
 
     /**
 	 * {@inheritDoc}
 	 */
-    virtual void homegearShuttingDown();
+    void homegearShuttingDown() override;
+
+    void queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>>& updatedParameters);
+    void queueGetDeviceConfiguration();
+    bool getDeviceConfiguration();
+    bool setDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>>& updatedParameters);
+    bool sendInboundLinkTable();
 
 	//RPC methods
-    virtual PVariable getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields);
-	virtual PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool checkAcls, bool onlyPushing = false);
-	PVariable setInterface(BaseLib::PRpcClientInfo clientInfo, std::string interfaceId);
-	virtual PVariable setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait);
-	//End RPC methods
+    PVariable forceConfigUpdate(PRpcClientInfo clientInfo) override;
+    PVariable getDeviceInfo(BaseLib::PRpcClientInfo clientInfo, std::map<std::string, bool> fields) override;
+	PVariable putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t channel, ParameterGroup::Type::Enum type, uint64_t remoteID, int32_t remoteChannel, PVariable variables, bool checkAcls, bool onlyPushing) override;
+	PVariable setInterface(BaseLib::PRpcClientInfo clientInfo, std::string interfaceId) override;
+	PVariable setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t channel, std::string valueKey, PVariable value, bool wait) override;
+    //End RPC methods
 protected:
 	class FrameValue
 	{
@@ -117,9 +131,9 @@ protected:
 	int32_t _cmacSize = -1;
 	bool _rollingCodeInTx = false;
 	int32_t _rollingCodeSize = -1;
+	uint32_t _gatewayAddress = 0;
 	//End
 
-	bool _shuttingDown = false;
 	std::shared_ptr<IEnOceanInterface> _physicalInterface;
 	uint32_t _lastRssiDevice = 0;
 	bool _globalRfChannel = false;
@@ -138,18 +152,27 @@ protected:
 	// }}}
 
 	// {{{ Variables for blinds
-		std::atomic<int32_t> _blindSignalDuration;
+		std::atomic<int32_t> _blindTransitionTime;
         std::atomic<int64_t> _blindStateResetTime;
 		std::atomic_bool _blindUp;
 		std::atomic<int64_t> _lastBlindPositionUpdate;
         std::atomic<int64_t> _lastRpcBlindPositionUpdate;
         std::atomic<int64_t> _blindCurrentTargetPosition;
-        std::atomic<int64_t> _blindCurrentSignalDuration;
+        std::atomic<int64_t> _blindCurrentTransitionTime;
         std::atomic<int32_t> _blindPosition;
 	// }}}
 
-	virtual void loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows);
-    virtual void saveVariables();
+	// {{{ Remote management variables
+	    std::mutex _updatedParametersMutex;
+        std::map<uint32_t, std::vector<uint8_t>> _updatedParameters;
+        std::atomic_bool _remoteManagementQueueGetDeviceConfiguration{false};
+        std::atomic_bool _remoteManagementQueueSetDeviceConfiguration{false};
+	// }}}
+
+	void loadVariables(BaseLib::Systems::ICentral* central, std::shared_ptr<BaseLib::Database::DataTable>& rows) override;
+    void saveVariables() override;
+    void loadUpdatedParameters(const std::vector<char>& encodedData);
+    void saveUpdatedParameters();
 
     void setRollingCode(int32_t value) { _rollingCode = value; saveVariable(20, value); }
     void setAesKey(std::vector<uint8_t>& value) { _aesKey = value; saveVariable(21, value); }
@@ -162,13 +185,16 @@ protected:
 
     void setRssiDevice(uint8_t rssi);
 
-	virtual std::shared_ptr<BaseLib::Systems::ICentral> getCentral();
+	std::shared_ptr<BaseLib::Systems::ICentral> getCentral() override;
+
+	bool remoteManagementUnlock();
+	void remoteManagementLock();
 
 	void getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameValues>& frameValue);
 
-	virtual PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type);
+	PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type) override;
 
-	void sendPacket(PEnOceanPacket packet, std::string responseId, int32_t delay, bool wait);
+	void sendPacket(const PEnOceanPacket& packet, const std::string& responseId, int32_t delay, bool wait);
 
     void updateBlindSpeed();
 
@@ -178,12 +204,12 @@ protected:
 		/**
 		 * {@inheritDoc}
 		 */
-		virtual bool getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters);
+		bool getAllValuesHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters) override;
 
 		/**
 		 * {@inheritDoc}
 		 */
-		virtual bool getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters);
+		bool getParamsetHook2(PRpcClientInfo clientInfo, PParameter parameter, uint32_t channel, PVariable parameters) override;
 	// }}}
 };
 
