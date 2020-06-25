@@ -1350,7 +1350,7 @@ PVariable EnOceanCentral::createDevice(BaseLib::PRpcClientInfo clientInfo, const
 
         GD::out.printInfo("Info: Trying to find description for product ID " + productId);
 
-        auto eep = GD::family->getRpcDevices()->getTypeNumberFromTypeId(productId);
+        auto eep = GD::family->getRpcDevices()->getTypeNumberFromProductId(productId);
         if(eep == 0) return Variable::createError(-1, "Unknown device.");
 
         auto rpcDevice = GD::family->getRpcDevices()->find(eep, 0x10, -1);
@@ -1978,7 +1978,7 @@ std::shared_ptr<Variable> EnOceanCentral::setInstallMode(BaseLib::PRpcClientInfo
                 metadataIterator = metadata->structValue->find("eep");
                 if(metadataIterator != metadata->structValue->end()) _remoteCommissioningEep = metadataIterator->second->integerValue64;
                 metadataIterator = metadata->structValue->find("securityCode");
-                if(metadataIterator != metadata->structValue->end()) _remoteCommissioningSecurityCode = metadataIterator->second->integerValue;
+                if(metadataIterator != metadata->structValue->end()) _remoteCommissioningSecurityCode = BaseLib::Math::getUnsignedNumber(metadataIterator->second->stringValue, true);
             }
         }
         else _pairingInterface = "";

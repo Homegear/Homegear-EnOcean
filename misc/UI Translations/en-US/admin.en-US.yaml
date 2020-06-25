@@ -6,6 +6,8 @@ l10n.enocean.pairingInfo.password: 'Password'
 l10n.enocean.pairingInfo.device: 'Device'
 l10n.enocean.pairingInfo.eep: 'EEP'
 l10n.enocean.pairingInfo.eepHelp: 'This EEP is used in Homegear for the remote commissioned device.'
+l10n.enocean.pairingInfo.securityCode: 'Security code'
+l10n.enocean.pairingInfo.securityCodeHelp: 'Enter the optional security code of the device here.'
 # }}}
 
 # {{{ Pairing
