@@ -58,7 +58,7 @@ void EnOceanPeer::init()
         _lastBlindPositionUpdate = 0;
         _lastRpcBlindPositionUpdate = 0;
         _blindCurrentTargetPosition = 0;
-        _blindCurrentSignalDuration = 0;
+        _blindCurrentTransitionTime = 0;
         _blindPosition = 0;
 	}
 	catch(const std::exception& ex)
@@ -107,7 +107,7 @@ void EnOceanPeer::worker()
                 if(_blindStateResetTime != -1)
                 {
                     //Correct blind state reset time
-                    _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentSignalDuration + (_blindCurrentTargetPosition == 0 || _blindCurrentTargetPosition == 10000 ? 5000 : 0);
+                    _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentTransitionTime + (_blindCurrentTargetPosition == 0 || _blindCurrentTargetPosition == 10000 ? 5000 : 0);
                     _lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
                     return;
                 }
@@ -616,7 +616,7 @@ bool EnOceanPeer::load(BaseLib::Systems::ICentral* central)
 			}
 		}
 
-		if(_deviceType == 0x01A53807)
+		if(_deviceType == 0x01A53807 || (_deviceType & 0xFFFFFFu) == 0xD20502)
 		{
 			channelIterator = valuesCentral.find(1);
 			if(channelIterator != configCentral.end())
@@ -1757,27 +1757,30 @@ bool EnOceanPeer::sendInboundLinkTable()
                 }
 
                 //{{{ Set device configuration
-                std::map<uint32_t, std::vector<uint8_t>> selectorData;
-                std::vector<uint8_t> outputSelectorRawData;
-                BaseLib::HelperFunctions::memcpyBigEndian(outputSelectorRawData, (int64_t)outputSelectorBitField);
-                uint32_t byteSize = outputSelectorBitSize / 8;
-                if(outputSelectorRawData.size() > byteSize)
+                if(outputSelectorBitSize != 0)
                 {
-                    outputSelectorRawData.erase(outputSelectorRawData.begin(), outputSelectorRawData.begin() + (outputSelectorRawData.size() - byteSize));
-                }
-                else if(outputSelectorRawData.size() < byteSize)
-                {
-                    std::vector<uint8_t> fill(byteSize - outputSelectorRawData.size(), 0);
-                    outputSelectorRawData.insert(outputSelectorRawData.begin(), fill.begin(), fill.end());
-                }
-                selectorData.emplace(outputSelectorMemoryIndex, outputSelectorRawData);
-                auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(_address, selectorData);
-                setBestInterface();
-                auto response = _physicalInterface->sendAndReceivePacket(setDeviceConfiguration, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
-                if(!response)
-                {
-                    GD::out.printError("Error: Could not set device configuration on device.");
-                    return false;
+                    std::map<uint32_t, std::vector<uint8_t>> selectorData;
+                    std::vector<uint8_t> outputSelectorRawData;
+                    BaseLib::HelperFunctions::memcpyBigEndian(outputSelectorRawData, (int64_t)outputSelectorBitField);
+                    uint32_t byteSize = outputSelectorBitSize / 8;
+                    if(outputSelectorRawData.size() > byteSize)
+                    {
+                        outputSelectorRawData.erase(outputSelectorRawData.begin(), outputSelectorRawData.begin() + (outputSelectorRawData.size() - byteSize));
+                    }
+                    else if(outputSelectorRawData.size() < byteSize)
+                    {
+                        std::vector<uint8_t> fill(byteSize - outputSelectorRawData.size(), 0);
+                        outputSelectorRawData.insert(outputSelectorRawData.begin(), fill.begin(), fill.end());
+                    }
+                    selectorData.emplace(outputSelectorMemoryIndex, outputSelectorRawData);
+                    auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(_address, selectorData);
+                    setBestInterface();
+                    auto response = _physicalInterface->sendAndReceivePacket(setDeviceConfiguration, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                    if(!response)
+                    {
+                        GD::out.printError("Error: Could not set device configuration on device.");
+                        return false;
+                    }
                 }
                 //}}}
             }
@@ -2241,9 +2244,9 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
 								int32_t positionDifference = _blindCurrentTargetPosition - _blindPosition;
                                 parameterData = parameterIterator->second.getBinaryData();
                                 _blindTransitionTime = parameterIterator->second.rpcParameter->convertFromPacket(parameterData, parameterIterator->second.mainRole(), false)->integerValue * 1000;
-                                if(positionDifference != 0) _blindCurrentSignalDuration = _blindTransitionTime / (10000 / std::abs(positionDifference));
-                                else _blindCurrentSignalDuration = 0;
-                                _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentSignalDuration + (_blindCurrentTargetPosition == 0 || _blindCurrentTargetPosition == 10000 ? 5000 : 0);
+                                if(positionDifference != 0) _blindCurrentTransitionTime = _blindTransitionTime / (10000 / std::abs(positionDifference));
+                                else _blindCurrentTransitionTime = 0;
+                                _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentTransitionTime + (_blindCurrentTargetPosition == 0 || _blindCurrentTargetPosition == 10000 ? 5000 : 0);
                                 _lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
                                 _blindUp = valueKey == "UP";
                                 updateBlindSpeed();
@@ -2283,42 +2286,45 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
 					int32_t newPosition = value->integerValue * 1000;
 					if(newPosition != _blindPosition)
 					{
-						int32_t positionDifference = newPosition - _blindPosition; //Can't be 0
-                        setValue(clientInfo, channel, positionDifference > 0 ? "UP" : "DOWN", std::make_shared<BaseLib::Variable>(false), false);
-
-                        channelIterator = configCentral.find(0);
-                        if(channelIterator != configCentral.end())
+						int32_t positionDifference = newPosition - _blindPosition;  //Can be 0 in case of updates from other threads
+						if(positionDifference != 0)
                         {
-                            auto parameterIterator2 = channelIterator->second.find("SIGNAL_DURATION");
-                            if(parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter)
+                            setValue(clientInfo, channel, positionDifference > 0 ? "UP" : "DOWN", std::make_shared<BaseLib::Variable>(false), false);
+
+                            channelIterator = configCentral.find(0);
+                            if(channelIterator != configCentral.end())
                             {
-                                parameterData = parameterIterator2->second.getBinaryData();
-                                _blindTransitionTime = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData, parameterIterator2->second.mainRole(), false)->integerValue * 1000;
-                                _blindCurrentTargetPosition = _blindPosition + positionDifference;
-                                _blindCurrentSignalDuration = _blindTransitionTime / (10000 / std::abs(positionDifference));
-                                _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
-                                _lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
-                                _blindUp = positionDifference < 0;
-                                updateBlindSpeed();
-
-                                PEnOceanPacket packet(new EnOceanPacket((EnOceanPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
-                                std::vector<uint8_t> data{ _blindUp ? (uint8_t)0x30 : (uint8_t)0x10 };
-                                packet->setPosition(8, 8, data);
-                                sendPacket(packet, "ANY", 0, wait);
-
-                                channelIterator = valuesCentral.find(1);
-                                if(channelIterator != valuesCentral.end())
+                                auto parameterIterator2 = channelIterator->second.find("SIGNAL_DURATION");
+                                if(parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter)
                                 {
-                                    parameterIterator2 = channelIterator->second.find(_blindUp ? "UP" : "DOWN");
-                                    if(parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter)
+                                    parameterData = parameterIterator2->second.getBinaryData();
+                                    _blindTransitionTime = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData, parameterIterator2->second.mainRole(), false)->integerValue * 1000;
+                                    _blindCurrentTargetPosition = _blindPosition + positionDifference;
+                                    _blindCurrentTransitionTime = _blindTransitionTime / (10000 / std::abs(positionDifference));
+                                    _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentTransitionTime + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
+                                    _lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
+                                    _blindUp = positionDifference < 0;
+                                    updateBlindSpeed();
+
+                                    PEnOceanPacket packet(new EnOceanPacket((EnOceanPacket::Type)1, (uint8_t)0xF6, _physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
+                                    std::vector<uint8_t> data{_blindUp ? (uint8_t)0x30 : (uint8_t)0x10};
+                                    packet->setPosition(8, 8, data);
+                                    sendPacket(packet, "ANY", 0, wait);
+
+                                    channelIterator = valuesCentral.find(1);
+                                    if(channelIterator != valuesCentral.end())
                                     {
-                                        BaseLib::PVariable trueValue = std::make_shared<BaseLib::Variable>(true);
-                                        parameterIterator2->second.rpcParameter->convertToPacket(trueValue, parameterIterator2->second.mainRole(), parameterData);
-                                        parameterIterator2->second.setBinaryData(parameterData);
-                                        if(parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData);
-                                        else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, _blindUp ? "UP" : "DOWN", parameterData);
-                                        valueKeys->push_back(_blindUp ? "UP" : "DOWN");
-                                        values->push_back(trueValue);
+                                        parameterIterator2 = channelIterator->second.find(_blindUp ? "UP" : "DOWN");
+                                        if(parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter)
+                                        {
+                                            BaseLib::PVariable trueValue = std::make_shared<BaseLib::Variable>(true);
+                                            parameterIterator2->second.rpcParameter->convertToPacket(trueValue, parameterIterator2->second.mainRole(), parameterData);
+                                            parameterIterator2->second.setBinaryData(parameterData);
+                                            if(parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData);
+                                            else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, _blindUp ? "UP" : "DOWN", parameterData);
+                                            valueKeys->push_back(_blindUp ? "UP" : "DOWN");
+                                            values->push_back(trueValue);
+                                        }
                                     }
                                 }
                             }
@@ -2336,22 +2342,25 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
                     int32_t newPosition = value->integerValue * 100;
                     if(newPosition != _blindPosition)
                     {
-                        int32_t positionDifference = newPosition - _blindPosition; //Can't be 0
+                        int32_t positionDifference = newPosition - _blindPosition; //Can be 0 in case of updates from other threads
 
-                        channelIterator = configCentral.find(0);
-                        if(channelIterator != configCentral.end())
+                        if(positionDifference != 0)
                         {
-                            auto parameterIterator2 = channelIterator->second.find("TRANSITION_TIME");
-                            if(parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter)
+                            channelIterator = configCentral.find(0);
+                            if(channelIterator != configCentral.end())
                             {
-                                parameterData = parameterIterator2->second.getBinaryData();
-                                _blindTransitionTime = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData, parameterIterator2->second.mainRole(), false)->integerValue;
-                                _blindCurrentTargetPosition = _blindPosition + positionDifference;
-                                _blindCurrentSignalDuration = _blindTransitionTime / (10000 / std::abs(positionDifference));
-                                _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentSignalDuration + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
-                                _lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
-                                _blindUp = positionDifference < 0;
-                                updateBlindSpeed();
+                                auto parameterIterator2 = channelIterator->second.find("TRANSITION_TIME");
+                                if(parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter)
+                                {
+                                    parameterData = parameterIterator2->second.getBinaryData();
+                                    _blindTransitionTime = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData, parameterIterator2->second.mainRole(), false)->integerValue;
+                                    _blindCurrentTargetPosition = _blindPosition + positionDifference;
+                                    _blindCurrentTransitionTime = _blindTransitionTime / (10000 / std::abs(positionDifference));
+                                    _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentTransitionTime;
+                                    _lastBlindPositionUpdate = BaseLib::HelperFunctions::getTime();
+                                    _blindUp = positionDifference < 0;
+                                    updateBlindSpeed();
+                                }
                             }
                         }
                     }

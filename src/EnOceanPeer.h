@@ -158,7 +158,7 @@ protected:
 		std::atomic<int64_t> _lastBlindPositionUpdate;
         std::atomic<int64_t> _lastRpcBlindPositionUpdate;
         std::atomic<int64_t> _blindCurrentTargetPosition;
-        std::atomic<int64_t> _blindCurrentSignalDuration;
+        std::atomic<int64_t> _blindCurrentTransitionTime;
         std::atomic<int32_t> _blindPosition;
 	// }}}
 
