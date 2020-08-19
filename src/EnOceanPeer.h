@@ -194,7 +194,7 @@ protected:
 
 	PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type) override;
 
-	void sendPacket(const PEnOceanPacket& packet, const std::string& responseId, int32_t delay, bool wait);
+	bool sendPacket(const PEnOceanPacket& packet, const std::string& responseId, int32_t delay, bool wait);
 
     void updateBlindSpeed();
 
