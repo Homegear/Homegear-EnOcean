@@ -23,7 +23,7 @@ public:
 
     virtual bool isOpen() { return !_stopped; }
 
-    virtual void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet);
+    virtual bool sendEnoceanPacket(const PEnOceanPacket& packet);
 protected:
     std::unique_ptr<BaseLib::TcpSocket> _tcpSocket;
     std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
