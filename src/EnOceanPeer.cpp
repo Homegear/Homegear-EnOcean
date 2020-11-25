@@ -1862,12 +1862,12 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
         if (value->booleanValue) {
           channelIterator = valuesCentral.find(1);
           if (channelIterator != valuesCentral.end()) {
-            auto parameterIterator = channelIterator->second.find(valueKey == "UP" ? "DOWN" : "UP");
-            if (parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter) {
+            auto parameterIterator2 = channelIterator->second.find(valueKey == "UP" ? "DOWN" : "UP");
+            if (parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter) {
               BaseLib::PVariable falseValue = std::make_shared<BaseLib::Variable>(false);
-              parameterIterator->second.rpcParameter->convertToPacket(falseValue, parameterIterator->second.mainRole(), parameterData);
-              parameterIterator->second.setBinaryData(parameterData);
-              if (parameterIterator->second.databaseId > 0) saveParameter(parameterIterator->second.databaseId, parameterData);
+              parameterIterator2->second.rpcParameter->convertToPacket(falseValue, parameterIterator2->second.mainRole(), parameterData);
+              parameterIterator2->second.setBinaryData(parameterData);
+              if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData);
               else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey == "UP" ? "DOWN" : "UP", parameterData);
               valueKeys->push_back(valueKey == "UP" ? "DOWN" : "UP");
               values->push_back(falseValue);
@@ -1881,12 +1881,12 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
 
           channelIterator = configCentral.find(0);
           if (channelIterator != configCentral.end()) {
-            auto parameterIterator = channelIterator->second.find("SIGNAL_DURATION");
-            if (parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter) {
+            auto parameterIterator2 = channelIterator->second.find("SIGNAL_DURATION");
+            if (parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter) {
               _blindCurrentTargetPosition = valueKey == "DOWN" ? 10000 : 0;
               int32_t positionDifference = _blindCurrentTargetPosition - _blindPosition;
-              parameterData = parameterIterator->second.getBinaryData();
-              _blindTransitionTime = parameterIterator->second.rpcParameter->convertFromPacket(parameterData, parameterIterator->second.mainRole(), false)->integerValue * 1000;
+              parameterData = parameterIterator2->second.getBinaryData();
+              _blindTransitionTime = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData, parameterIterator2->second.mainRole(), false)->integerValue * 1000;
               if (positionDifference != 0) _blindCurrentTransitionTime = _blindTransitionTime / (10000 / std::abs(positionDifference));
               else _blindCurrentTransitionTime = 0;
               _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentTransitionTime + (_blindCurrentTargetPosition == 0 || _blindCurrentTargetPosition == 10000 ? 5000 : 0);
@@ -1901,16 +1901,39 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
             _blindStateResetTime = -1;
             updateBlindPosition();
           }
+
           channelIterator = valuesCentral.find(1);
           if (channelIterator != valuesCentral.end()) {
-            auto parameterIterator = channelIterator->second.find(valueKey == "UP" ? "DOWN" : "UP");
-            if (parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter) {
+            auto parameterIterator2 = channelIterator->second.find(valueKey == "UP" ? "DOWN" : "UP");
+            if (parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter) {
               BaseLib::PVariable falseValue = std::make_shared<BaseLib::Variable>(false);
-              parameterIterator->second.rpcParameter->convertToPacket(falseValue, parameterIterator->second.mainRole(), parameterData);
-              parameterIterator->second.setBinaryData(parameterData);
-              if (parameterIterator->second.databaseId > 0) saveParameter(parameterIterator->second.databaseId, parameterData);
+              parameterIterator2->second.rpcParameter->convertToPacket(falseValue, parameterIterator2->second.mainRole(), parameterData);
+              parameterIterator2->second.setBinaryData(parameterData);
+              if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData);
               else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey == "UP" ? "DOWN" : "UP", parameterData);
               valueKeys->push_back(valueKey == "UP" ? "DOWN" : "UP");
+              values->push_back(falseValue);
+            }
+          }
+        }
+      } else if (valueKey == "STOP") {
+        // Set the opposite value to "false", too
+        if (_blindStateResetTime != -1) {
+          _blindStateResetTime = -1;
+          updateBlindPosition();
+        }
+
+        channelIterator = valuesCentral.find(1);
+        if (channelIterator != valuesCentral.end()) {
+          for (auto &variable : {"UP", "DOWN"}) {
+            auto parameterIterator2 = channelIterator->second.find(variable);
+            if (parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter) {
+              BaseLib::PVariable falseValue = std::make_shared<BaseLib::Variable>(false);
+              parameterIterator2->second.rpcParameter->convertToPacket(falseValue, parameterIterator2->second.mainRole(), parameterData);
+              parameterIterator2->second.setBinaryData(parameterData);
+              if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData);
+              else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, variable, parameterData);
+              valueKeys->push_back(variable);
               values->push_back(falseValue);
             }
           }
