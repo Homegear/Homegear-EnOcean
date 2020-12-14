@@ -1031,7 +1031,10 @@ std::shared_ptr<EnOceanPeer> EnOceanCentral::createPeer(uint64_t eep, int32_t ad
 	try
 	{
 	    auto rpcDevice = GD::family->getRpcDevices()->find(eep, 0x10, -1);
-	    if(!rpcDevice) rpcDevice = GD::family->getRpcDevices()->find(eep & 0xFFFFFFu, 0x10, -1);
+	    if(!rpcDevice) {
+	      rpcDevice = GD::family->getRpcDevices()->find(eep & 0xFFFFFFu, 0x10, -1);
+	      eep &= 0xFFFFFFu;
+	    }
 	    if(!rpcDevice) return std::shared_ptr<EnOceanPeer>();
 
 		std::shared_ptr<EnOceanPeer> peer(new EnOceanPeer(_deviceId, this));
