@@ -102,7 +102,7 @@ protected:
 
 	BaseLib::SharedObjects* _bl = nullptr;
 	BaseLib::Output _out;
-	uint32_t _baseAddress = 0;
+	std::atomic<uint32_t> _baseAddress{0};
 
 	std::mutex _sendPacketMutex;
 	std::mutex _getResponseMutex;

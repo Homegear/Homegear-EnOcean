@@ -35,7 +35,7 @@ public:
 	void setGatewayAddress(uint32_t value);
 	//}}}
 
-	std::shared_ptr<IEnOceanInterface>& getPhysicalInterface() { return _physicalInterface; }
+	std::shared_ptr<IEnOceanInterface> getPhysicalInterface();
 
     bool hasRfChannel(int32_t channel);
 	int32_t getRfChannel(int32_t channel);
@@ -134,7 +134,6 @@ protected:
 	uint32_t _gatewayAddress = 0;
 	//End
 
-	std::shared_ptr<IEnOceanInterface> _physicalInterface;
 	uint32_t _lastRssiDevice = 0;
 	bool _globalRfChannel = false;
 	std::mutex _rfChannelsMutex;
@@ -180,7 +179,6 @@ protected:
     void setCmacSize(int32_t value) { _cmacSize = value; saveVariable(23, value); }
     void setRollingCodeInTx(bool value) { _rollingCodeInTx = value; saveVariable(24, value); }
     void setRollingCodeSize(int32_t value) { _rollingCodeSize = value; saveVariable(25, value); }
-    virtual void setPhysicalInterface(std::shared_ptr<IEnOceanInterface> interface);
     void setBestInterface();
 
     void setRssiDevice(uint8_t rssi);
