@@ -8,6 +8,12 @@
 namespace EnOcean
 {
 
+class ApplyChanges : public EnOceanPacket
+{
+ public:
+  explicit ApplyChanges(int32_t destinationAddress, bool applyLinkTableChanges, bool applyConfigurationChanges);
+};
+
 class GetDeviceConfiguration : public EnOceanPacket
 {
 public:

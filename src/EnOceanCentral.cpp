@@ -3,6 +3,7 @@
 #include "EnOceanCentral.h"
 #include "GD.h"
 #include "EnOceanPackets.h"
+#include "RemanFeatures.h"
 
 #include <iomanip>
 
@@ -985,30 +986,12 @@ PVariable EnOceanCentral::addLink(BaseLib::PRpcClientInfo clientInfo, uint64_t s
     }
     if (!validLink) return Variable::createError(-6, "Link not supported.");
 
-    bool supportsSetLinkTable = false;
-    if (receiverRpcDevice->metadata) {
-      auto metadataIterator = receiverRpcDevice->metadata->structValue->find("remoteManagementInfo");
-      if (metadataIterator != receiverRpcDevice->metadata->structValue->end() && !metadataIterator->second->arrayValue->empty()) {
-        auto remoteManagementInfo = metadataIterator->second->arrayValue->at(0);
-        auto infoIterator = remoteManagementInfo->structValue->find("features");
-        if (infoIterator != metadataIterator->second->structValue->end() && !infoIterator->second->arrayValue->empty()) {
-          auto features = infoIterator->second->arrayValue->at(0);
-          auto featureIterator = features->structValue->find("setLinkTable");
-          if (featureIterator != features->structValue->end() && featureIterator->second->booleanValue) {
-            supportsSetLinkTable = true;
-          }
-          featureIterator = features->structValue->find("setInboundLinkTableSize");
-          if (featureIterator != features->structValue->end()) {
-            uint32_t inboundLinkTableSize = featureIterator->second->integerValue;
-            if (receiver->getLinkCount() + 1u > inboundLinkTableSize) {
-              return Variable::createError(-3, "Can't link more devices. You need to unlink a device first.");
-            }
-          }
-        }
-      }
-    }
-    if (!supportsSetLinkTable) {
+    auto receiverRemanFeatures = receiver->getRemanFeatures();
+    if (!receiverRemanFeatures->kSetLinkTable) {
       return Variable::createError(-1, "Device does not support links.");
+    }
+    if (receiver->getLinkCount() + 1u > receiverRemanFeatures->kInboundLinkTableSize) {
+      return Variable::createError(-3, "Can't link more devices. You need to unlink a device first.");
     }
 
     std::shared_ptr<BaseLib::Systems::BasicPeer> senderPeer(new BaseLib::Systems::BasicPeer());
@@ -1431,6 +1414,19 @@ uint64_t EnOceanCentral::remoteManagementGetEep(const std::shared_ptr<IEnOceanIn
     }
 
     {
+      auto ping = std::make_shared<PingPacket>(deviceAddress);
+      auto response = interface->sendAndReceivePacket(ping, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{0x06, 0x06}});
+      if (response) {
+        GD::out.printInfo("Info: Got ping response.");
+        auto pingData = response->getData();
+        eep = ((uint64_t)response->getRemoteManagementManufacturer() << 24u) | (unsigned)((uint32_t)pingData.at(4) << 16u) | (unsigned)((uint16_t)(pingData.at(5) >> 2u) << 8u) | (((uint8_t)pingData.at(5) & 3u) << 5u)
+            | (uint8_t)((uint8_t)pingData.at(6) >> 3u);
+      }
+    }
+
+    if (eep == 0) {
+      //Documentation states: From EEP 3.0 the FUNC and TYPE have the length of 8 bits. For EEP’s with FUNC > 0x3F, or TYPE > 0x7F, this RMCC will not work. In this case, the ping answer will not contain an EEP.
+      //I. e. using QueryId is the recommended way of getting an EEP.
       auto queryId = std::make_shared<QueryIdPacket>(deviceAddress);
       auto response = interface->sendAndReceivePacket(queryId, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{0x06, 0x04},
                                                                                                                                           {0x07, 0x04}});
@@ -1481,54 +1477,11 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
       return 0;
     }
 
-    bool sendsAck = false;
-    bool setLinkTableHasIndex = true;
-    uint32_t setInboundLinkTableSize = 1u;
-    uint32_t setOutboundLinkTableSize = 0u;
-    uint32_t linkTableGatewayEep = 0xA53808u;
-    bool hasSetRepeaterFunctions = false;
+    auto features = RemanFeatureParser::parse(rpcDevice);
 
-    if (rpcDevice->metadata) {
-      auto metadataIterator = rpcDevice->metadata->structValue->find("remoteManagementInfo");
-      if (metadataIterator != rpcDevice->metadata->structValue->end() && !metadataIterator->second->arrayValue->empty()) {
-        auto remoteManagementInfo = metadataIterator->second->arrayValue->at(0);
-        auto infoIterator = remoteManagementInfo->structValue->find("features");
-        if (infoIterator != metadataIterator->second->structValue->end() && !infoIterator->second->arrayValue->empty()) {
-          auto features = infoIterator->second->arrayValue->at(0);
-          auto featureIterator = features->structValue->find("setLinkTable");
-          if (featureIterator != features->structValue->end() && !featureIterator->second->booleanValue) {
-            setInboundLinkTableSize = 0;
-            setOutboundLinkTableSize = 0;
-          }
-          if (setInboundLinkTableSize == 0) {
-            GD::out.printInfo("Info: EEP " + BaseLib::HelperFunctions::getHexString(eep) + " does not support \"Set Link Table\". Treating the device as sensor.");
-          } else {
-            featureIterator = features->structValue->find("setInboundLinkTableSize");
-            if (featureIterator != features->structValue->end()) setInboundLinkTableSize = featureIterator->second->integerValue;
-
-            featureIterator = features->structValue->find("setOutboundLinkTableSize");
-            if (featureIterator != features->structValue->end()) setOutboundLinkTableSize = featureIterator->second->integerValue;
-
-            featureIterator = features->structValue->find("setLinkTableHasIndex");
-            if (featureIterator != features->structValue->end()) setLinkTableHasIndex = featureIterator->second->booleanValue;
-
-            featureIterator = features->structValue->find("linkTableGatewayEep");
-            if (featureIterator != features->structValue->end()) linkTableGatewayEep = BaseLib::Math::getUnsignedNumber(featureIterator->second->stringValue, true);
-          }
-
-          featureIterator = features->structValue->find("sendsAck");
-          if (featureIterator != features->structValue->end()) sendsAck = featureIterator->second->booleanValue;
-
-          featureIterator = features->structValue->find("setRepeaterFunctions");
-          if (featureIterator != features->structValue->end()) hasSetRepeaterFunctions = featureIterator->second->booleanValue;
-        }
-      }
+    if (!features->kSetLinkTable || features->kInboundLinkTableSize == 0) {
+      GD::out.printInfo("Info: EEP " + BaseLib::HelperFunctions::getHexString(eep) + " does not support \"Set Link Table\". Assuming the device is a sensor.");
     }
-
-    if (sendsAck) GD::out.printInfo("Info: EEP " + BaseLib::HelperFunctions::getHexString(eep) + " supports remote management ACKs.");
-    else GD::out.printInfo("Info: EEP " + BaseLib::HelperFunctions::getHexString(eep) + " does not support remote management ACKs. Using \"Query Status\" instead.");
-
-    if (!setLinkTableHasIndex) GD::out.printInfo("Info: Using \"Set Link Table\" without index.");
 
     if (securityCode != 0) {
       auto unlock = std::make_shared<Unlock>(deviceAddress, securityCode);
@@ -1558,37 +1511,39 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
     int32_t rfChannel = -1;
 
     //{{{ //Set inbound link table (pairing)
-    if (setInboundLinkTableSize != 0) {
+    if (features->kInboundLinkTableSize != 0) {
       rfChannel = getFreeRfChannel(interface->getID());
       if (rfChannel == -1) {
         GD::out.printError("Error: Could not get free RF channel.");
         return 0;
       }
 
+      static constexpr uint32_t entrySize = 9;
+
       std::vector<uint8_t> linkTable{};
-      linkTable.reserve(9 * setInboundLinkTableSize);
-      if (setLinkTableHasIndex) linkTable.push_back(0);
+      linkTable.reserve(entrySize * features->kInboundLinkTableSize);
+      linkTable.push_back(0);
       if (gatewayAddress == 0) gatewayAddress = (uint32_t)interface->getAddress();
       linkTable.push_back(gatewayAddress >> 24u);
       linkTable.push_back(gatewayAddress >> 16u);
       linkTable.push_back(gatewayAddress >> 8u);
       linkTable.push_back(gatewayAddress | (uint8_t)rfChannel);
-      linkTable.push_back(linkTableGatewayEep >> 16u);
-      linkTable.push_back(linkTableGatewayEep >> 8u);
-      linkTable.push_back(linkTableGatewayEep);
+      linkTable.push_back(features->kLinkTableGatewayEep >> 16u);
+      linkTable.push_back(features->kLinkTableGatewayEep >> 8u);
+      linkTable.push_back(features->kLinkTableGatewayEep);
       linkTable.push_back(0);
       if (gatewayAddress2 != 0) {
         linkTable.push_back(gatewayAddress2 >> 24u);
         linkTable.push_back(gatewayAddress2 >> 16u);
         linkTable.push_back(gatewayAddress2 >> 8u);
         linkTable.push_back(gatewayAddress2 | (uint8_t)rfChannel);
-        linkTable.push_back(linkTableGatewayEep >> 16u);
-        linkTable.push_back(linkTableGatewayEep >> 8u);
-        linkTable.push_back(linkTableGatewayEep);
+        linkTable.push_back(features->kLinkTableGatewayEep >> 16u);
+        linkTable.push_back(features->kLinkTableGatewayEep >> 8u);
+        linkTable.push_back(features->kLinkTableGatewayEep);
         linkTable.push_back(0);
       }
-      for (uint32_t i = (gatewayAddress2 != 0 ? 2 : 1); i < setInboundLinkTableSize; i++) {
-        if (setLinkTableHasIndex) linkTable.push_back(i);
+      for (uint32_t i = (gatewayAddress2 != 0 ? 2 : 1); i < features->kInboundLinkTableSize; i++) {
+        linkTable.push_back(i);
         linkTable.push_back(0xFFu);
         linkTable.push_back(0xFFu);
         linkTable.push_back(0xFFu);
@@ -1598,41 +1553,60 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         linkTable.push_back(0);
         linkTable.push_back(0);
       }
-      auto setLinkTablePacket = std::make_shared<SetLinkTable>(deviceAddress, true, linkTable);
 
-      if (sendsAck) {
+      if (linkTable.size() > features->kMaxDataLength) {
+        pairingSuccessful = true;
+
+        std::vector<uint8_t> chunk{};
+        chunk.reserve(features->kMaxDataLength);
+        for (uint32_t i = 0; i < linkTable.size(); i += entrySize) {
+          chunk.insert(chunk.end(), linkTable.begin() + i, linkTable.begin() + i + entrySize);
+          if (chunk.size() + entrySize > features->kMaxDataLength) {
+            auto setLinkTablePacket = std::make_shared<SetLinkTable>(deviceAddress, true, chunk);
+
+            auto response = interface->sendAndReceivePacket(setLinkTablePacket,
+                                                            2,
+                                                            IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+            if (!response) {
+              pairingSuccessful = false;
+              GD::out.printError("Error: Could not set link table on device.");
+            }
+
+            chunk.clear();
+          }
+        }
+
+        auto setLinkTablePacket = std::make_shared<SetLinkTable>(deviceAddress, true, chunk);
+
+        auto response = interface->sendAndReceivePacket(setLinkTablePacket,
+                                                        2,
+                                                        IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                        {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+        if (!response) {
+          pairingSuccessful = false;
+          GD::out.printError("Error: Could not set link table on device.");
+        }
+      } else {
+        auto setLinkTablePacket = std::make_shared<SetLinkTable>(deviceAddress, true, linkTable);
+
         auto response = interface->sendAndReceivePacket(setLinkTablePacket,
                                                         2,
                                                         IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                         {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
         pairingSuccessful = (bool)response;
-      } else {
-        //Remote commissioning ACK in response to query status is needed for Laights actuators
-        interface->sendEnoceanPacket(setLinkTablePacket);
-        auto queryStatus = std::make_shared<QueryStatusPacket>(deviceAddress);
-        auto response = interface->sendAndReceivePacket(queryStatus,
-                                                        2,
-                                                        IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                        {{(uint16_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse},
-                                                         {(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
-        if (response) {
-          auto responseData = response->getData();
-          if ((response->getRemoteManagementFunction() == (uint16_t)EnOceanPacket::RemoteManagementResponse::queryStatusResponse && responseData.size() >= 8
-              && responseData.at(5) == ((uint16_t)EnOceanPacket::RemoteManagementFunction::setLinkTable >> 8u) && responseData.at(6) == (uint8_t)EnOceanPacket::RemoteManagementFunction::setLinkTable && responseData.at(7) == 0) ||
-              response->getRemoteManagementFunction() == (uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck) {
-            pairingSuccessful = true;
-          }
-        }
       }
     } else pairingSuccessful = true;
     //}}}
 
     //{{{ Set outbound link table
-    if (setOutboundLinkTableSize != 0) {
+    if (features->kSetOutboundLinkTableSize != 0) {
+      static constexpr uint32_t entrySize = 9;
+
       std::vector<uint8_t> linkTable{};
-      linkTable.reserve(9 * setOutboundLinkTableSize);
-      for (uint32_t i = 0; i < setOutboundLinkTableSize; i++) {
-        if (setLinkTableHasIndex) linkTable.push_back(i);
+      linkTable.reserve(entrySize * features->kSetOutboundLinkTableSize);
+      for (uint32_t i = 0; i < features->kSetOutboundLinkTableSize; i++) {
+        linkTable.push_back(i);
         linkTable.push_back(0xFFu);
         linkTable.push_back(0xFFu);
         linkTable.push_back(0xFFu);
@@ -1642,9 +1616,43 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         linkTable.push_back(0);
         linkTable.push_back(0);
       }
-      auto setLinkTable = std::make_shared<SetLinkTable>(deviceAddress, false, linkTable);
 
-      if (sendsAck) {
+      if (linkTable.size() > features->kMaxDataLength) {
+        pairingSuccessful = true;
+
+        std::vector<uint8_t> chunk{};
+        chunk.reserve(features->kMaxDataLength);
+        for (uint32_t i = 0; i < linkTable.size(); i += entrySize) {
+          chunk.insert(chunk.end(), linkTable.begin() + i, linkTable.begin() + i + entrySize);
+          if (chunk.size() + entrySize > features->kMaxDataLength) {
+            auto setLinkTablePacket = std::make_shared<SetLinkTable>(deviceAddress, false, chunk);
+
+            auto response = interface->sendAndReceivePacket(setLinkTablePacket,
+                                                            2,
+                                                            IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+            if (!response) {
+              pairingSuccessful = false;
+              GD::out.printError("Error: Could not set link table on device.");
+            }
+
+            chunk.clear();
+          }
+        }
+
+        auto setLinkTablePacket = std::make_shared<SetLinkTable>(deviceAddress, false, chunk);
+
+        auto response = interface->sendAndReceivePacket(setLinkTablePacket,
+                                                        2,
+                                                        IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                        {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+        if (!response) {
+          pairingSuccessful = false;
+          GD::out.printError("Error: Could not set link table on device.");
+        }
+      } else {
+        auto setLinkTable = std::make_shared<SetLinkTable>(deviceAddress, false, linkTable);
+
         auto response = interface->sendAndReceivePacket(setLinkTable,
                                                         2,
                                                         IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
@@ -1655,9 +1663,19 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
     //}}}
 
     //{{{ Set repeater functions
-    if (hasSetRepeaterFunctions) {
+    if (features->kSetRepeaterFunctions) {
       auto setRepeaterFunctions = std::make_shared<SetRepeaterFunctions>(deviceAddress, 0, 1, 0);
       auto response = interface->sendAndReceivePacket(setRepeaterFunctions,
+                                                      2,
+                                                      IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                      {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+    }
+    //}}}
+
+    //{{{
+    if (features->kApplyChanges) {
+      auto applyChanges = std::make_shared<ApplyChanges>(deviceAddress, true, true);
+      auto response = interface->sendAndReceivePacket(applyChanges,
                                                       2,
                                                       IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                       {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});

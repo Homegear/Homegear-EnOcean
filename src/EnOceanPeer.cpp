@@ -41,14 +41,6 @@ EnOceanPeer::~EnOceanPeer() {
 
 void EnOceanPeer::init() {
   try {
-    _blindTransitionTime = -1;
-    _blindStateResetTime = -1;
-    _blindUp = false;
-    _lastBlindPositionUpdate = 0;
-    _lastRpcBlindPositionUpdate = 0;
-    _blindCurrentTargetPosition = 0;
-    _blindCurrentTransitionTime = 0;
-    _blindPosition = 0;
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -115,6 +107,20 @@ void EnOceanPeer::worker() {
 
       if (updatePosition) updateBlindPosition();
     }
+
+    if (_pingInterval > 0 && BaseLib::HelperFunctions::getTimeSeconds() >= (_lastPing + _pingInterval)) {
+      _lastPing = BaseLib::HelperFunctions::getTimeSeconds();
+      auto ping = std::make_shared<PingPacket>(_address);
+      setBestInterface();
+      auto physicalInterface = getPhysicalInterface();
+      auto response = physicalInterface->sendAndReceivePacket(ping, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{0x06, 0x06}});
+      if (response) {
+        GD::out.printDebug("Debug: Got ping response.");
+      } else {
+        GD::out.printInfo("Info: No ping response received.");
+      }
+    }
+
     if (!serviceMessages->getUnreach()) serviceMessages->checkUnreach(_rpcDevice->timeout, getLastPacketReceived());
   }
   catch (const std::exception &ex) {
@@ -373,6 +379,8 @@ void EnOceanPeer::loadVariables(BaseLib::Systems::ICentral *central, std::shared
     _rpcDevice = GD::family->getRpcDevices()->find(_deviceType, _firmwareVersion, -1);
     if (!_rpcDevice) return;
 
+    _remanFeatures = RemanFeatureParser::parse(_rpcDevice);
+
     for (BaseLib::Database::DataTable::iterator row = rows->begin(); row != rows->end(); ++row) {
       switch (row->second.at(2)->intValue) {
         case 12: {
@@ -512,6 +520,13 @@ bool EnOceanPeer::load(BaseLib::Systems::ICentral *central) {
       if (parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter) {
         std::vector<uint8_t> parameterData = parameterIterator->second.getBinaryData();
         _forceEncryption = parameterIterator->second.rpcParameter->convertFromPacket(parameterData, parameterIterator->second.mainRole(), false)->booleanValue;
+      }
+
+      parameterIterator = channelIterator->second.find("PING_INTERVAL");
+      if (parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter) {
+        std::vector<uint8_t> parameterData = parameterIterator->second.getBinaryData();
+        _pingInterval = parameterIterator->second.rpcParameter->convertFromPacket(parameterData, parameterIterator->second.mainRole(), false)->integerValue;
+        _lastPing = (BaseLib::HelperFunctions::getTimeSeconds() - _pingInterval) + BaseLib::HelperFunctions::getRandomNumber(60, 300);
       }
     }
 
@@ -766,6 +781,10 @@ void EnOceanPeer::setRfChannel(int32_t channel, int32_t rfChannel) {
   }
 }
 
+PRemanFeatures EnOceanPeer::getRemanFeatures() {
+  return _remanFeatures;
+}
+
 void EnOceanPeer::getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameValues> &frameValues) {
   try {
     if (!_rpcDevice) return;
@@ -879,27 +898,27 @@ void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
           return;
         }
         if ((data[1] & 0x08) == 0x08) {
-          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because RLC and key are encrypted with a pre-shared key. That is currenctly not supported.");
+          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because RLC and key are encrypted with a pre-shared key. That is currently not supported.");
           return;
         }
         if ((data[1] & 0x04) == 0 && (data[1] & 0x03) != 0) {
-          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because bidrectional teach-in procedure was requested. That is currenctly not supported.");
+          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because bidirectional teach-in procedure was requested. That is currently not supported.");
           return;
         }
         if ((data[2] & 0x07) != 0x03) {
-          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because an encryption type other than VAES was requested. That is currenctly not supported.");
+          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because an encryption type other than VAES was requested. That is currently not supported.");
           return;
         }
         if ((data[2] & 0x18) != 0x08 && (data[2] & 0x18) != 0x10) {
-          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because encryption has no CMAC. That is currenctly not supported.");
+          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because encryption has no CMAC. That is currently not supported.");
           return;
         }
         if ((data[2] & 0x20) == 0x20) {
-          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because the Rolling Code is transmitted in data telegram. That is currenctly not supported.");
+          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because the Rolling Code is transmitted in data telegram. That is currently not supported.");
           return;
         }
         if ((data[2] & 0xC0) != 0x40) {
-          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because encryption has no Rolling Code or Rolling Code size is 3 bytes. That is currenctly not supported.");
+          GD::out.printWarning("Warning: Can't process first encryption teach-in packet, because encryption has no Rolling Code or Rolling Code size is 3 bytes. That is currently not supported.");
           return;
         }
         setEncryptionType(data[2] & 0x07);
@@ -1246,21 +1265,64 @@ void EnOceanPeer::queueSetDeviceConfiguration(const std::map<uint32_t, std::vect
 
 bool EnOceanPeer::setDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters) {
   try {
+    if (!_remanFeatures) return true;
+
     remoteManagementUnlock();
 
     bool result = true;
 
-    auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(_address, updatedParameters);
-    setBestInterface();
-    auto physicalInterface = getPhysicalInterface();
-    auto response = physicalInterface->sendAndReceivePacket(setDeviceConfiguration,
-                                                            2,
-                                                            IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
-    if (!response) {
-      result = false;
-      GD::out.printError("Error: Could not set device configuration on device.");
+    if (updatedParameters.size() > _remanFeatures->kMaxDataLength) {
+      std::map<uint32_t, std::vector<uint8_t>> chunk;
+      uint32_t currentSize = 0;
+      for (auto &element : updatedParameters) {
+        if (element.second.empty()) continue;
+        if (currentSize + 3 + element.second.size() > _remanFeatures->kMaxDataLength) {
+          auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(_address, chunk);
+          setBestInterface();
+          auto physicalInterface = getPhysicalInterface();
+          auto response = physicalInterface->sendAndReceivePacket(setDeviceConfiguration,
+                                                                  2,
+                                                                  IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                                  {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+          if (!response) {
+            result = false;
+            GD::out.printError("Error: Could not set device configuration on device.");
+          }
+
+          currentSize = 0;
+          chunk.clear();
+        }
+
+        chunk.emplace(element);
+        currentSize += 3 + element.second.size();
+      }
+
+      auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(_address, chunk);
+      setBestInterface();
+      auto physicalInterface = getPhysicalInterface();
+      auto response = physicalInterface->sendAndReceivePacket(setDeviceConfiguration,
+                                                              2,
+                                                              IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                              {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+      if (!response) {
+        result = false;
+        GD::out.printError("Error: Could not set device configuration on device.");
+      }
+    } else {
+      auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(_address, updatedParameters);
+      setBestInterface();
+      auto physicalInterface = getPhysicalInterface();
+      auto response = physicalInterface->sendAndReceivePacket(setDeviceConfiguration,
+                                                              2,
+                                                              IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                              {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+      if (!response) {
+        result = false;
+        GD::out.printError("Error: Could not set device configuration on device.");
+      }
     }
+
+    if (result) remoteManagementApplyChanges(false, true);
 
     remoteManagementLock();
 
@@ -1289,27 +1351,13 @@ void EnOceanPeer::queueGetDeviceConfiguration() {
 
 bool EnOceanPeer::getDeviceConfiguration() {
   try {
+    if (!_remanFeatures) return true;
+
     uint32_t deviceConfigurationSize = 0xFF;
 
-    if (_rpcDevice->metadata) {
-      auto metadataIterator = _rpcDevice->metadata->structValue->find("remoteManagementInfo");
-      if (metadataIterator != _rpcDevice->metadata->structValue->end() && !metadataIterator->second->arrayValue->empty()) {
-        auto remoteManagementInfo = metadataIterator->second->arrayValue->at(0);
-        auto infoIterator = remoteManagementInfo->structValue->find("features");
-        if (infoIterator != metadataIterator->second->structValue->end() && !infoIterator->second->arrayValue->empty()) {
-          auto features = infoIterator->second->arrayValue->at(0);
-          auto featureIterator = features->structValue->find("deviceConfigurationSize");
-          if (featureIterator != features->structValue->end()) {
-            deviceConfigurationSize = featureIterator->second->integerValue;
-          }
-
-          featureIterator = features->structValue->find("getDeviceConfiguration");
-          if (featureIterator != features->structValue->end() && !featureIterator->second->booleanValue) {
-            GD::out.printInfo("Info: Device does not support getDeviceConfiguration.");
-            return true;
-          }
-        }
-      }
+    if (!_remanFeatures->kGetDeviceConfiguration) {
+      GD::out.printInfo("Info: Device does not support getDeviceConfiguration.");
+      return true;
     }
 
     remoteManagementUnlock();
@@ -1376,45 +1424,25 @@ bool EnOceanPeer::getDeviceConfiguration() {
 
 bool EnOceanPeer::sendInboundLinkTable() {
   try {
-    uint32_t setInboundLinkTableSize = 1;
-    bool setLinkTableHasIndex = true;
-    uint32_t linkTableGatewayEep = 0xA53808u;
+    if (!_remanFeatures) return true;
+
     auto physicalInterface = getPhysicalInterface();
-
-    if (_rpcDevice->metadata) {
-      auto metadataIterator = _rpcDevice->metadata->structValue->find("remoteManagementInfo");
-      if (metadataIterator != _rpcDevice->metadata->structValue->end() && !metadataIterator->second->arrayValue->empty()) {
-        auto remoteManagementInfo = metadataIterator->second->arrayValue->at(0);
-        auto infoIterator = remoteManagementInfo->structValue->find("features");
-        if (infoIterator != metadataIterator->second->structValue->end() && !infoIterator->second->arrayValue->empty()) {
-          auto features = infoIterator->second->arrayValue->at(0);
-          auto featureIterator = features->structValue->find("setInboundLinkTableSize");
-          if (featureIterator != features->structValue->end()) {
-            setInboundLinkTableSize = featureIterator->second->integerValue;
-          }
-
-          featureIterator = features->structValue->find("setLinkTableHasIndex");
-          if (featureIterator != features->structValue->end()) setLinkTableHasIndex = featureIterator->second->booleanValue;
-
-          featureIterator = features->structValue->find("linkTableGatewayEep");
-          if (featureIterator != features->structValue->end()) linkTableGatewayEep = BaseLib::Math::getUnsignedNumber(featureIterator->second->stringValue, true);
-        }
-      }
-    }
 
     remoteManagementUnlock();
 
+    static constexpr uint32_t entrySize = 9;
+
     std::vector<uint8_t> linkTable{};
-    linkTable.reserve(9 * setInboundLinkTableSize);
-    if (setLinkTableHasIndex) linkTable.push_back(0);
+    linkTable.reserve(entrySize * _remanFeatures->kInboundLinkTableSize);
+    linkTable.push_back(0);
     auto gatewayAddress = (_gatewayAddress != 0) ? _gatewayAddress : physicalInterface->getAddress();
     linkTable.push_back(gatewayAddress >> 24u);
     linkTable.push_back(gatewayAddress >> 16u);
     linkTable.push_back(gatewayAddress >> 8u);
     linkTable.push_back(gatewayAddress | (uint8_t)getRfChannel(0));
-    linkTable.push_back(linkTableGatewayEep >> 16u);
-    linkTable.push_back(linkTableGatewayEep >> 8u);
-    linkTable.push_back(linkTableGatewayEep);
+    linkTable.push_back(_remanFeatures->kLinkTableGatewayEep >> 16u);
+    linkTable.push_back(_remanFeatures->kLinkTableGatewayEep >> 8u);
+    linkTable.push_back(_remanFeatures->kLinkTableGatewayEep);
     linkTable.push_back(0);
 
     {
@@ -1463,7 +1491,7 @@ bool EnOceanPeer::sendInboundLinkTable() {
             outputSelectorBitField |= (1u << index);
           }
 
-          if (setLinkTableHasIndex) linkTable.push_back(index);
+          linkTable.push_back(index);
           linkTable.push_back((uint32_t)peer->address >> 24u);
           linkTable.push_back((uint32_t)peer->address >> 16u);
           linkTable.push_back((uint32_t)peer->address >> 8u);
@@ -1501,8 +1529,8 @@ bool EnOceanPeer::sendInboundLinkTable() {
         }
         //}}}
       }
-      for (uint32_t i = index; i < setInboundLinkTableSize; i++) {
-        if (setLinkTableHasIndex) linkTable.push_back(i);
+      for (uint32_t i = index; i < _remanFeatures->kInboundLinkTableSize; i++) {
+        linkTable.push_back(i);
         linkTable.push_back(0xFFu);
         linkTable.push_back(0xFFu);
         linkTable.push_back(0xFFu);
@@ -1514,19 +1542,56 @@ bool EnOceanPeer::sendInboundLinkTable() {
       }
     }
 
-    auto setLinkTable = std::make_shared<SetLinkTable>(_address, true, linkTable);
+    bool result = true;
+    if (linkTable.size() > _remanFeatures->kMaxDataLength) {
+      std::vector<uint8_t> chunk{};
+      chunk.reserve(_remanFeatures->kMaxDataLength);
+      for (uint32_t i = 0; i < linkTable.size(); i += entrySize) {
+        chunk.insert(chunk.end(), linkTable.begin() + i, linkTable.begin() + i + entrySize);
+        if (chunk.size() + entrySize > _remanFeatures->kMaxDataLength) {
+          auto setLinkTable = std::make_shared<SetLinkTable>(_address, true, chunk);
 
-    auto response = physicalInterface->sendAndReceivePacket(setLinkTable,
-                                                            2,
-                                                            IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
-    if (!response) {
-      GD::out.printError("Error: Could not set device configuration on device.");
+          auto response = physicalInterface->sendAndReceivePacket(setLinkTable,
+                                                                  2,
+                                                                  IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                                  {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+          if (!response) {
+            result = false;
+            GD::out.printError("Error: Could not set link table on device.");
+          }
+
+          chunk.clear();
+        }
+      }
+
+      auto setLinkTable = std::make_shared<SetLinkTable>(_address, true, chunk);
+
+      auto response = physicalInterface->sendAndReceivePacket(setLinkTable,
+                                                              2,
+                                                              IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                              {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+      if (!response) {
+        result = false;
+        GD::out.printError("Error: Could not set link table on device.");
+      }
+    } else {
+      auto setLinkTable = std::make_shared<SetLinkTable>(_address, true, linkTable);
+
+      auto response = physicalInterface->sendAndReceivePacket(setLinkTable,
+                                                              2,
+                                                              IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                              {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+      if (!response) {
+        GD::out.printError("Error: Could not set link table on device.");
+        result = false;
+      }
     }
+
+    if (result) remoteManagementApplyChanges(true, true);
 
     remoteManagementLock();
 
-    return (bool)response;
+    return result;
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1601,6 +1666,8 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
         if (channel == 0 && variable.first == "REPEATER_LEVEL") {
           setRepeaterLevel = true;
           repeaterLevel = parameter.rpcParameter->convertFromPacket(parameterData, parameter.mainRole(), false)->integerValue;
+        } else if (channel == 0 && variable.first == "PING_INTERVAL") {
+          _pingInterval = variable.second->integerValue;
         }
 
         parameterChanged = true;
@@ -1666,6 +1733,8 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
           GD::out.printError("Error: Could not set repeater level on device.");
         }
 
+        remoteManagementApplyChanges(true, true);
+
         remoteManagementLock();
       }
       //}}}
@@ -1678,12 +1747,12 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
 
       if (parameterChanged) raiseRPCUpdateDevice(_peerID, channel, _serialNumber + ":" + std::to_string(channel), 0);
     } else if (type == ParameterGroup::Type::Enum::variables) {
-      for (Struct::iterator i = variables->structValue->begin(); i != variables->structValue->end(); ++i) {
-        if (i->first.empty() || !i->second) continue;
+      for (auto &variable : *variables->structValue) {
+        if (variable.first.empty() || !variable.second) continue;
 
-        if (checkAcls && !clientInfo->acls->checkVariableWriteAccess(central->getPeer(_peerID), channel, i->first)) continue;
+        if (checkAcls && !clientInfo->acls->checkVariableWriteAccess(central->getPeer(_peerID), channel, variable.first)) continue;
 
-        setValue(clientInfo, channel, i->first, i->second, false);
+        setValue(clientInfo, channel, variable.first, variable.second, false);
       }
     } else {
       return Variable::createError(-3, "Parameter set type is not supported.");
@@ -2179,6 +2248,23 @@ void EnOceanPeer::remoteManagementLock() {
       auto physicalInterface = getPhysicalInterface();
       physicalInterface->sendEnoceanPacket(lock);
       physicalInterface->sendEnoceanPacket(lock);
+    }
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void EnOceanPeer::remoteManagementApplyChanges(bool applyLinkTableChanges, bool applyConfigurationChanges) {
+  try {
+    auto applyChanges = std::make_shared<ApplyChanges>(_address, applyLinkTableChanges, applyConfigurationChanges);
+    auto physicalInterface = getPhysicalInterface();
+    auto response = physicalInterface->sendAndReceivePacket(applyChanges,
+                                                            2,
+                                                            IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+    if (!response) {
+      GD::out.printWarning("Error: Could not apply changes.");
     }
   }
   catch (const std::exception &ex) {

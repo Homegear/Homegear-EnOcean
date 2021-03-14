@@ -7,41 +7,39 @@
 #include "IEnOceanInterface.h"
 #include <homegear-base/BaseLib.h>
 
-namespace EnOcean
-{
+namespace EnOcean {
 
-class HomegearGateway : public IEnOceanInterface
-{
-public:
-    HomegearGateway(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
-    virtual ~HomegearGateway();
+class HomegearGateway : public IEnOceanInterface {
+ public:
+  explicit HomegearGateway(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
+  ~HomegearGateway() override;
 
-    virtual void startListening();
-    virtual void stopListening();
+  void startListening() override;
+  void stopListening() override;
 
-    virtual int32_t setBaseAddress(uint32_t value);
+  int32_t setBaseAddress(uint32_t value) override;
 
-    virtual bool isOpen() { return !_stopped; }
+  bool isOpen() override { return !_stopped; }
 
-    virtual bool sendEnoceanPacket(const PEnOceanPacket& packet);
-protected:
-    std::unique_ptr<BaseLib::TcpSocket> _tcpSocket;
-    std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
-    std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
-    std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
+  bool sendEnoceanPacket(const PEnOceanPacket &packet) override;
+ protected:
+  std::unique_ptr<BaseLib::TcpSocket> _tcpSocket;
+  std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
+  std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
+  std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
 
-    std::thread _initThread;
-    std::mutex _invokeMutex;
-    std::mutex _requestMutex;
-    std::atomic_bool _waitForResponse;
-    std::condition_variable _requestConditionVariable;
-    BaseLib::PVariable _rpcResponse;
+  std::thread _initThread;
+  std::mutex _invokeMutex;
+  std::mutex _requestMutex;
+  std::atomic_bool _waitForResponse;
+  std::condition_variable _requestConditionVariable;
+  BaseLib::PVariable _rpcResponse;
 
-    void listen();
-    virtual void rawSend(std::vector<uint8_t>& packet);
-    PVariable invoke(std::string methodName, PArray& parameters);
-    void processPacket(std::vector<uint8_t>& data);
-    void init();
+  void listen();
+  void rawSend(std::vector<uint8_t> &packet) override;
+  PVariable invoke(std::string methodName, PArray &parameters);
+  void processPacket(std::vector<uint8_t> &data);
+  void init();
 };
 
 }
