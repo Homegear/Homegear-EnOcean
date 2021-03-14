@@ -1,14 +1,14 @@
 /* Copyright 2013-2019 Homegear GmbH */
 
-#include "../GD.h"
+#include "../Gd.h"
 #include "HomegearGateway.h"
 
 namespace EnOcean {
 
 HomegearGateway::HomegearGateway(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IEnOceanInterface(settings) {
   _settings = settings;
-  _out.init(GD::bl);
-  _out.setPrefix(GD::out.getPrefix() + "EnOcean Homegear Gateway \"" + settings->id + "\": ");
+  _out.init(Gd::bl);
+  _out.setPrefix(Gd::out.getPrefix() + "EnOcean Homegear Gateway \"" + settings->id + "\": ");
 
   signal(SIGPIPE, SIG_IGN);
 
@@ -148,7 +148,7 @@ void HomegearGateway::listen() {
         if (bytesRead <= 0) continue;
         if (bytesRead > 1024) bytesRead = 1024;
 
-        if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: TCP packet received: " + BaseLib::HelperFunctions::getHexString(buffer.data(), bytesRead));
+        if (Gd::bl->debugLevel >= 5) _out.printDebug("Debug: TCP packet received: " + BaseLib::HelperFunctions::getHexString(buffer.data(), bytesRead));
 
         processedBytes = 0;
         while (processedBytes < bytesRead) {

@@ -1,13 +1,13 @@
 /* Copyright 2013-2019 Homegear GmbH */
 
 #include "IEnOceanInterface.h"
-#include "../GD.h"
+#include "../Gd.h"
 #include "../EnOceanPacket.h"
 
 namespace EnOcean {
 
-IEnOceanInterface::IEnOceanInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(GD::bl, GD::family->getFamily(), settings) {
-  _bl = GD::bl;
+IEnOceanInterface::IEnOceanInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IPhysicalInterface(Gd::bl, Gd::family->getFamily(), settings) {
+  _bl = Gd::bl;
 
   if (settings->listenThreadPriority == -1) {
     settings->listenThreadPriority = 0;
@@ -235,9 +235,9 @@ void IEnOceanInterface::rawSend(std::vector<uint8_t> &packet) {
 bool IEnOceanInterface::sendEnoceanPacket(const PEnOceanPacket &packet) {
   try {
     if (packet->getType() == EnOceanPacket::Type::REMOTE_MAN_COMMAND) {
-      GD::out.printInfo("Info: Sending packet (REMAN function 0x" + BaseLib::HelperFunctions::getHexString(packet->getRemoteManagementFunction(), 3) + ") " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
+      Gd::out.printInfo("Info: Sending packet (REMAN function 0x" + BaseLib::HelperFunctions::getHexString(packet->getRemoteManagementFunction(), 3) + ") " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
     } else {
-      GD::out.printInfo("Info: Sending packet " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
+      Gd::out.printInfo("Info: Sending packet " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
     }
   } catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

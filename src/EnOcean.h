@@ -7,22 +7,20 @@
 
 using namespace BaseLib;
 
-namespace EnOcean
-{
+namespace EnOcean {
 class EnOceanCentral;
 
-class EnOcean : public BaseLib::Systems::DeviceFamily
-{
-public:
-	EnOcean(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink* eventHandler);
-	virtual ~EnOcean();
-	virtual void dispose();
+class EnOcean : public BaseLib::Systems::DeviceFamily {
+ public:
+  EnOcean(BaseLib::SharedObjects *bl, BaseLib::Systems::IFamilyEventSink *eventHandler);
+  virtual ~EnOcean();
+  virtual void dispose();
 
-	virtual bool hasPhysicalInterface() { return true; }
-	virtual PVariable getPairingInfo();
-protected:
-	virtual std::shared_ptr<BaseLib::Systems::ICentral> initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber);
-	virtual void createCentral();
+  virtual bool hasPhysicalInterface() { return true; }
+  virtual PVariable getPairingInfo();
+ protected:
+  virtual std::shared_ptr<BaseLib::Systems::ICentral> initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber);
+  virtual void createCentral();
 };
 
 }

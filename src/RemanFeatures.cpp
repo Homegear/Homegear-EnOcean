@@ -1,7 +1,7 @@
 /* Copyright 2013-2019 Homegear GmbH */
 
 #include "RemanFeatures.h"
-#include "GD.h"
+#include "Gd.h"
 
 namespace EnOcean {
 
@@ -148,7 +148,7 @@ PRemanFeatures RemanFeatureParser::parse(const PHomegearDevice &rpcDevice) {
     return features;
   }
   catch (const std::exception &ex) {
-    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return PRemanFeatures();
 }

@@ -1,14 +1,14 @@
 /* Copyright 2013-2019 Homegear GmbH */
 
-#include "../GD.h"
+#include "../Gd.h"
 #include "Hgdc.h"
 
 namespace EnOcean {
 
 Hgdc::Hgdc(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IEnOceanInterface(settings) {
   _settings = settings;
-  _out.init(GD::bl);
-  _out.setPrefix(GD::out.getPrefix() + "EnOcean HGDC \"" + settings->id + "\": ");
+  _out.init(Gd::bl);
+  _out.setPrefix(Gd::out.getPrefix() + "EnOcean HGDC \"" + settings->id + "\": ");
 
   signal(SIGPIPE, SIG_IGN);
 
@@ -22,8 +22,8 @@ Hgdc::~Hgdc() {
 
 void Hgdc::startListening() {
   try {
-    GD::bl->hgdc->unregisterPacketReceivedEventHandler(_packetReceivedEventHandlerId);
-    _packetReceivedEventHandlerId = GD::bl->hgdc->registerPacketReceivedEventHandler(MY_FAMILY_ID,
+    Gd::bl->hgdc->unregisterPacketReceivedEventHandler(_packetReceivedEventHandlerId);
+    _packetReceivedEventHandlerId = Gd::bl->hgdc->registerPacketReceivedEventHandler(MY_FAMILY_ID,
                                                                                      std::function<void(int64_t, const std::string &, const std::vector<uint8_t> &)>(std::bind(&Hgdc::processPacket,
                                                                                                                                                                                this,
                                                                                                                                                                                std::placeholders::_1,
@@ -43,7 +43,7 @@ void Hgdc::stopListening() {
   try {
     _stopped = true;
     IPhysicalInterface::stopListening();
-    GD::bl->hgdc->unregisterPacketReceivedEventHandler(_packetReceivedEventHandlerId);
+    Gd::bl->hgdc->unregisterPacketReceivedEventHandler(_packetReceivedEventHandlerId);
     _packetReceivedEventHandlerId = -1;
   }
   catch (const std::exception &ex) {
@@ -155,7 +155,7 @@ bool Hgdc::sendEnoceanPacket(const PEnOceanPacket &packet) {
 void Hgdc::rawSend(std::vector<uint8_t> &packet) {
   try {
     IEnOceanInterface::rawSend(packet);
-    if (!GD::bl->hgdc->sendPacket(_settings->serialNumber, packet)) {
+    if (!Gd::bl->hgdc->sendPacket(_settings->serialNumber, packet)) {
       _out.printError("Error sending packet " + BaseLib::HelperFunctions::getHexString(packet) + ".");
     }
   }

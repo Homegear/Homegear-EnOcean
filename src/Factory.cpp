@@ -2,29 +2,24 @@
 
 #include "Factory.h"
 #include "../config.h"
-#include "GD.h"
+#include "Gd.h"
 
-BaseLib::Systems::DeviceFamily* MyFactory::createDeviceFamily(BaseLib::SharedObjects* bl, BaseLib::Systems::IFamilyEventSink* eventHandler)
-{
-	return new EnOcean::EnOcean(bl, eventHandler);
+BaseLib::Systems::DeviceFamily *MyFactory::createDeviceFamily(BaseLib::SharedObjects *bl, BaseLib::Systems::IFamilyEventSink *eventHandler) {
+  return new EnOcean::EnOcean(bl, eventHandler);
 }
 
-std::string getVersion()
-{
-	return VERSION;
+std::string getVersion() {
+  return VERSION;
 }
 
-int32_t getFamilyId()
-{
-	return MY_FAMILY_ID;
+int32_t getFamilyId() {
+  return MY_FAMILY_ID;
 }
 
-std::string getFamilyName()
-{
-	return MY_FAMILY_NAME;
+std::string getFamilyName() {
+  return MY_FAMILY_NAME;
 }
 
-BaseLib::Systems::SystemFactory* getFactory()
-{
-	return (BaseLib::Systems::SystemFactory*)(new MyFactory);
+BaseLib::Systems::SystemFactory *getFactory() {
+  return (BaseLib::Systems::SystemFactory *)(new MyFactory);
 }

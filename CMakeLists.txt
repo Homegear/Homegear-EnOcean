@@ -10,8 +10,8 @@ set(SOURCE_FILES
         src/PhysicalInterfaces/Usb300.h
         src/Factory.cpp
         src/Factory.h
-        src/GD.cpp
-        src/GD.h
+        src/Gd.cpp
+        src/Gd.h
         src/Interfaces.cpp
         src/Interfaces.h
         src/EnOceanCentral.cpp

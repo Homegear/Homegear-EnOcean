@@ -97,7 +97,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   void handleRemoteCommissioningQueue();
   uint64_t remoteCommissionPeer(const std::shared_ptr<IEnOceanInterface> &interface, uint32_t deviceAddress, uint64_t eep, uint32_t securityCode = 0, uint32_t gatewayAddress = 0, uint32_t gatewayAddress2 = 0);
   static uint64_t remoteManagementGetEep(const std::shared_ptr<IEnOceanInterface> &interface, uint32_t deviceAddress, uint32_t securityCode = 0);
-  bool handlePairingRequest(const std::string &interfaceId, const PEnOceanPacket& packet);
+  bool handlePairingRequest(const std::string &interfaceId, const PEnOceanPacket &packet);
 };
 
 }

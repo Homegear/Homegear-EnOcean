@@ -1,6 +1,6 @@
 /* Copyright 2013-2019 Homegear GmbH */
 
-#include "../GD.h"
+#include "../Gd.h"
 #include "Usb300.h"
 
 namespace EnOcean {
@@ -9,15 +9,15 @@ Usb300::Usb300(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> sett
   _initComplete = false;
 
   _settings = settings;
-  _out.init(GD::bl);
-  _out.setPrefix(GD::out.getPrefix() + "EnOcean USB 300 \"" + settings->id + "\": ");
+  _out.init(Gd::bl);
+  _out.setPrefix(Gd::out.getPrefix() + "EnOcean USB 300 \"" + settings->id + "\": ");
 
   signal(SIGPIPE, SIG_IGN);
 }
 
 Usb300::~Usb300() {
   stopListening();
-  GD::bl->threadManager.join(_initThread);
+  Gd::bl->threadManager.join(_initThread);
 }
 
 void Usb300::setup(int32_t userID, int32_t groupID, bool setPermissions) {
@@ -164,7 +164,7 @@ void Usb300::reconnect() {
     }
     _stopped = false;
 
-    GD::bl->threadManager.join(_initThread);
+    Gd::bl->threadManager.join(_initThread);
     _bl->threadManager.start(_initThread, true, &Usb300::init, this);
   }
   catch (const std::exception &ex) {
