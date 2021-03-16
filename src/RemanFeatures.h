@@ -14,6 +14,16 @@ struct RemanFeatures {
   uint32_t kMaxDataLength = 1024;
 
   /**
+   * When true, encryption is forced, i. e. the security table (function 0x216) is written.
+   */
+  bool kForceEncryption = false;
+
+  /**
+   * The security level format as described in the security specification. 0xF3 is recommended.
+   */
+  uint8_t kSlf = 0xF3;
+
+  /**
    * Maximum number of entries in the inbound link table.
    */
   uint32_t kInboundLinkTableSize = 0;

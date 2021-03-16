@@ -52,6 +52,11 @@ class SetRepeaterFunctions : public EnOceanPacket {
   SetRepeaterFunctions(int32_t destinationAddress, uint8_t function, uint8_t level, uint8_t filterStructure);
 };
 
+class SetSecurityProfile : public EnOceanPacket {
+ public:
+  SetSecurityProfile(int32_t destinationAddress, bool fitIn22Byte, bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId, uint32_t sourceId);
+};
+
 class Unlock : public EnOceanPacket {
  public:
   Unlock(int32_t destinationAddress, uint32_t securityCode);

@@ -19,6 +19,12 @@ PRemanFeatures RemanFeatureParser::parse(const PHomegearDevice &rpcDevice) {
           auto featureIterator = featureStruct->structValue->find("maxDataLength");
           if (featureIterator != featureStruct->structValue->end()) features->kMaxDataLength = featureIterator->second->integerValue;
 
+          featureIterator = featureStruct->structValue->find("forceEncryption");
+          if (featureIterator != featureStruct->structValue->end()) features->kForceEncryption = featureIterator->second->booleanValue;
+
+          featureIterator = featureStruct->structValue->find("slf");
+          if (featureIterator != featureStruct->structValue->end()) features->kSlf = featureIterator->second->integerValue;
+
           featureIterator = featureStruct->structValue->find("inboundLinkTableSize");
           if (featureIterator != featureStruct->structValue->end()) features->kInboundLinkTableSize = featureIterator->second->integerValue;
 

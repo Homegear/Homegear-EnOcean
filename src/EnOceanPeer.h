@@ -32,6 +32,38 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void setPhysicalInterfaceId(std::string);
   uint32_t getGatewayAddress();
   void setGatewayAddress(uint32_t value);
+  void setRollingCodeInbound(int32_t value) {
+    _rollingCodeInbound = value;
+    saveVariable(29, value);
+  }
+  void setRollingCodeOutbound(int32_t value) {
+    _rollingCodeOutbound = value;
+    saveVariable(20, value);
+  }
+  void setAesKeyInbound(const std::vector<uint8_t> &value) {
+    _aesKeyInbound = value;
+    saveVariable(28, _aesKeyInbound);
+  }
+  void setAesKeyOutbound(const std::vector<uint8_t> &value) {
+    _aesKeyOutbound = value;
+    saveVariable(21, _aesKeyOutbound);
+  }
+  void setEncryptionType(int32_t value) {
+    _encryptionType = value;
+    saveVariable(22, value);
+  }
+  void setCmacSize(int32_t value) {
+    _cmacSize = value;
+    saveVariable(23, value);
+  }
+  void setExplicitRollingCode(bool value) {
+    _explicitRollingCode = value;
+    saveVariable(24, value);
+  }
+  void setRollingCodeSize(int32_t value) {
+    _rollingCodeSize = value;
+    saveVariable(25, value);
+  }
   //}}}
 
   std::shared_ptr<IEnOceanInterface> getPhysicalInterface();
@@ -79,6 +111,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool getDeviceConfiguration();
   bool setDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
   bool sendInboundLinkTable();
+  bool sendPing();
+  bool setRepeaterFunctions(uint8_t function, uint8_t level, uint8_t structure);
 
   //RPC methods
   PVariable forceConfigUpdate(PRpcClientInfo clientInfo) override;
@@ -122,11 +156,13 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
 
   //In table variables:
   std::string _physicalInterfaceId;
-  int32_t _rollingCode = -1;
-  std::vector<uint8_t> _aesKey;
+  std::atomic<uint32_t> _rollingCodeOutbound{0xFFFFFFFF};
+  std::atomic<uint32_t> _rollingCodeInbound{0xFFFFFFFF};
+  std::vector<uint8_t> _aesKeyInbound;
+  std::vector<uint8_t> _aesKeyOutbound;
   int32_t _encryptionType = -1;
   int32_t _cmacSize = -1;
-  bool _rollingCodeInTx = false;
+  bool _explicitRollingCode = false;
   int32_t _rollingCodeSize = -1;
   uint32_t _gatewayAddress = 0;
   //End
@@ -176,30 +212,6 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void loadUpdatedParameters(const std::vector<char> &encodedData);
   void saveUpdatedParameters();
 
-  void setRollingCode(int32_t value) {
-    _rollingCode = value;
-    saveVariable(20, value);
-  }
-  void setAesKey(std::vector<uint8_t> &value) {
-    _aesKey = value;
-    saveVariable(21, value);
-  }
-  void setEncryptionType(int32_t value) {
-    _encryptionType = value;
-    saveVariable(22, value);
-  }
-  void setCmacSize(int32_t value) {
-    _cmacSize = value;
-    saveVariable(23, value);
-  }
-  void setRollingCodeInTx(bool value) {
-    _rollingCodeInTx = value;
-    saveVariable(24, value);
-  }
-  void setRollingCodeSize(int32_t value) {
-    _rollingCodeSize = value;
-    saveVariable(25, value);
-  }
   void setBestInterface();
 
   void setRssiDevice(uint8_t rssi);

@@ -100,6 +100,34 @@ SetRepeaterFunctions::SetRepeaterFunctions(int32_t destinationAddress, uint8_t f
   _data.push_back((unsigned)(function << 6u) | ((level & 3u) << 4u) | (unsigned)((filterStructure & 1u) << 3u));
 }
 
+SetSecurityProfile::SetSecurityProfile(int32_t destinationAddress, bool fitIn22Byte, bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId, uint32_t sourceId)
+    : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, 0, destinationAddress) {
+  _remoteManagementFunction = (uint16_t)RemoteManagementFunction::setSecurityProfile;
+  _data.reserve(36);
+  _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::setSecurityProfile >> 8u));
+  _data.push_back((uint8_t)RemoteManagementFunction::setSecurityProfile);
+  _data.push_back(0x07); //Manufacturer MSB
+  _data.push_back(0xFF); //Manufacturer LSB
+  _data.push_back(outbound ? 0x80 : 0);
+  _data.push_back(index);
+  _data.push_back(slf);
+  if (!fitIn22Byte) _data.push_back(rlc >> 24);
+  _data.push_back(rlc >> 16);
+  _data.push_back(rlc >> 8);
+  _data.push_back(rlc);
+  _data.insert(_data.end(), aesKey.begin(), aesKey.end());
+  if (!fitIn22Byte) {
+    _data.push_back(destinationId >> 24);
+    _data.push_back(destinationId >> 16);
+    _data.push_back(destinationId >> 8);
+    _data.push_back(destinationId);
+    _data.push_back(sourceId >> 24);
+    _data.push_back(sourceId >> 16);
+    _data.push_back(sourceId >> 8);
+    _data.push_back(sourceId);
+  }
+}
+
 Unlock::Unlock(int32_t destinationAddress, uint32_t securityCode) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, 0, destinationAddress) {
   _remoteManagementFunction = (uint16_t)RemoteManagementFunction::unlock;
   _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::unlock >> 8u));
