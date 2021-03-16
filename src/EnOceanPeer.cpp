@@ -1005,7 +1005,7 @@ void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
           Gd::out.printError("Error: Decryption of packet failed.");
           return;
         }
-        packet->setData(data);
+        packet->setData(data, 1);
 
         Gd::out.printInfo("Decrypted packet: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
 

@@ -112,13 +112,10 @@ class EnOceanPacket : public BaseLib::Systems::Packet {
   uint16_t getRemoteManagementFunction() { return _remoteManagementFunction; }
   uint16_t getRemoteManagementManufacturer() { return _remoteManagementManufacturer; }
   std::vector<uint8_t> getData() { return _data; }
-  void setData(std::vector<uint8_t> &value) {
-    if (value.at(0) == 0x32) {
-      _data.clear();
-      _data.insert(_data.end(), value.begin() + 1, value.end());
-    }
-    else _data = value;
+  void setData(std::vector<uint8_t> &value, uint32_t offset = 0) {
     _packet.clear();
+    _data.clear();
+    _data.insert(_data.end(), value.begin() + offset, value.end());
     if (!_data.empty()) _rorg = (uint8_t)_data.at(0);
   }
   int32_t getDataSize() { return _data.size(); }
