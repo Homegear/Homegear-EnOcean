@@ -1,7 +1,9 @@
 /* Copyright 2013-2019 Homegear GmbH */
 
-#ifndef MYPACKET_H_
-#define MYPACKET_H_
+#ifndef ENOCEANPACKET_H_
+#define ENOCEANPACKET_H_
+
+#include "Security.h"
 
 #include <homegear-base/BaseLib.h>
 
@@ -101,7 +103,7 @@ class EnOceanPacket : public BaseLib::Systems::Packet {
 
   EnOceanPacket();
   explicit EnOceanPacket(const std::vector<uint8_t> &espPacket);
-  EnOceanPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress);
+  EnOceanPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress, const std::vector<uint8_t> &data = std::vector<uint8_t>());
   ~EnOceanPacket() override;
 
   int32_t senderAddress() { return _senderAddress; }
@@ -112,12 +114,7 @@ class EnOceanPacket : public BaseLib::Systems::Packet {
   uint16_t getRemoteManagementFunction() { return _remoteManagementFunction; }
   uint16_t getRemoteManagementManufacturer() { return _remoteManagementManufacturer; }
   std::vector<uint8_t> getData() { return _data; }
-  void setData(std::vector<uint8_t> &value, uint32_t offset = 0) {
-    _packet.clear();
-    _data.clear();
-    _data.insert(_data.end(), value.begin() + offset, value.end());
-    if (!_data.empty()) _rorg = (uint8_t)_data.at(0);
-  }
+  void setData(const std::vector<uint8_t> &value, uint32_t offset = 0);
   int32_t getDataSize() { return _data.size(); }
   std::vector<uint8_t> getOptionalData() { return _optionalData; }
   std::vector<uint8_t> getBinary();

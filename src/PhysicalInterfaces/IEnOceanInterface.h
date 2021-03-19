@@ -32,7 +32,12 @@ class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface {
 
   virtual bool sendEnoceanPacket(const PEnOceanPacket &packet);
 
-  PEnOceanPacket sendAndReceivePacket(const std::shared_ptr<EnOceanPacket> &packet,
+  PEnOceanPacket sendAndReceivePacket(const PEnOceanPacket &packet,
+                                      uint32_t retries = 0,
+                                      EnOceanRequestFilterType filterType = EnOceanRequestFilterType::senderAddress,
+                                      const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>());
+
+  PEnOceanPacket sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets,
                                       uint32_t retries = 0,
                                       EnOceanRequestFilterType filterType = EnOceanRequestFilterType::senderAddress,
                                       const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>());

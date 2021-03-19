@@ -227,6 +227,7 @@ void IEnOceanInterface::rawSend(std::vector<uint8_t> &packet) {
     if (time - _lastRawPacketSent < 80) {
       std::this_thread::sleep_for(std::chrono::milliseconds((_lastRawPacketSent + BaseLib::HelperFunctions::getRandomNumber(80, 150) - time)));
     }
+    _lastRawPacketSent = BaseLib::HelperFunctions::getTime();
   } catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
@@ -245,7 +246,7 @@ bool IEnOceanInterface::sendEnoceanPacket(const PEnOceanPacket &packet) {
   return false;
 }
 
-PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::shared_ptr<EnOceanPacket> &packet, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
+PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &packet, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
   try {
     if (_stopped) return PEnOceanPacket();
 
@@ -277,6 +278,50 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::shared_ptr<EnO
 
     requestsGuard.lock();
     _enoceanRequests.erase(packet->destinationAddress());
+    requestsGuard.unlock();
+
+    return request->response;
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return std::shared_ptr<EnOceanPacket>();
+}
+
+PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
+  try {
+    if (_stopped || packets.empty()) return PEnOceanPacket();
+
+    std::shared_ptr<EnOceanRequest> request = std::make_shared<EnOceanRequest>();
+    request->filterType = filterType;
+    request->filterData = filterData;
+
+    std::unique_lock<std::mutex> requestsGuard(_enoceanRequestsMutex);
+    _enoceanRequests[packets.at(0)->destinationAddress()] = request;
+    requestsGuard.unlock();
+
+    std::unique_lock<std::mutex> lock(request->mutex);
+
+    for (uint32_t i = 0; i < retries + 1; i++) {
+      for (auto &packet : packets) {
+        if (!sendEnoceanPacket(packet)) {
+          requestsGuard.lock();
+          _enoceanRequests.erase(packet->destinationAddress());
+          requestsGuard.unlock();
+          return PEnOceanPacket();
+        }
+      }
+
+      if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(2000), [&] { return request->mutexReady; })) {
+        if (i < retries) _out.printInfo("Info: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packets.at(0)->getBinary()) + ". Retrying...");
+        else _out.printError("Error: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packets.at(0)->getBinary()));
+      }
+
+      if (request->response) break;
+    }
+
+    requestsGuard.lock();
+    _enoceanRequests.erase(packets.at(0)->destinationAddress());
     requestsGuard.unlock();
 
     return request->response;

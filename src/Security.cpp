@@ -63,12 +63,53 @@ std::vector<uint8_t> Security::encryptRollingCode(const std::vector<uint8_t> &de
   return std::vector<uint8_t>();
 }
 
-bool Security::decrypt(const std::vector<uint8_t> &deviceAesKey, std::vector<uint8_t> &data, int32_t dataSize, uint32_t rollingCode, int32_t rollingCodeSize) {
+bool Security::encryptExplicitRlc(const std::vector<uint8_t> &deviceAesKey, std::vector<uint8_t> &data, uint32_t dataSize, uint32_t rollingCode, int32_t rollingCodeSize, int32_t cmacSize) {
   try {
     std::vector<uint8_t> encryptedRollingCode = encryptRollingCode(deviceAesKey, rollingCode, rollingCodeSize);
     if (encryptedRollingCode.empty()) return false;
 
-    for (int32_t i = 1; i < dataSize && i - 1 < (signed)encryptedRollingCode.size(); i++) {
+    if (dataSize > 16) {
+      Gd::out.printError("Error: Encryption of packets longer than 16 bytes is not implemented.");
+      return false;
+    }
+
+    for (uint32_t i = 0; i < dataSize && i < encryptedRollingCode.size(); i++) {
+      data[i] ^= encryptedRollingCode[i];
+    }
+
+    std::vector<uint8_t> encryptedData;
+    encryptedData.reserve(dataSize + 9);
+
+    encryptedData.push_back(0x31);
+    encryptedData.insert(encryptedData.end(), data.begin(), data.begin() + dataSize);
+    auto cmac = getCmac(deviceAesKey, encryptedData, encryptedData.size(), rollingCode, rollingCodeSize, cmacSize);
+    encryptedData.push_back(rollingCode >> 24);
+    encryptedData.push_back(rollingCode >> 16);
+    encryptedData.push_back(rollingCode >> 8);
+    encryptedData.push_back(rollingCode);
+    encryptedData.insert(encryptedData.end(), cmac.begin(), cmac.end());
+
+    data = std::move(encryptedData);
+
+    return true;
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return false;
+}
+
+bool Security::decrypt(const std::vector<uint8_t> &deviceAesKey, std::vector<uint8_t> &data, uint32_t dataSize, uint32_t rollingCode, int32_t rollingCodeSize) {
+  try {
+    std::vector<uint8_t> encryptedRollingCode = encryptRollingCode(deviceAesKey, rollingCode, rollingCodeSize);
+    if (encryptedRollingCode.empty()) return false;
+
+    if (dataSize > 17) {
+      Gd::out.printError("Error: Decryption of packets longer than 16 bytes is not implemented.");
+      return false;
+    }
+
+    for (uint32_t i = 1; i < dataSize && i - 1 < encryptedRollingCode.size(); i++) {
       data[i] ^= encryptedRollingCode[i - 1];
     }
 

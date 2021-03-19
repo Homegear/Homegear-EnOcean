@@ -50,9 +50,11 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   PVariable setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string interfaceId) override;
   PVariable startSniffing(BaseLib::PRpcClientInfo clientInfo) override;
   PVariable stopSniffing(BaseLib::PRpcClientInfo clientInfo) override;
+  PVariable updateFirmware(PRpcClientInfo clientInfo, std::vector<uint64_t> ids, bool manual) override;
  protected:
   struct PairingInfo {
     std::mutex pairingMutex;
+    std::mutex recomMutex;
     std::mutex pairingModeThreadMutex;
     std::mutex processedAddressesMutex;
     std::mutex pairingDataMutex;
@@ -113,6 +115,8 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   BaseLib::PVariable remanPing(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetRepeaterFunctions(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetRepeaterFilter(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanSetSecurityProfile(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanSetCode(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   //}}}
 };
 

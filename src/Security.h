@@ -12,7 +12,8 @@ class Security {
   Security(BaseLib::SharedObjects *bl);
   virtual ~Security();
 
-  bool decrypt(const std::vector<uint8_t> &deviceAesKey, std::vector<uint8_t> &data, int32_t dataSize, uint32_t rollingCode, int32_t rollingCodeSize);
+  bool encryptExplicitRlc(const std::vector<uint8_t> &deviceAesKey, std::vector<uint8_t> &data, uint32_t dataSize, uint32_t rollingCode, int32_t rollingCodeSize, int32_t cmacSize);
+  bool decrypt(const std::vector<uint8_t> &deviceAesKey, std::vector<uint8_t> &data, uint32_t dataSize, uint32_t rollingCode, int32_t rollingCodeSize);
   bool checkCmacImplicitRlc(const std::vector<uint8_t> &deviceAesKey, const std::vector<uint8_t> &encryptedData, int32_t dataSize, uint32_t &rollingCode, int32_t rollingCodeSize, int32_t cmacSize);
   bool checkCmacExplicitRlc(const std::vector<uint8_t> &deviceAesKey, const std::vector<uint8_t> &encryptedData, uint32_t lastRollingCode, uint32_t &newRollingCode, int32_t dataSize, int32_t rollingCodeSize, int32_t cmacSize);
   std::vector<uint8_t> getCmac(const std::vector<uint8_t> &deviceAesKey, const std::vector<uint8_t> &encryptedData, int32_t dataSize, uint32_t rollingCode, int32_t rollingCodeSize, int32_t cmacSize);

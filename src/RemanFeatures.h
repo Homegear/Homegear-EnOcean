@@ -14,6 +14,11 @@ struct RemanFeatures {
   uint32_t kMaxDataLength = 1024;
 
   /**
+   * Encode sender address in REMAN packet. For some devices this improves ACK times.
+   */
+  bool kDirectedPackets = false;
+
+  /**
    * When true, encryption is forced, i. e. the security table (function 0x216) is written.
    */
   bool kForceEncryption = false;
@@ -22,6 +27,11 @@ struct RemanFeatures {
    * The security level format as described in the security specification. 0xF3 is recommended.
    */
   uint8_t kSlf = 0xF3;
+
+  /**
+   * 0x11 for Version 1.1 or 0x13 for Version 1.3
+   */
+  uint32_t kRecomVersion = 0x13;
 
   /**
    * Maximum number of entries in the inbound link table.

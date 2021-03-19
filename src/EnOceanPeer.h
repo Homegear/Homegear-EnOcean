@@ -5,7 +5,6 @@
 
 #include "PhysicalInterfaces/IEnOceanInterface.h"
 #include "EnOceanPacket.h"
-#include "Security.h"
 #include "RemanFeatures.h"
 #include <homegear-base/BaseLib.h>
 
@@ -32,13 +31,13 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void setPhysicalInterfaceId(std::string);
   uint32_t getGatewayAddress();
   void setGatewayAddress(uint32_t value);
-  void setRollingCodeInbound(int32_t value) {
+  void setRollingCodeInbound(uint32_t value) {
     _rollingCodeInbound = value;
-    saveVariable(29, value);
+    saveVariable(29, (int64_t)value);
   }
-  void setRollingCodeOutbound(int32_t value) {
+  void setRollingCodeOutbound(uint32_t value) {
     _rollingCodeOutbound = value;
-    saveVariable(20, value);
+    saveVariable(20, (int64_t)value);
   }
   void setAesKeyInbound(const std::vector<uint8_t> &value) {
     _aesKeyInbound = value;
@@ -47,6 +46,10 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void setAesKeyOutbound(const std::vector<uint8_t> &value) {
     _aesKeyOutbound = value;
     saveVariable(21, _aesKeyOutbound);
+  }
+  void setSecurityCode(uint32_t value) {
+    _securityCode = value;
+    saveVariable(30, (int64_t)value);
   }
   void setEncryptionType(int32_t value) {
     _encryptionType = value;
@@ -63,6 +66,12 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void setRollingCodeSize(int32_t value) {
     _rollingCodeSize = value;
     saveVariable(25, value);
+  }
+  void setErp1SequenceCounter(uint8_t value) {
+    _erp1SequenceCounter = value;
+    if (_erp1SequenceCounter > 3) _erp1SequenceCounter = 1;
+    else if (_erp1SequenceCounter == 0) _erp1SequenceCounter = 1;
+    saveVariable(31, (int32_t)value);
   }
   //}}}
 
@@ -106,13 +115,22 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
    */
   void homegearShuttingDown() override;
 
+  PEnOceanPacket sendAndReceivePacket(std::shared_ptr<EnOceanPacket> &packet,
+                            uint32_t retries = 0,
+                            IEnOceanInterface::EnOceanRequestFilterType filterType = IEnOceanInterface::EnOceanRequestFilterType::senderAddress,
+                            const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>());
+  bool sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait);
+
   void queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
   void queueGetDeviceConfiguration();
   bool getDeviceConfiguration();
   bool setDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
   bool sendInboundLinkTable();
-  bool sendPing();
-  bool setRepeaterFunctions(uint8_t function, uint8_t level, uint8_t structure);
+  bool remanPing();
+  bool remanSetRepeaterFilter(uint8_t filterControl, uint8_t filterType, uint32_t filterValue);
+  bool remanSetRepeaterFunctions(uint8_t function, uint8_t level, uint8_t structure);
+  bool remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId, uint32_t sourceId);
+  bool remanSetCode(uint32_t securityCode);
 
   //RPC methods
   PVariable forceConfigUpdate(PRpcClientInfo clientInfo) override;
@@ -160,11 +178,13 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   std::atomic<uint32_t> _rollingCodeInbound{0xFFFFFFFF};
   std::vector<uint8_t> _aesKeyInbound;
   std::vector<uint8_t> _aesKeyOutbound;
+  uint32_t _securityCode = 0xFFFFFFFF;
   int32_t _encryptionType = -1;
   int32_t _cmacSize = -1;
   bool _explicitRollingCode = false;
   int32_t _rollingCodeSize = -1;
   uint32_t _gatewayAddress = 0;
+  uint8_t _erp1SequenceCounter = 1;
   //End
 
   uint32_t _lastRssiDevice = 0;
@@ -173,6 +193,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   std::unordered_map<int32_t, int32_t> _rfChannels;
   PRemanFeatures _remanFeatures;
 
+  std::mutex _sendPacketMutex;
   PEnOceanPacket _lastPacket;
 
   bool _forceEncryption = false;
@@ -226,7 +247,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
 
   PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type) override;
 
-  bool sendPacket(const PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait);
+  bool decryptPacket(PEnOceanPacket &packet);
+  std::vector<PEnOceanPacket> encryptPacket(PEnOceanPacket &packet);
 
   void updateBlindSpeed();
 
