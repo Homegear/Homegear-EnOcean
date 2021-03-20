@@ -222,6 +222,7 @@ void IEnOceanInterface::decrementRssi(uint32_t address, bool wildcardPeer) {
 
 void IEnOceanInterface::rawSend(std::vector<uint8_t> &packet) {
   try {
+    if (packet.size() > 7 && packet.at(6) == 0xD1) return; //Send MSC packets immediately (e. g. firmware update)
     std::lock_guard<std::mutex> rawSendGuard(_rawSendMutex);
     auto time = BaseLib::HelperFunctions::getTime();
     if (time - _lastRawPacketSent < 80) {

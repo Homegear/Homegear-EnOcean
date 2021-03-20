@@ -101,6 +101,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   std::string getFirmwareVersionString(int32_t firmwareVersion) override { return "1.0"; }
   bool firmwareUpdateAvailable() override { return false; }
 
+  uint32_t getRemanSenderAddress();
   bool isWildcardPeer() { return _rpcDevice->addressSize == 25; }
 
   std::string printConfig();

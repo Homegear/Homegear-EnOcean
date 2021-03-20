@@ -19,8 +19,8 @@ PRemanFeatures RemanFeatureParser::parse(const PHomegearDevice &rpcDevice) {
           auto featureIterator = featureStruct->structValue->find("maxDataLength");
           if (featureIterator != featureStruct->structValue->end()) features->kMaxDataLength = featureIterator->second->integerValue;
 
-          featureIterator = featureStruct->structValue->find("directedPackets");
-          if (featureIterator != featureStruct->structValue->end()) features->kDirectedPackets = featureIterator->second->booleanValue;
+          featureIterator = featureStruct->structValue->find("addressedRemanPackets");
+          if (featureIterator != featureStruct->structValue->end()) features->kAddressedRemanPackets = featureIterator->second->booleanValue;
 
           featureIterator = featureStruct->structValue->find("forceEncryption");
           if (featureIterator != featureStruct->structValue->end()) features->kForceEncryption = featureIterator->second->booleanValue;

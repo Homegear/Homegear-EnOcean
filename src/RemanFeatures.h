@@ -16,7 +16,7 @@ struct RemanFeatures {
   /**
    * Encode sender address in REMAN packet. For some devices this improves ACK times.
    */
-  bool kDirectedPackets = false;
+  bool kAddressedRemanPackets = false;
 
   /**
    * When true, encryption is forced, i. e. the security table (function 0x216) is written.
