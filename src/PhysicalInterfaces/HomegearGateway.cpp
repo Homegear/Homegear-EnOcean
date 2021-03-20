@@ -70,6 +70,8 @@ int32_t HomegearGateway::setBaseAddress(uint32_t value) {
       return -1;
     }
 
+    Gd::out.printInfo("Info: Changing base address to: " + BaseLib::HelperFunctions::getHexString(value));
+
     BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
     parameters->reserve(2);
     parameters->push_back(std::make_shared<BaseLib::Variable>(MY_FAMILY_ID));
@@ -99,6 +101,16 @@ void HomegearGateway::init() {
     } else {
       _baseAddress = (uint32_t)(int32_t)result->integerValue64;
       _out.printInfo("Info: Base address set to 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + ".");
+    }
+
+    auto roamingSetting = Gd::family->getFamilySetting("forcebaseid");
+    if (roamingSetting) {
+      uint32_t newBaseId = (uint32_t)roamingSetting->integerValue & 0xFFFFFF80;
+      if (newBaseId >= 0xFF800000) {
+        setBaseAddress(newBaseId);
+      } else {
+        Gd::out.printWarning(R"(Warning: Invalid base ID specified in setting "forceBaseId" in "enocean.conf".)");
+      }
     }
   }
   catch (const std::exception &ex) {

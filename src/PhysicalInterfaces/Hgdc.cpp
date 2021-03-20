@@ -71,6 +71,16 @@ void Hgdc::init() {
 
     _out.printInfo("Info: Init complete. Base address is 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + ". Remaining changes: " + std::to_string(response[11]));
 
+    auto roamingSetting = Gd::family->getFamilySetting("forcebaseid");
+    if (roamingSetting) {
+      uint32_t newBaseId = (uint32_t)roamingSetting->integerValue & 0xFFFFFF80;
+      if (newBaseId >= 0xFF800000) {
+        setBaseAddress(newBaseId);
+      } else {
+        Gd::out.printWarning(R"(Warning: Invalid base ID specified in setting "forceBaseId" in "enocean.conf".)");
+      }
+    }
+
     _initComplete = true;
   }
   catch (const std::exception &ex) {
@@ -80,14 +90,12 @@ void Hgdc::init() {
 
 int32_t Hgdc::setBaseAddress(uint32_t value) {
   try {
-    if (!_initComplete) {
-      _out.printError("Error: Could not set base address. Init is not complete.");
-      return -1;
-    }
     if ((value & 0xFF000000) != 0xFF000000) {
       _out.printError("Error: Could not set base address. Address must start with 0xFF.");
       return -1;
     }
+
+    Gd::out.printInfo("Info: Changing base address to: " + BaseLib::HelperFunctions::getHexString(value));
 
     std::vector<uint8_t> response;
 

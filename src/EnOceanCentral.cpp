@@ -291,9 +291,8 @@ bool EnOceanCentral::onPacketReceived(std::string &senderId, std::shared_ptr<Bas
     bool result = false;
     bool unpaired = true;
     for (auto &peer : peers) {
-      std::string settingName = "roaming";
-      auto roamingSetting = Gd::family->getFamilySetting(settingName);
-      bool roaming = roamingSetting ? roamingSetting->integerValue : true;
+      auto roamingSetting = Gd::family->getFamilySetting("roaming");
+      bool roaming = !roamingSetting || roamingSetting->integerValue;
       if (roaming && senderId != peer->getPhysicalInterfaceId() && peer->getPhysicalInterface()->getBaseAddress() == Gd::interfaces->getInterface(senderId)->getBaseAddress()) {
         if (myPacket->getRssi() > peer->getPhysicalInterface()->getRssi(peer->getAddress(), peer->isWildcardPeer()) + 6) {
           peer->getPhysicalInterface()->decrementRssi(peer->getAddress(), peer->isWildcardPeer()); //Reduce RSSI on current peer's interface in case it is not receiving any packets from this peer anymore
