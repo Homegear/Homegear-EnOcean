@@ -19,6 +19,7 @@ class Hgdc : public IEnOceanInterface {
   void init();
 
   int32_t setBaseAddress(uint32_t value) override;
+  DutyCycleInfo getDutyCycleInfo() override;
 
   bool isOpen() override { return !_stopped && _initComplete; }
 

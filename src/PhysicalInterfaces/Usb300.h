@@ -19,6 +19,7 @@ class Usb300 : public IEnOceanInterface {
   void setup(int32_t userID, int32_t groupID, bool setPermissions) override;
 
   int32_t setBaseAddress(uint32_t value) override;
+  DutyCycleInfo getDutyCycleInfo() override;
 
   bool isOpen() override { return _serial && _serial->isOpen() && !_stopped; }
 

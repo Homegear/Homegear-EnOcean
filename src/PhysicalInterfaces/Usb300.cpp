@@ -125,6 +125,36 @@ int32_t Usb300::setBaseAddress(uint32_t value) {
   return -1;
 }
 
+IEnOceanInterface::DutyCycleInfo Usb300::getDutyCycleInfo() {
+  try {
+    std::vector<uint8_t> response;
+    for (int32_t i = 0; i < 10; i++) {
+      std::vector<uint8_t> data{0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x23, 0x00};
+      addCrc8(data);
+      getResponse(0x02, data, response);
+      if (response.size() != 15 || response[1] != 0 || response[2] != 8 || response[3] != 0 || response[6] != 0) {
+        if (i < 9) continue;
+        _out.printError("Error reading duty cycle information from device: " + BaseLib::HelperFunctions::getHexString(data));
+        _stopped = true;
+        return DutyCycleInfo();
+      }
+
+      Gd::out.printInfo("Moin " + BaseLib::HelperFunctions::getHexString(response));
+
+      DutyCycleInfo info;
+      info.dutyCycleUsed = response[7];
+      info.slotPeriod = (((uint32_t)response[9]) << 8) | response[10];
+      info.timeLeftInSlot = (((uint32_t)response[11]) << 8) | response[12];
+
+      return info;
+    }
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return DutyCycleInfo();
+}
+
 void Usb300::init() {
   try {
     std::vector<uint8_t> response;

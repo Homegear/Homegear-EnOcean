@@ -25,6 +25,9 @@ PRemanFeatures RemanFeatureParser::parse(const PHomegearDevice &rpcDevice) {
           featureIterator = featureStruct->structValue->find("forceEncryption");
           if (featureIterator != featureStruct->structValue->end()) features->kForceEncryption = featureIterator->second->booleanValue;
 
+          featureIterator = featureStruct->structValue->find("unencryptedUpdates");
+          if (featureIterator != featureStruct->structValue->end()) features->kUnencryptedUpdates = featureIterator->second->booleanValue;
+
           featureIterator = featureStruct->structValue->find("slf");
           if (featureIterator != featureStruct->structValue->end()) features->kSlf = featureIterator->second->integerValue;
 

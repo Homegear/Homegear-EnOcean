@@ -69,7 +69,6 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
     bool remoteCommissioning{false};
     uint32_t remoteCommissioningSecurityCode{0};
     uint32_t remoteCommissioningGatewayAddress{0};
-    uint32_t remoteCommissioningGatewayAddress2{0};
     uint32_t remoteCommissioningDeviceAddress{0};
     uint64_t eep{0};
     bool remoteCommissioningWaitForSignal{false};

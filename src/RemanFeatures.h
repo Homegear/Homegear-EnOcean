@@ -24,6 +24,12 @@ struct RemanFeatures {
   bool kForceEncryption = false;
 
   /**
+   * When true, a second base address with suffix 1 is placed into the link table. For this
+   * address no security profile is created.
+   */
+  bool kUnencryptedUpdates = false;
+
+  /**
    * The security level format as described in the security specification. 0xF3 is recommended.
    */
   uint8_t kSlf = 0xF3;

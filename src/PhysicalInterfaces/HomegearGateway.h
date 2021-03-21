@@ -18,6 +18,7 @@ class HomegearGateway : public IEnOceanInterface {
   void stopListening() override;
 
   int32_t setBaseAddress(uint32_t value) override;
+  DutyCycleInfo getDutyCycleInfo() override;
 
   bool isOpen() override { return !_stopped; }
 

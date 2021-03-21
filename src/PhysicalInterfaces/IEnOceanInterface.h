@@ -16,6 +16,12 @@ class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface {
     remoteManagementFunction
   };
 
+  struct DutyCycleInfo {
+    uint32_t dutyCycleUsed = 0;
+    uint32_t slotPeriod = 0;
+    uint32_t timeLeftInSlot = 0;
+  };
+
   explicit IEnOceanInterface(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
   ~IEnOceanInterface() override;
 
@@ -23,7 +29,8 @@ class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface {
   uint32_t getBaseAddress() const { return _baseAddress; }
   int32_t getRssi(int32_t address, bool wildcardPeer);
   void decrementRssi(uint32_t address, bool wildcardPeer);
-  virtual int32_t setBaseAddress(uint32_t value) { return -1; };
+  virtual int32_t setBaseAddress(uint32_t value) { return -1; }
+  virtual DutyCycleInfo getDutyCycleInfo() { return DutyCycleInfo(); }
 
   void startListening() override {}
   void stopListening() override {}

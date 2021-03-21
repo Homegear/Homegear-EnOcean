@@ -90,6 +90,21 @@ int32_t HomegearGateway::setBaseAddress(uint32_t value) {
   return -1;
 }
 
+IEnOceanInterface::DutyCycleInfo HomegearGateway::getDutyCycleInfo() {
+  try {
+    if (!_tcpSocket->connected()) {
+      _out.printError("Error: Could not set base address. Not connected to gateway.");
+      return DutyCycleInfo();
+    }
+
+    Gd::out.printError("Error: getDutyCycleInfo is not supported yet.");
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return DutyCycleInfo();
+}
+
 void HomegearGateway::init() {
   try {
     BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
