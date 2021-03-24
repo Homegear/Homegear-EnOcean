@@ -123,9 +123,9 @@ void EnOceanPeer::worker() {
                                                               IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                               {{(uint16_t)EnOceanPacket::RemoteManagementResponse::pingResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::pingResponse}});
       if (response) {
-        Gd::out.printDebug("Debug: Got ping response.");
+        Gd::out.printDebug("Debug (peer " + std::to_string(_peerID) + "): Got ping response.");
       } else {
-        Gd::out.printInfo("Info: No ping response received.");
+        Gd::out.printInfo("Info (peer " + std::to_string(_peerID) + "): No ping response received.");
       }
     }
 
