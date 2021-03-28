@@ -247,7 +247,7 @@ bool IEnOceanInterface::sendEnoceanPacket(const PEnOceanPacket &packet) {
   return false;
 }
 
-PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &packet, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
+PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &packet, uint32_t deviceEnoceanId, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
   try {
     if (_stopped) return PEnOceanPacket();
 
@@ -256,7 +256,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
     request->filterData = filterData;
 
     std::unique_lock<std::mutex> requestsGuard(_enoceanRequestsMutex);
-    _enoceanRequests[packet->destinationAddress()] = request;
+    _enoceanRequests[deviceEnoceanId] = request;
     requestsGuard.unlock();
 
     std::unique_lock<std::mutex> lock(request->mutex);
@@ -264,7 +264,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
     for (uint32_t i = 0; i < retries + 1; i++) {
       if (!sendEnoceanPacket(packet)) {
         requestsGuard.lock();
-        _enoceanRequests.erase(packet->destinationAddress());
+        _enoceanRequests.erase(deviceEnoceanId);
         requestsGuard.unlock();
         return PEnOceanPacket();
       }
@@ -278,7 +278,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
     }
 
     requestsGuard.lock();
-    _enoceanRequests.erase(packet->destinationAddress());
+    _enoceanRequests.erase(deviceEnoceanId);
     requestsGuard.unlock();
 
     return request->response;
@@ -289,7 +289,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
   return std::shared_ptr<EnOceanPacket>();
 }
 
-PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
+PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets, uint32_t deviceEnoceanId, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
   try {
     if (_stopped || packets.empty()) return PEnOceanPacket();
 
@@ -298,7 +298,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOcea
     request->filterData = filterData;
 
     std::unique_lock<std::mutex> requestsGuard(_enoceanRequestsMutex);
-    _enoceanRequests[packets.at(0)->destinationAddress()] = request;
+    _enoceanRequests[deviceEnoceanId] = request;
     requestsGuard.unlock();
 
     std::unique_lock<std::mutex> lock(request->mutex);
@@ -307,7 +307,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOcea
       for (auto &packet : packets) {
         if (!sendEnoceanPacket(packet)) {
           requestsGuard.lock();
-          _enoceanRequests.erase(packet->destinationAddress());
+          _enoceanRequests.erase(deviceEnoceanId);
           requestsGuard.unlock();
           return PEnOceanPacket();
         }
@@ -322,7 +322,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOcea
     }
 
     requestsGuard.lock();
-    _enoceanRequests.erase(packets.at(0)->destinationAddress());
+    _enoceanRequests.erase(deviceEnoceanId);
     requestsGuard.unlock();
 
     return request->response;

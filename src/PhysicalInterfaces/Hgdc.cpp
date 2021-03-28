@@ -54,10 +54,11 @@ void Hgdc::stopListening() {
 void Hgdc::init() {
   try {
     _initComplete = false;
-    std::vector<uint8_t> response;
+    uint8_t remainingChanges = 0;
     for (int32_t i = 0; i < 10; i++) {
       std::vector<uint8_t> data{0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x08, 0x00};
       addCrc8(data);
+      std::vector<uint8_t> response;
       getResponse(0x02, data, response);
       if (response.size() != 13 || response[1] != 0 || response[2] != 5 || response[3] != 1 || response[6] != 0) {
         if (i < 9) continue;
@@ -65,11 +66,38 @@ void Hgdc::init() {
         _stopped = true;
         return;
       }
-      _baseAddress = ((int32_t)(uint8_t)response[7] << 24) | ((int32_t)(uint8_t)response[8] << 16) | ((int32_t)(uint8_t)response[9] << 8) | (uint8_t)response[10];
+      _baseAddress = ((uint32_t)(uint8_t)response[7] << 24) | ((uint32_t)(uint8_t)response[8] << 16) | ((uint32_t)(uint8_t)response[9] << 8) | (uint8_t)response[10];
+      remainingChanges = response[11];
       break;
     }
 
-    _out.printInfo("Info: Init complete. Base address is 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + ". Remaining changes: " + std::to_string(response[11]));
+    std::string appVersion;
+    std::string apiVersion;
+    uint32_t chipId = 0;
+    std::string appDescription;
+    for (int32_t i = 0; i < 10; i++) {
+      // Get info
+      std::vector<uint8_t> data{0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x03, 0x00};
+      addCrc8(data);
+      std::vector<uint8_t> response;
+      getResponse(0x02, data, response);
+      if (response.size() != 40 || response[1] != 0 || response[2] != 33 || response[3] != 0 || response[6] != 0) {
+        if (i < 9) continue;
+        _out.printError("Error reading info from device: " + BaseLib::HelperFunctions::getHexString(response));
+        _stopped = true;
+        return;
+      }
+      appVersion = std::to_string(response[7]) + '.' + std::to_string(response[8]) + '.' + std::to_string(response[9]) + '.' + std::to_string(response[10]);
+      apiVersion = std::to_string(response[11]) + '.' + std::to_string(response[12]) + '.' + std::to_string(response[13]) + '.' + std::to_string(response[14]);
+      chipId = ((uint32_t)(uint8_t)response[15] << 24) | ((uint32_t)(uint8_t)response[16] << 16) | ((uint32_t)(uint8_t)response[17] << 8) | (uint8_t)response[18];
+      appDescription.insert(appDescription.end(), response.begin() + 23, response.begin() + 23 + 16);
+      appDescription.resize(strlen(appDescription.c_str())); //Trim to null terminator
+      break;
+    }
+
+    _out.printInfo(
+        "Info: Init complete.\n  - Base address: 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + " (remaining changes: " + std::to_string(remainingChanges) + ")\n  - App version: " + appVersion + "\n  - API version: " + apiVersion
+            + "\n  - Chip address: 0x" + BaseLib::HelperFunctions::getHexString(chipId, 8) + "\n  - App description: " + appDescription);
 
     auto roamingSetting = Gd::family->getFamilySetting("forcebaseid");
     if (roamingSetting) {

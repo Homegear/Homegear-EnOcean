@@ -62,6 +62,9 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
     std::thread pairingModeThread;
     std::queue<std::pair<std::string, uint32_t>> remoteCommissioningAddressQueue;
     std::unordered_set<int32_t> processedAddresses;
+    std::atomic_bool pairingStarted{false};
+    std::atomic_bool pairingError{false};
+    std::atomic<uint32_t> pairingProgress{0};
   };
 
   struct PairingData {
