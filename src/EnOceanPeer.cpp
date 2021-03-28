@@ -1345,7 +1345,7 @@ bool EnOceanPeer::setDeviceConfiguration(const std::map<uint32_t, std::vector<ui
       if (!chunk.empty()) {
         setBestInterface();
         auto physicalInterface = getPhysicalInterface();
-        auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(physicalInterface->getBaseAddress()getRemanDestinationAddress(), chunk);
+        auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), chunk);
         auto response = physicalInterface->sendAndReceivePacket(setDeviceConfiguration,
                                                                 _address,
                                                                 2,
@@ -1567,7 +1567,7 @@ bool EnOceanPeer::sendInboundLinkTable() {
             outputSelectorRawData.insert(outputSelectorRawData.begin(), fill.begin(), fill.end());
           }
           selectorData.emplace(outputSelectorMemoryIndex, outputSelectorRawData);
-          auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(physicalInterface->getBaseAddress()getRemanDestinationAddress(), selectorData);
+          auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), selectorData);
           auto response = physicalInterface->sendAndReceivePacket(setDeviceConfiguration,
                                                                   _address,
                                                                   2,
