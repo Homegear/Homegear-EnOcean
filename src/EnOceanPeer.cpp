@@ -1323,7 +1323,7 @@ bool EnOceanPeer::setDeviceConfiguration(const std::map<uint32_t, std::vector<ui
         if (currentSize + 3 + element.second.size() > _remanFeatures->kMaxDataLength) {
           setBestInterface();
           auto physicalInterface = getPhysicalInterface();
-          auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), chunk);
+          auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(0, getRemanDestinationAddress(), chunk);
           auto response = physicalInterface->sendAndReceivePacket(setDeviceConfiguration,
                                                                   _address,
                                                                   2,
@@ -1345,7 +1345,7 @@ bool EnOceanPeer::setDeviceConfiguration(const std::map<uint32_t, std::vector<ui
       if (!chunk.empty()) {
         setBestInterface();
         auto physicalInterface = getPhysicalInterface();
-        auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), chunk);
+        auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(0, getRemanDestinationAddress(), chunk);
         auto response = physicalInterface->sendAndReceivePacket(setDeviceConfiguration,
                                                                 _address,
                                                                 2,
@@ -1359,7 +1359,7 @@ bool EnOceanPeer::setDeviceConfiguration(const std::map<uint32_t, std::vector<ui
     } else {
       setBestInterface();
       auto physicalInterface = getPhysicalInterface();
-      auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), updatedParameters);
+      auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(0, getRemanDestinationAddress(), updatedParameters);
       auto response = physicalInterface->sendAndReceivePacket(setDeviceConfiguration,
                                                               _address,
                                                               2,
@@ -1413,7 +1413,7 @@ bool EnOceanPeer::getDeviceConfiguration() {
 
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
-    auto getDeviceConfiguration = std::make_shared<GetDeviceConfiguration>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), 0, deviceConfigurationSize, 0xFF);
+    auto getDeviceConfiguration = std::make_shared<GetDeviceConfiguration>(0, getRemanDestinationAddress(), 0, deviceConfigurationSize, 0xFF);
     auto response = physicalInterface->sendAndReceivePacket(getDeviceConfiguration,
                                                             _address,
                                                             2,
@@ -1567,7 +1567,7 @@ bool EnOceanPeer::sendInboundLinkTable() {
             outputSelectorRawData.insert(outputSelectorRawData.begin(), fill.begin(), fill.end());
           }
           selectorData.emplace(outputSelectorMemoryIndex, outputSelectorRawData);
-          auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), selectorData);
+          auto setDeviceConfiguration = std::make_shared<SetDeviceConfiguration>(0, getRemanDestinationAddress(), selectorData);
           auto response = physicalInterface->sendAndReceivePacket(setDeviceConfiguration,
                                                                   _address,
                                                                   2,
@@ -1600,7 +1600,7 @@ bool EnOceanPeer::sendInboundLinkTable() {
       for (uint32_t i = 0; i < linkTable.size(); i += entrySize) {
         chunk.insert(chunk.end(), linkTable.begin() + i, linkTable.begin() + i + entrySize);
         if (chunk.size() + entrySize > _remanFeatures->kMaxDataLength) {
-          auto setLinkTable = std::make_shared<SetLinkTable>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), true, chunk);
+          auto setLinkTable = std::make_shared<SetLinkTable>(0, getRemanDestinationAddress(), true, chunk);
           auto response = physicalInterface->sendAndReceivePacket(setLinkTable,
                                                                   _address,
                                                                   2,
@@ -1616,7 +1616,7 @@ bool EnOceanPeer::sendInboundLinkTable() {
       }
 
       if (!chunk.empty()) {
-        auto setLinkTable = std::make_shared<SetLinkTable>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), true, chunk);
+        auto setLinkTable = std::make_shared<SetLinkTable>(0, getRemanDestinationAddress(), true, chunk);
         auto response = physicalInterface->sendAndReceivePacket(setLinkTable,
                                                                 _address,
                                                                 2,
@@ -1628,7 +1628,7 @@ bool EnOceanPeer::sendInboundLinkTable() {
         }
       }
     } else {
-      auto setLinkTable = std::make_shared<SetLinkTable>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), true, linkTable);
+      auto setLinkTable = std::make_shared<SetLinkTable>(0, getRemanDestinationAddress(), true, linkTable);
       auto response = physicalInterface->sendAndReceivePacket(setLinkTable,
                                                               _address,
                                                               2,
@@ -1680,7 +1680,7 @@ bool EnOceanPeer::remanSetRepeaterFilter(uint8_t filterControl, uint8_t filterTy
 
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
-    auto setRepeaterFilter = std::make_shared<SetRepeaterFilter>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), filterControl, filterType, filterValue);
+    auto setRepeaterFilter = std::make_shared<SetRepeaterFilter>(0, getRemanDestinationAddress(), filterControl, filterType, filterValue);
     auto response = physicalInterface->sendAndReceivePacket(setRepeaterFilter,
                                                             _address,
                                                             2,
@@ -1706,7 +1706,7 @@ bool EnOceanPeer::remanSetRepeaterFunctions(uint8_t function, uint8_t level, uin
 
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
-    auto setRepeaterFunctions = std::make_shared<SetRepeaterFunctions>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), function, level, structure);
+    auto setRepeaterFunctions = std::make_shared<SetRepeaterFunctions>(0, getRemanDestinationAddress(), function, level, structure);
     auto response = physicalInterface->sendAndReceivePacket(setRepeaterFunctions,
                                                             _address,
                                                             2,
@@ -1732,7 +1732,7 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
 
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
-    auto setSecurityProfile = std::make_shared<SetSecurityProfile>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), _remanFeatures->kRecomVersion == 0x11, outbound, index, slf, rlc, aesKey, destinationId, sourceId);
+    auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0, getRemanDestinationAddress(), _remanFeatures->kRecomVersion == 0x11, outbound, index, slf, rlc, aesKey, destinationId, sourceId);
     auto response = physicalInterface->sendAndReceivePacket(setSecurityProfile,
                                                             _address,
                                                             2,
@@ -1758,7 +1758,7 @@ bool EnOceanPeer::remanSetCode(uint32_t securityCode) {
 
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
-    auto setCode = std::make_shared<SetCode>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), securityCode);
+    auto setCode = std::make_shared<SetCode>(0, getRemanDestinationAddress(), securityCode);
     auto response = physicalInterface->sendAndReceivePacket(setCode,
                                                             _address,
                                                             2,
@@ -1906,7 +1906,7 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
         uint8_t level = (repeaterLevel == 0) ? 1 : repeaterLevel;
         setBestInterface();
         auto physicalInterface = getPhysicalInterface();
-        auto setRepeaterFunctions = std::make_shared<SetRepeaterFunctions>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), function, level, 0);
+        auto setRepeaterFunctions = std::make_shared<SetRepeaterFunctions>(0, getRemanDestinationAddress(), function, level, 0);
         auto response = physicalInterface->sendAndReceivePacket(setRepeaterFunctions,
                                                                 _address,
                                                                 2,
@@ -2546,11 +2546,11 @@ bool EnOceanPeer::remoteManagementUnlock() {
     if (_securityCode != 0) {
       setBestInterface();
       auto physicalInterface = getPhysicalInterface();
-      auto unlock = std::make_shared<Unlock>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), _securityCode);
+      auto unlock = std::make_shared<Unlock>(0, getRemanDestinationAddress(), _securityCode);
       physicalInterface->sendEnoceanPacket(unlock);
       physicalInterface->sendEnoceanPacket(unlock);
 
-      auto queryStatus = std::make_shared<QueryStatusPacket>(physicalInterface->getBaseAddress(), getRemanDestinationAddress());
+      auto queryStatus = std::make_shared<QueryStatusPacket>(0, getRemanDestinationAddress());
       auto response = physicalInterface->sendAndReceivePacket(queryStatus,
                                                               _address,
                                                               2,
@@ -2582,7 +2582,7 @@ void EnOceanPeer::remoteManagementLock() {
   try {
     if (_securityCode != 0) {
       auto physicalInterface = getPhysicalInterface();
-      auto lock = std::make_shared<Lock>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), _securityCode);
+      auto lock = std::make_shared<Lock>(0, getRemanDestinationAddress(), _securityCode);
       physicalInterface->sendEnoceanPacket(lock);
       physicalInterface->sendEnoceanPacket(lock);
     }
@@ -2596,7 +2596,7 @@ void EnOceanPeer::remoteManagementApplyChanges(bool applyLinkTableChanges, bool 
   try {
     if (!_remanFeatures || !_remanFeatures->kApplyChanges) return;
     auto physicalInterface = getPhysicalInterface();
-    auto applyChanges = std::make_shared<ApplyChanges>(physicalInterface->getBaseAddress(), getRemanDestinationAddress(), applyLinkTableChanges, applyConfigurationChanges);
+    auto applyChanges = std::make_shared<ApplyChanges>(0, getRemanDestinationAddress(), applyLinkTableChanges, applyConfigurationChanges);
     auto response = physicalInterface->sendAndReceivePacket(applyChanges,
                                                             _address,
                                                             2,

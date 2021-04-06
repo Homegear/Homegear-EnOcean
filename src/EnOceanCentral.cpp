@@ -1488,11 +1488,11 @@ uint64_t EnOceanCentral::remoteManagementGetEep(const std::shared_ptr<IEnOceanIn
     uint64_t eep = 0;
 
     if (securityCode != 0) {
-      auto unlock = std::make_shared<Unlock>(interface->getBaseAddress(), deviceAddress, securityCode);
+      auto unlock = std::make_shared<Unlock>(0, deviceAddress, securityCode);
       interface->sendEnoceanPacket(unlock);
       interface->sendEnoceanPacket(unlock);
 
-      auto queryStatus = std::make_shared<QueryStatusPacket>(interface->getBaseAddress(), deviceAddress);
+      auto queryStatus = std::make_shared<QueryStatusPacket>(0, deviceAddress);
       // 0 retries to not block too long, because this fails for example when reception is enabled only after a
       // signal packet (RORG 0xD0). Before the device sends a signal packet, other packets might be sent that
       // trigger pairing without the device being able to process packets from Homegear.
@@ -1516,7 +1516,7 @@ uint64_t EnOceanCentral::remoteManagementGetEep(const std::shared_ptr<IEnOceanIn
     }
 
     {
-      auto ping = std::make_shared<PingPacket>(interface->getBaseAddress(), deviceAddress);
+      auto ping = std::make_shared<PingPacket>(0, deviceAddress);
       auto response = interface->sendAndReceivePacket(ping,
                                                       deviceAddress,
                                                       2,
@@ -1533,12 +1533,12 @@ uint64_t EnOceanCentral::remoteManagementGetEep(const std::shared_ptr<IEnOceanIn
     if (eep == 0) {
       //Documentation states: From EEP 3.0 the FUNC and TYPE have the length of 8 bits. For EEP’s with FUNC > 0x3F, or TYPE > 0x7F, this RMCC will not work. In this case, the ping answer will not contain an EEP.
       //I. e. using QueryId is the recommended way of getting an EEP.
-      auto queryId = std::make_shared<QueryIdPacket>(interface->getBaseAddress(), deviceAddress);
+      auto queryId = std::make_shared<QueryIdPacket>(0, deviceAddress);
       auto response = interface->sendAndReceivePacket(queryId, deviceAddress, 2, IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction, {{0x06, 0x04},
                                                                                                                                                          {0x07, 0x04}});
       if (!response) {
         if (securityCode != 0) {
-          auto lock = std::make_shared<Lock>(interface->getBaseAddress(), deviceAddress, securityCode);
+          auto lock = std::make_shared<Lock>(0, deviceAddress, securityCode);
           interface->sendEnoceanPacket(lock);
           interface->sendEnoceanPacket(lock);
         }
@@ -1552,7 +1552,7 @@ uint64_t EnOceanCentral::remoteManagementGetEep(const std::shared_ptr<IEnOceanIn
     }
 
     if (securityCode != 0) {
-      auto lock = std::make_shared<Lock>(interface->getBaseAddress(), deviceAddress, securityCode);
+      auto lock = std::make_shared<Lock>(0, deviceAddress, securityCode);
       interface->sendEnoceanPacket(lock);
       interface->sendEnoceanPacket(lock);
     }
@@ -1604,13 +1604,13 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
     auto destinationAddress = features->kAddressedRemanPackets ? deviceAddress : 0xFFFFFFFFu;
 
     if (pairingData.remoteCommissioningSecurityCode != 0) {
-      auto unlock = std::make_shared<Unlock>(interface->getBaseAddress(), destinationAddress, pairingData.remoteCommissioningSecurityCode);
+      auto unlock = std::make_shared<Unlock>(0, destinationAddress, pairingData.remoteCommissioningSecurityCode);
       interface->sendEnoceanPacket(unlock);
       _pairingInfo.pairingProgress = (100 / 16) * 1;
       interface->sendEnoceanPacket(unlock);
       _pairingInfo.pairingProgress = (100 / 16) * 2;
 
-      auto queryStatus = std::make_shared<QueryStatusPacket>(interface->getBaseAddress(), destinationAddress);
+      auto queryStatus = std::make_shared<QueryStatusPacket>(0, destinationAddress);
       auto response = interface->sendAndReceivePacket(queryStatus,
                                                       deviceAddress,
                                                       2,
@@ -1696,7 +1696,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         for (uint32_t i = 0; i < linkTable.size(); i += entrySize) {
           chunk.insert(chunk.end(), linkTable.begin() + i, linkTable.begin() + i + entrySize);
           if (chunk.size() + entrySize > features->kMaxDataLength) {
-            auto setLinkTablePacket = std::make_shared<SetLinkTable>(interface->getBaseAddress(), destinationAddress, true, chunk);
+            auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, destinationAddress, true, chunk);
 
             auto response = interface->sendAndReceivePacket(setLinkTablePacket,
                                                             deviceAddress,
@@ -1715,7 +1715,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         }
 
         if (!chunk.empty()) {
-          auto setLinkTablePacket = std::make_shared<SetLinkTable>(interface->getBaseAddress(), destinationAddress, true, chunk);
+          auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, destinationAddress, true, chunk);
 
           auto response = interface->sendAndReceivePacket(setLinkTablePacket,
                                                           deviceAddress,
@@ -1730,7 +1730,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
           }
         }
       } else {
-        auto setLinkTablePacket = std::make_shared<SetLinkTable>(interface->getBaseAddress(), destinationAddress, true, linkTable);
+        auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, destinationAddress, true, linkTable);
 
         auto response = interface->sendAndReceivePacket(setLinkTablePacket,
                                                         deviceAddress,
@@ -1771,7 +1771,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         for (uint32_t i = 0; i < linkTable.size(); i += entrySize) {
           chunk.insert(chunk.end(), linkTable.begin() + i, linkTable.begin() + i + entrySize);
           if (chunk.size() + entrySize > features->kMaxDataLength) {
-            auto setLinkTablePacket = std::make_shared<SetLinkTable>(interface->getBaseAddress(), destinationAddress, false, chunk);
+            auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, destinationAddress, false, chunk);
 
             auto response = interface->sendAndReceivePacket(setLinkTablePacket,
                                                             deviceAddress,
@@ -1790,7 +1790,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         }
 
         if (!chunk.empty()) {
-          auto setLinkTablePacket = std::make_shared<SetLinkTable>(interface->getBaseAddress(), destinationAddress, false, chunk);
+          auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, destinationAddress, false, chunk);
 
           auto response = interface->sendAndReceivePacket(setLinkTablePacket,
                                                           deviceAddress,
@@ -1805,7 +1805,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
           }
         }
       } else {
-        auto setLinkTable = std::make_shared<SetLinkTable>(interface->getBaseAddress(), destinationAddress, false, linkTable);
+        auto setLinkTable = std::make_shared<SetLinkTable>(0, destinationAddress, false, linkTable);
 
         auto response = interface->sendAndReceivePacket(setLinkTable,
                                                         deviceAddress,
@@ -1822,7 +1822,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
     //}}}
 
     //{{{ //Dummy call as the Homegear actuators (e. g. HG-16A-EO) need some time before they accept new packets
-    auto queryStatus = std::make_shared<QueryStatusPacket>(interface->getBaseAddress(), destinationAddress);
+    auto queryStatus = std::make_shared<QueryStatusPacket>(0, destinationAddress);
     auto response = interface->sendAndReceivePacket(queryStatus,
                                                     deviceAddress,
                                                     10,
@@ -1833,7 +1833,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
 
     //{{{ Set repeater functions
     if (features->kSetRepeaterFunctions) {
-      auto setRepeaterFunctions = std::make_shared<SetRepeaterFunctions>(interface->getBaseAddress(), destinationAddress, 0, 1, 0);
+      auto setRepeaterFunctions = std::make_shared<SetRepeaterFunctions>(0, destinationAddress, 0, 1, 0);
       response = interface->sendAndReceivePacket(setRepeaterFunctions,
                                                  deviceAddress,
                                                  2,
@@ -1863,7 +1863,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         return 0;
       }
 
-      auto setSecurityProfile = std::make_shared<SetSecurityProfile>(interface->getBaseAddress(), destinationAddress, features->kRecomVersion == 0x11, false, 0, features->kSlf, 0, pairingData.aesKeyInbound, deviceAddress, pairingData.remoteCommissioningGatewayAddress);
+      auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0, destinationAddress, features->kRecomVersion == 0x11, false, 0, features->kSlf, 0, pairingData.aesKeyInbound, deviceAddress, pairingData.remoteCommissioningGatewayAddress);
       response = interface->sendAndReceivePacket(setSecurityProfile,
                                                  deviceAddress,
                                                  2,
@@ -1875,7 +1875,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         _pairingInfo.pairingError = true;
         return 0;
       } else {
-        setSecurityProfile = std::make_shared<SetSecurityProfile>(interface->getBaseAddress(), destinationAddress, features->kRecomVersion == 0x11, true, 0, features->kSlf, 0, pairingData.aesKeyOutbound, pairingData.remoteCommissioningGatewayAddress, deviceAddress);
+        setSecurityProfile = std::make_shared<SetSecurityProfile>(0, destinationAddress, features->kRecomVersion == 0x11, true, 0, features->kSlf, 0, pairingData.aesKeyOutbound, pairingData.remoteCommissioningGatewayAddress, deviceAddress);
         response = interface->sendAndReceivePacket(setSecurityProfile,
                                                    deviceAddress,
                                                    2,
@@ -1893,7 +1893,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
 
     //{{{
     if (features->kApplyChanges) {
-      auto applyChanges = std::make_shared<ApplyChanges>(interface->getBaseAddress(), destinationAddress, true, true);
+      auto applyChanges = std::make_shared<ApplyChanges>(0, destinationAddress, true, true);
       response = interface->sendAndReceivePacket(applyChanges,
                                                  deviceAddress,
                                                  2,
@@ -1904,7 +1904,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
     //}}}
 
     if (pairingData.remoteCommissioningSecurityCode != 0) {
-      auto lock = std::make_shared<Lock>(interface->getBaseAddress(), destinationAddress, pairingData.remoteCommissioningSecurityCode);
+      auto lock = std::make_shared<Lock>(0, destinationAddress, pairingData.remoteCommissioningSecurityCode);
       interface->sendEnoceanPacket(lock);
       _pairingInfo.pairingProgress = (100 / 16) * 14;
       interface->sendEnoceanPacket(lock);
