@@ -139,8 +139,6 @@ IEnOceanInterface::DutyCycleInfo Usb300::getDutyCycleInfo() {
         return DutyCycleInfo();
       }
 
-      Gd::out.printInfo("Moin " + BaseLib::HelperFunctions::getHexString(response));
-
       DutyCycleInfo info;
       info.dutyCycleUsed = response[7];
       info.slotPeriod = (((uint32_t)response[9]) << 8) | response[10];
