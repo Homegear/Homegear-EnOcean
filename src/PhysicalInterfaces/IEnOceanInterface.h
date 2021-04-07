@@ -32,6 +32,8 @@ class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface {
   virtual int32_t setBaseAddress(uint32_t value) { return -1; }
   virtual DutyCycleInfo getDutyCycleInfo() { return DutyCycleInfo(); }
 
+  virtual void reset() {}
+
   void startListening() override {}
   void stopListening() override {}
 

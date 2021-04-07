@@ -24,11 +24,12 @@ void Hgdc::startListening() {
   try {
     Gd::bl->hgdc->unregisterPacketReceivedEventHandler(_packetReceivedEventHandlerId);
     _packetReceivedEventHandlerId = Gd::bl->hgdc->registerPacketReceivedEventHandler(MY_FAMILY_ID,
-                                                                                     std::function<void(int64_t, const std::string &, const std::vector<uint8_t> &)>(std::bind(&Hgdc::processPacket,
-                                                                                                                                                                               this,
-                                                                                                                                                                               std::placeholders::_1,
-                                                                                                                                                                               std::placeholders::_2,
-                                                                                                                                                                               std::placeholders::_3)));
+                                                                                     std::function < void(int64_t,
+    const std::string &, const std::vector<uint8_t> &)>(std::bind(&Hgdc::processPacket,
+                                                                  this,
+                                                                  std::placeholders::_1,
+                                                                  std::placeholders::_2,
+                                                                  std::placeholders::_3)));
     IPhysicalInterface::startListening();
 
     _stopped = false;
@@ -66,7 +67,10 @@ void Hgdc::init() {
         _stopped = true;
         return;
       }
-      _baseAddress = ((uint32_t)(uint8_t)response[7] << 24) | ((uint32_t)(uint8_t)response[8] << 16) | ((uint32_t)(uint8_t)response[9] << 8) | (uint8_t)response[10];
+      _baseAddress = ((uint32_t)(uint8_t)
+      response[7] << 24) | ((uint32_t)(uint8_t)
+      response[8] << 16) | ((uint32_t)(uint8_t)
+      response[9] << 8) | (uint8_t)response[10];
       remainingChanges = response[11];
       break;
     }
@@ -89,7 +93,10 @@ void Hgdc::init() {
       }
       appVersion = std::to_string(response[7]) + '.' + std::to_string(response[8]) + '.' + std::to_string(response[9]) + '.' + std::to_string(response[10]);
       apiVersion = std::to_string(response[11]) + '.' + std::to_string(response[12]) + '.' + std::to_string(response[13]) + '.' + std::to_string(response[14]);
-      chipId = ((uint32_t)(uint8_t)response[15] << 24) | ((uint32_t)(uint8_t)response[16] << 16) | ((uint32_t)(uint8_t)response[17] << 8) | (uint8_t)response[18];
+      chipId = ((uint32_t)(uint8_t)
+      response[15] << 24) | ((uint32_t)(uint8_t)
+      response[16] << 16) | ((uint32_t)(uint8_t)
+      response[17] << 8) | (uint8_t)response[18];
       appDescription.insert(appDescription.end(), response.begin() + 23, response.begin() + 23 + 16);
       appDescription.resize(strlen(appDescription.c_str())); //Trim to null terminator
       break;
@@ -110,6 +117,16 @@ void Hgdc::init() {
     }
 
     _initComplete = true;
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void Hgdc::reset() {
+  try {
+    Gd::bl->hgdc->moduleReset(_settings->serialNumber);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -149,7 +166,10 @@ int32_t Hgdc::setBaseAddress(uint32_t value) {
         _stopped = true;
         return -1;
       }
-      _baseAddress = ((int32_t)(uint8_t)response[7] << 24) | ((int32_t)(uint8_t)response[8] << 16) | ((int32_t)(uint8_t)response[9] << 8) | (uint8_t)response[10];
+      _baseAddress = ((int32_t)(uint8_t)
+      response[7] << 24) | ((int32_t)(uint8_t)
+      response[8] << 16) | ((int32_t)(uint8_t)
+      response[9] << 8) | (uint8_t)response[10];
       break;
     }
 

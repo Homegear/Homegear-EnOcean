@@ -2105,6 +2105,8 @@ PVariable EnOceanCentral::updateFirmware(PRpcClientInfo clientInfo, std::vector<
     auto updateAddress = baseAddress | 1;
 
     auto dutyCycleInfo = interface->getDutyCycleInfo();
+    if (dutyCycleInfo.dutyCycleUsed > 10) interface->reset();
+    dutyCycleInfo = interface->getDutyCycleInfo();
     if (dutyCycleInfo.dutyCycleUsed > 10) {
       return BaseLib::Variable::createError(-1, "Not enough duty cycle available.");
     }
@@ -2219,6 +2221,8 @@ PVariable EnOceanCentral::updateFirmware(PRpcClientInfo clientInfo, std::vector<
 
       for (uint32_t i = 0; i < 100; i++) {
         if (Gd::bl->shuttingDown) return BaseLib::Variable::createError(-2, "Updates did not finish");
+        dutyCycleInfo = interface->getDutyCycleInfo();
+        if (dutyCycleInfo.dutyCycleUsed > 90) interface->reset();
         dutyCycleInfo = interface->getDutyCycleInfo();
         if (dutyCycleInfo.dutyCycleUsed > 90) {
           Gd::out.printInfo("Info: Waiting for duty cycle to free up. Waiting " + std::to_string(dutyCycleInfo.timeLeftInSlot) + " seconds.");
