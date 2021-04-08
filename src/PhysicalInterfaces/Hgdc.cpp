@@ -55,6 +55,12 @@ void Hgdc::stopListening() {
 void Hgdc::init() {
   try {
     _initComplete = false;
+    if (!Gd::bl->hgdc->isMaster()) {
+      _out.printInfo("Info: Not initializing module as we are not master.");
+      _initComplete = true;
+      return;
+    }
+
     uint8_t remainingChanges = 0;
     for (int32_t i = 0; i < 10; i++) {
       std::vector<uint8_t> data{0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x08, 0x00};
@@ -156,7 +162,7 @@ int32_t Hgdc::setBaseAddress(uint32_t value) {
       }
     }
 
-    for (int32_t i = 0; i < 10; i++) {
+    for (int32_t i = 0; i < 3; i++) {
       std::vector<uint8_t> data{0x55, 0x00, 0x01, 0x00, 0x05, 0x00, 0x08, 0x00};
       addCrc8(data);
       getResponse(0x02, data, response);
