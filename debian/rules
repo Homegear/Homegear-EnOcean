@@ -18,6 +18,11 @@ override_dh_auto_install:
 	chown -R root:root $(CURDIR)/debian/homegear-enocean/var/lib/homegear/admin-ui/translations/modules/enocean
 	chmod -R 555 $(CURDIR)/debian/homegear-enocean/var/lib/homegear/admin-ui/translations/modules/enocean
 
+	mkdir -p $(CURDIR)/debian/homegear-enocean/usr/share/homegear/firmware
+	cp -R $(CURDIR)/misc/Firmware/* $(CURDIR)/debian/homegear-enocean/usr/share/homegear/firmware
+	chown -R root:root $(CURDIR)/debian/homegear-enocean/usr/share/homegear/firmware
+	chmod -R 444 $(CURDIR)/debian/homegear-enocean/usr/share/homegear/firmware
+
 override_dh_strip:
 	dh_strip
 
