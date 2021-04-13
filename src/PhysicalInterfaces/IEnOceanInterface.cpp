@@ -54,7 +54,7 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t> &re
       return;
     }
 
-    if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(10000), [&] { return request->mutexReady; })) {
+    if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(2000), [&] { return request->mutexReady; })) {
       _out.printError("Error: No serial ACK received to packet: " + BaseLib::HelperFunctions::getHexString(requestPacket));
     }
     responsePacket = request->response;
@@ -70,7 +70,7 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t> &re
 
 bool IEnOceanInterface::checkForSerialRequest(const std::vector<uint8_t> &packet) {
   try {
-    uint8_t packetType = packet[4];
+    uint8_t packetType = packet.at(4);
     std::unique_lock<std::mutex> requestsGuard(_serialRequestsMutex);
     auto requestIterator = _serialRequests.find(packetType);
     if (requestIterator != _serialRequests.end()) {

@@ -2146,6 +2146,7 @@ PVariable EnOceanCentral::updateFirmware(PRpcClientInfo clientInfo, std::vector<
           }
         }
         if (deviceVersion >= version) {
+          Gd::out.printInfo("Info: Peer " + std::to_string(peerId) + " already has current firmware version " + BaseLib::HelperFunctions::getHexString(deviceVersion) + ".");
           updatedPeers->arrayValue->emplace_back(std::make_shared<BaseLib::Variable>(peerId));
           continue;
         }
@@ -2204,7 +2205,7 @@ PVariable EnOceanCentral::updateFirmware(PRpcClientInfo clientInfo, std::vector<
     peersInBootloader.insert(peersInBootloader.end(), peersInBootloaderOld.begin(), peersInBootloaderOld.end());
 
     //{{{ //Update ready peers
-    if (peersInBootloader.empty()) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tArray);
+    if (peersInBootloader.empty()) return updatedPeers;
     bool repeatBlock = false;
     uint32_t block = 0xA5;
     while (true) {
@@ -2278,7 +2279,10 @@ PVariable EnOceanCentral::updateFirmware(PRpcClientInfo clientInfo, std::vector<
           if (newBlock == block) {
             updateData.currentBlockRetries++;
             repeatBlock = true;
-          } else updateData.block = newBlock;
+          } else {
+            updateData.block = newBlock;
+            updateData.currentBlockRetries = 0;
+          }
           updateData.totalRetries++;
         }
       }

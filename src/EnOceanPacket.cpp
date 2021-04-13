@@ -46,15 +46,17 @@ EnOceanPacket::EnOceanPacket(Type type, uint8_t rorg, int32_t senderAddress, int
     _appendAddressAndStatus = true;
     if (data.empty()) _data.push_back(rorg);
   }
-  if (type == Type::RADIO_ERP1)
+  if (type == Type::RADIO_ERP1) {
     _optionalData =
         std::vector<uint8_t>{3, (uint8_t)((_destinationAddress >> 24u) & 0xFFu), (uint8_t)((_destinationAddress >> 16u) & 0xFFu), (uint8_t)((_destinationAddress >> 8u) & 0xFFu), (uint8_t)(_destinationAddress & 0xFFu),
                              0xFF, 0};
-  else if (type == Type::RADIO_ERP2) _optionalData = std::vector<uint8_t>{3, (uint8_t)0xFF};
-  else if (type == Type::REMOTE_MAN_COMMAND)
+  } else if (type == Type::RADIO_ERP2) {
+    _optionalData = std::vector<uint8_t>{3, (uint8_t)0xFF};
+  } else if (type == Type::REMOTE_MAN_COMMAND) {
     _optionalData = std::vector<uint8_t>{(uint8_t)((_destinationAddress >> 24u) & 0xFFu), (uint8_t)((_destinationAddress >> 16u) & 0xFFu), (uint8_t)((_destinationAddress >> 8u) & 0xFFu),
                                          (uint8_t)(_destinationAddress & 0xFFu), (uint8_t)((_senderAddress >> 24u) & 0xFFu), (uint8_t)((_senderAddress >> 16u) & 0xFFu),
                                          (uint8_t)((_senderAddress >> 8u) & 0xFFu), (uint8_t)(_senderAddress & 0xFFu), 0xFF, 0};
+  }
 }
 
 EnOceanPacket::~EnOceanPacket() {

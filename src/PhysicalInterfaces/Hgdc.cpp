@@ -112,9 +112,9 @@ void Hgdc::init() {
         "Info: Init complete.\n  - Base address: 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + " (remaining changes: " + std::to_string(remainingChanges) + ")\n  - App version: " + appVersion + "\n  - API version: " + apiVersion
             + "\n  - Chip address: 0x" + BaseLib::HelperFunctions::getHexString(chipId, 8) + "\n  - App description: " + appDescription);
 
-    auto roamingSetting = Gd::family->getFamilySetting("forcebaseid");
-    if (roamingSetting) {
-      uint32_t newBaseId = (uint32_t)roamingSetting->integerValue & 0xFFFFFF80;
+    auto familySetting = Gd::family->getFamilySetting("forcebaseid");
+    if (familySetting) {
+      uint32_t newBaseId = (uint32_t)familySetting->integerValue & 0xFFFFFF80;
       if (newBaseId >= 0xFF800000) {
         setBaseAddress(newBaseId);
       } else {
@@ -290,7 +290,7 @@ void Hgdc::processPacket(int64_t familyId, const std::string &serialNumber, cons
     auto packet = std::make_shared<EnOceanPacket>(data);
     if (checkForEnOceanRequest(packet)) return;
     if (packet->getType() == EnOceanPacket::Type::RADIO_ERP1 || packet->getType() == EnOceanPacket::Type::RADIO_ERP2) {
-      if ((packet->senderAddress() & 0xFFFFFF80) == _baseAddress) _out.printInfo("Info: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
+      if ((packet->senderAddress() & 0xFFFFFF80) == _baseAddress && Gd::bl->debugLevel >= 5) _out.printDebug("Debug: Ignoring packet from myself: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
       else raisePacketReceived(packet);
     } else {
       _out.printInfo("Info: Not processing packet: " + BaseLib::HelperFunctions::getHexString(data));
