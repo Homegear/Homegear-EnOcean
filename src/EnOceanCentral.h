@@ -35,7 +35,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
 
   bool peerExists(uint64_t id);
   bool peerExists(std::string serialNumber);
-  bool peerExists(int32_t address, uint64_t eep);
+  bool peerExists(int32_t address, uint64_t eep = 0);
 
   PVariable addLink(BaseLib::PRpcClientInfo clientInfo, uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description) override;
   PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId) override;
@@ -104,7 +104,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   void loadVariables() override {}
   void saveVariables() override {}
   std::shared_ptr<EnOceanPeer> createPeer(uint64_t eep, int32_t address, std::string serialNumber, bool save = true);
-  std::shared_ptr<EnOceanPeer> buildPeer(uint64_t eep, int32_t address, const std::string &interfaceId, bool bidirectional, int32_t rfChannel);
+  std::shared_ptr<EnOceanPeer> buildPeer(uint64_t eep, int32_t address, const std::string &interfaceId, bool requiresRfChannel, int32_t rfChannel);
   void deletePeer(uint64_t id);
 
   void pairingModeTimer(int32_t duration, bool debugOutput = true);

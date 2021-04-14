@@ -230,6 +230,7 @@ bool EnOceanCentral::peerExists(std::string serialNumber) {
 
 bool EnOceanCentral::peerExists(int32_t address, uint64_t eep) {
   std::list<PMyPeer> peers = getPeer(address);
+  if (eep == 0) return !peers.empty();
   for (auto &peer : peers) {
     if (peer->getDeviceType() == eep) return true;
   }
@@ -361,6 +362,28 @@ bool EnOceanCentral::handlePairingRequest(const std::string &interfaceId, const 
     if (!pairingData.remoteCommissioning && packet->getRorg() == 0xF6 && pairingData.eep != 0) {
       if (!peerExists(packet->senderAddress())) {
         buildPeer(pairingData.eep, packet->senderAddress(), interfaceId, false, -1);
+      }
+    } else if (!pairingData.remoteCommissioning && packet->getRorg() == 0xD1 && pairingData.eep != 0) {
+      //Eltako actuators
+      if (!peerExists(packet->senderAddress())) {
+        auto rpcDevice = Gd::family->getRpcDevices()->find(pairingData.eep, 0x10, -1);
+        if (rpcDevice) {
+          auto channelIterator = rpcDevice->functions.find(1);
+          if (channelIterator != rpcDevice->functions.end()) {
+            auto variableIterator = channelIterator->second->variables->parameters.find("PAIRING");
+            if (variableIterator != channelIterator->second->variables->parameters.end() && variableIterator->second->logical->type == BaseLib::DeviceDescription::ILogical::Type::Enum::tBoolean) {
+              auto peer = buildPeer(pairingData.eep, packet->senderAddress(), interfaceId, false, -1);
+              if (peer) {
+                auto result = peer->setValue(std::make_shared<RpcClientInfo>(), 1, "PAIRING", std::make_shared<BaseLib::Variable>(true), true);
+                if (result->errorStruct) {
+                  auto peerId = peer->getID();
+                  peer.reset();
+                  deletePeer(peerId);
+                }
+              }
+            }
+          }
+        }
       }
     } else if (!pairingData.remoteCommissioning && packet->getRorg() == 0xD4) {
       //UTE
@@ -963,10 +986,10 @@ std::shared_ptr<EnOceanPeer> EnOceanCentral::createPeer(uint64_t eep, int32_t ad
   return std::shared_ptr<EnOceanPeer>();
 }
 
-std::shared_ptr<EnOceanPeer> EnOceanCentral::buildPeer(uint64_t eep, int32_t address, const std::string &interfaceId, bool bidirectional, int32_t rfChannel) {
+std::shared_ptr<EnOceanPeer> EnOceanCentral::buildPeer(uint64_t eep, int32_t address, const std::string &interfaceId, bool requiresRfChannel, int32_t rfChannel) {
   try {
     std::string serial = getFreeSerialNumber(address);
-    if (bidirectional) {
+    if (requiresRfChannel) {
       if (rfChannel == -1) rfChannel = getFreeRfChannel(interfaceId);
       if (rfChannel == -1) {
         std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
@@ -990,7 +1013,7 @@ std::shared_ptr<EnOceanPeer> EnOceanCentral::buildPeer(uint64_t eep, int32_t add
       peer->save(true, true, false);
       peer->initializeCentralConfig();
       peer->setPhysicalInterfaceId(interfaceId);
-      if (bidirectional && peer->hasRfChannel(0)) peer->setRfChannel(0, rfChannel);
+      if (requiresRfChannel && peer->hasRfChannel(0)) peer->setRfChannel(0, rfChannel);
       peersGuard.lock();
       _peers[peer->getAddress()].push_back(peer);
       _peersById[peer->getID()] = peer;
