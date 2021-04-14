@@ -2281,7 +2281,7 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
       values->push_back(rpcParameter->convertFromPacket(parameterData, parameter.mainRole(), true));
     }
 
-    if (valueKey == "PAIRING") {
+    if (valueKey == "PAIRING" && (value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)) {
       if (value->integerValue == -1 && getRfChannel(_globalRfChannel ? 0 : channel) != -1) value->integerValue = getRfChannel(_globalRfChannel ? 0 : channel);
       if (value->integerValue == -1) value->integerValue = central->getFreeRfChannel(_physicalInterfaceId);
       if (value->integerValue == -1) {
