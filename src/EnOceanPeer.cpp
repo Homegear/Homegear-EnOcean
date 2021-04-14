@@ -116,7 +116,8 @@ void EnOceanPeer::worker() {
       _lastPing = BaseLib::HelperFunctions::getTimeSeconds();
       setBestInterface();
       auto physicalInterface = getPhysicalInterface();
-      auto ping = std::make_shared<PingPacket>(physicalInterface->getBaseAddress(), getRemanDestinationAddress());
+      auto senderAddress = ((_deviceType & 0xFF000000) == 0x33000000) ? (physicalInterface->getBaseAddress() | 1) : 0;
+      auto ping = std::make_shared<PingPacket>(senderAddress, getRemanDestinationAddress());
       auto response = physicalInterface->sendAndReceivePacket(ping,
                                                               _address,
                                                               2,
@@ -1658,7 +1659,8 @@ bool EnOceanPeer::remanPing() {
 
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
-    auto ping = std::make_shared<PingPacket>(physicalInterface->getBaseAddress(), getRemanDestinationAddress());
+    auto senderAddress = ((_deviceType & 0xFF000000) == 0x33000000) ? (physicalInterface->getBaseAddress() | 1) : 0;
+    auto ping = std::make_shared<PingPacket>(senderAddress, getRemanDestinationAddress());
     auto response = physicalInterface->sendAndReceivePacket(ping,
                                                             _address,
                                                             2,
