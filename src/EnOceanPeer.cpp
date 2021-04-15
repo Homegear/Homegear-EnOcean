@@ -2525,7 +2525,9 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
         }
       }
 
-      sendPacket(packet, setRequest->responseId, setRequest->delay, wait);
+      if (!sendPacket(packet, setRequest->responseId, setRequest->delay, wait)) {
+        return Variable::createError(-100, "No answer from device.");
+      }
     }
 
     if (!valueKeys->empty()) {

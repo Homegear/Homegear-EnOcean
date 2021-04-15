@@ -74,6 +74,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
     uint32_t remoteCommissioningGatewayAddress{0};
     uint32_t remoteCommissioningDeviceAddress{0};
     uint64_t eep{0};
+    int8_t rfChannel{-1};
     bool remoteCommissioningWaitForSignal{false};
     int32_t minRssi{0};
     std::vector<uint8_t> aesKeyInbound;

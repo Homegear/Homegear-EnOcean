@@ -371,15 +371,36 @@ bool EnOceanCentral::handlePairingRequest(const std::string &interfaceId, const 
           auto channelIterator = rpcDevice->functions.find(1);
           if (channelIterator != rpcDevice->functions.end()) {
             auto variableIterator = channelIterator->second->variables->parameters.find("PAIRING");
-            if (variableIterator != channelIterator->second->variables->parameters.end() && variableIterator->second->logical->type == BaseLib::DeviceDescription::ILogical::Type::Enum::tBoolean) {
-              auto peer = buildPeer(pairingData.eep, packet->senderAddress(), interfaceId, false, -1);
-              if (peer) {
-                auto result = peer->setValue(std::make_shared<RpcClientInfo>(), 1, "PAIRING", std::make_shared<BaseLib::Variable>(true), true);
-                if (result->errorStruct) {
-                  auto peerId = peer->getID();
-                  peer.reset();
-                  deletePeer(peerId);
-                  return false;
+            if (variableIterator != channelIterator->second->variables->parameters.end()) {
+              if (variableIterator->second->logical->type == BaseLib::DeviceDescription::ILogical::Type::Enum::tBoolean) {
+                auto peer = buildPeer(pairingData.eep, packet->senderAddress(), interfaceId, false, -1);
+                if (peer) {
+                  auto result = peer->setValue(std::make_shared<RpcClientInfo>(), 1, "PAIRING", std::make_shared<BaseLib::Variable>(true), true);
+                  if (result->errorStruct) {
+                    auto peerId = peer->getID();
+                    peer.reset();
+                    deletePeer(peerId);
+                    return false;
+                  }
+                  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                  peer->setValue(std::make_shared<RpcClientInfo>(), 1, "PAIRING", std::make_shared<BaseLib::Variable>(true), true);
+                  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                  peer->setValue(std::make_shared<RpcClientInfo>(), 1, "PAIRING", std::make_shared<BaseLib::Variable>(true), true);
+                }
+              } else {
+                auto peer = buildPeer(pairingData.eep, packet->senderAddress(), interfaceId, true, _pairingData.rfChannel);
+                if (peer) {
+                  auto result = peer->setValue(std::make_shared<RpcClientInfo>(), 1, "PAIRING", std::make_shared<BaseLib::Variable>((int32_t)_pairingData.rfChannel), true);
+                  if (result->errorStruct) {
+                    auto peerId = peer->getID();
+                    peer.reset();
+                    deletePeer(peerId);
+                    return false;
+                  }
+                  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                  peer->setValue(std::make_shared<RpcClientInfo>(), 1, "PAIRING", std::make_shared<BaseLib::Variable>((int32_t)_pairingData.rfChannel), true);
+                  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                  peer->setValue(std::make_shared<RpcClientInfo>(), 1, "PAIRING", std::make_shared<BaseLib::Variable>((int32_t)_pairingData.rfChannel), true);
                 }
               }
             }
@@ -1038,6 +1059,7 @@ std::shared_ptr<EnOceanPeer> EnOceanCentral::buildPeer(uint64_t eep, int32_t add
     }
 
     Gd::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
+    setInstallMode(nullptr, false, -1, nullptr, false);
 
     return peer;
   }
@@ -2033,6 +2055,9 @@ std::shared_ptr<Variable> EnOceanCentral::setInstallMode(BaseLib::PRpcClientInfo
         if (metadataIterator->second->type == BaseLib::VariableType::tString) pairingData.eep = BaseLib::Math::getUnsignedNumber64(metadataIterator->second->stringValue);
         else pairingData.eep = metadataIterator->second->integerValue64;
       }
+
+      metadataIterator = metadata->structValue->find("rfChannel");
+      if (metadataIterator != metadata->structValue->end()) pairingData.rfChannel = metadataIterator->second->integerValue;
 
       metadataIterator = metadata->structValue->find("rssi");
       if (metadataIterator != metadata->structValue->end()) pairingData.minRssi = metadataIterator->second->integerValue;
