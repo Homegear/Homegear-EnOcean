@@ -18,7 +18,7 @@ EnOceanPacket::EnOceanPacket(const std::vector<uint8_t> &espPacket) : _packet(es
     Gd::out.printWarning("Warning: Tried to import packet with wrong size information: " + BaseLib::HelperFunctions::getHexString(espPacket));
     return;
   }
-  _type = (Type)espPacket[4];
+  _type = (Type)espPacket[4];2
   _data.insert(_data.end(), espPacket.begin() + 6, espPacket.begin() + 6 + dataSize);
   _optionalData.insert(_optionalData.end(), espPacket.begin() + 6 + dataSize, espPacket.begin() + 6 + dataSize + optionalSize);
 

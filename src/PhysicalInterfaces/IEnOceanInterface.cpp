@@ -54,7 +54,7 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t> &re
       return;
     }
 
-    if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(2000), [&] { return request->mutexReady; })) {
+    if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(3000), [&] { return request->mutexReady; })) {
       _out.printError("Error: No serial ACK received to packet: " + BaseLib::HelperFunctions::getHexString(requestPacket));
     }
     responsePacket = request->response;
@@ -269,7 +269,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
         return PEnOceanPacket();
       }
 
-      if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(2000), [&] { return request->mutexReady; })) {
+      if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(3000), [&] { return request->mutexReady; })) {
         if (i < retries) _out.printInfo("Info: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()) + ". Retrying...");
         else _out.printError("Error: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
       }
@@ -313,7 +313,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOcea
         }
       }
 
-      if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(2000), [&] { return request->mutexReady; })) {
+      if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(3000), [&] { return request->mutexReady; })) {
         if (i < retries) _out.printInfo("Info: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packets.at(0)->getBinary()) + ". Retrying...");
         else _out.printError("Error: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packets.at(0)->getBinary()));
       }

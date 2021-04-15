@@ -379,6 +379,7 @@ bool EnOceanCentral::handlePairingRequest(const std::string &interfaceId, const 
                   auto peerId = peer->getID();
                   peer.reset();
                   deletePeer(peerId);
+                  return false;
                 }
               }
             }
