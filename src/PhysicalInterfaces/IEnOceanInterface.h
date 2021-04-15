@@ -117,7 +117,6 @@ class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface {
   BaseLib::Output _out;
   std::atomic<uint32_t> _baseAddress{0};
 
-  std::mutex _sendPacketMutex;
   std::mutex _getResponseMutex;
 
   std::mutex _serialRequestsMutex;

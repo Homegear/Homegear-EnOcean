@@ -34,10 +34,9 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t> &re
     responsePacket.clear();
 
     std::shared_ptr<SerialRequest> request = std::make_shared<SerialRequest>();
-    std::unique_lock<std::mutex> sendPacketGuard(_sendPacketMutex, std::defer_lock);
     std::unique_lock<std::mutex> getResponseGuard(_getResponseMutex, std::defer_lock);
     std::unique_lock<std::mutex> requestsGuard(_serialRequestsMutex, std::defer_lock);
-    std::lock(sendPacketGuard, getResponseGuard, requestsGuard);
+    std::lock(getResponseGuard, requestsGuard);
 
     _serialRequests[packetType] = request;
     requestsGuard.unlock();
