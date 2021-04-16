@@ -1059,7 +1059,7 @@ std::shared_ptr<EnOceanPeer> EnOceanCentral::buildPeer(uint64_t eep, int32_t add
     }
 
     Gd::out.printMessage("Added peer " + std::to_string(peer->getID()) + ".");
-    setInstallMode(nullptr, false, -1, nullptr, false);
+    _pairing = false;
 
     return peer;
   }
