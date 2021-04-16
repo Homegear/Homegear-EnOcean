@@ -1964,6 +1964,9 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
       } else {
         peer->setGatewayAddress(interface->getBaseAddress());
       }
+      if (pairingData.remoteCommissioningSecurityCode != 0) {
+        peer->setSecurityCode(pairingData.remoteCommissioningSecurityCode);
+      }
       if (!pairingData.aesKeyInbound.empty()) {
         peer->setAesKeyInbound(pairingData.aesKeyInbound);
       }
