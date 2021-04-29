@@ -442,7 +442,7 @@ void EnOceanPeer::loadVariables(BaseLib::Systems::ICentral *central, std::shared
           break;
         }
         case 29: {
-          _rollingCodeInbound = ((uint32_t)row->second.at(3)->intValue) + 1000;
+          setRollingCodeInbound(((uint32_t)row->second.at(3)->intValue) + 1000);
           break;
         }
         case 30: {
