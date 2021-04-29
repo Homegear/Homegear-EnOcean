@@ -120,10 +120,11 @@ class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface {
   std::mutex _getResponseMutex;
 
   std::mutex _serialRequestsMutex;
-  std::unordered_map<uint32_t, std::shared_ptr<SerialRequest>> _serialRequests;
+  std::unordered_map<uint8_t, std::shared_ptr<SerialRequest>> _serialRequests;
 
   std::mutex _enoceanRequestsMutex;
-  std::unordered_map<uint8_t, std::shared_ptr<EnOceanRequest>> _enoceanRequests;
+  uint32_t _packetId = 0;
+  std::unordered_map<uint32_t, std::unordered_map<uint32_t, std::shared_ptr<EnOceanRequest>>> _enoceanRequests;
 
   std::mutex _rssiMutex;
   std::unordered_map<uint32_t, DeviceInfo> _wildcardRssi;

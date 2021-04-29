@@ -95,35 +95,37 @@ bool IEnOceanInterface::checkForEnOceanRequest(PEnOceanPacket &packet) {
     std::unique_lock<std::mutex> requestsGuard(_enoceanRequestsMutex);
     auto requestIterator = _enoceanRequests.find(packet->senderAddress());
     if (requestIterator != _enoceanRequests.end()) {
-      auto request = requestIterator->second;
-      requestsGuard.unlock();
+      for (auto &element : requestIterator->second) {
+        auto request = element.second;
+        requestsGuard.unlock();
 
-      if (request->filterType == EnOceanRequestFilterType::remoteManagementFunction) {
-        bool found = false;
-        for (auto &filterData : request->filterData) {
-          if (filterData.size() >= 2) {
-            uint16_t function = (uint16_t)((uint16_t)filterData[0] << 8u) | filterData[1];
-            if (packet->getRemoteManagementFunction() != function) continue;
-            if (request->filterData.size() >= 4) {
-              uint16_t manufacturer = (uint16_t)((uint16_t)filterData[2] << 8u) | filterData[3];
-              if (packet->getRemoteManagementManufacturer() != manufacturer) continue;
+        if (request->filterType == EnOceanRequestFilterType::remoteManagementFunction) {
+          bool found = false;
+          for (auto &filterData : request->filterData) {
+            if (filterData.size() >= 2) {
+              uint16_t function = (uint16_t)((uint16_t)filterData[0] << 8u) | filterData[1];
+              if (packet->getRemoteManagementFunction() != function) continue;
+              if (request->filterData.size() >= 4) {
+                uint16_t manufacturer = (uint16_t)((uint16_t)filterData[2] << 8u) | filterData[3];
+                if (packet->getRemoteManagementManufacturer() != manufacturer) continue;
+              }
+              found = true;
             }
-            found = true;
+            if (found) break;
           }
-          if (found) break;
+          if (!found) continue;
         }
-        if (!found) return false;
-      }
 
-      _out.printInfo("Info: Response packet received: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
+        _out.printInfo("Info: Response packet received: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
 
-      request->response = packet;
-      {
-        std::lock_guard<std::mutex> lock(request->mutex);
-        request->mutexReady = true;
+        request->response = packet;
+        {
+          std::lock_guard<std::mutex> lock(request->mutex);
+          request->mutexReady = true;
+        }
+        request->conditionVariable.notify_all();
+        return true;
       }
-      request->conditionVariable.notify_all();
-      return true;
     }
   }
   catch (const std::exception &ex) {
@@ -255,7 +257,8 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
     request->filterData = filterData;
 
     std::unique_lock<std::mutex> requestsGuard(_enoceanRequestsMutex);
-    _enoceanRequests[deviceEnoceanId] = request;
+    uint32_t packetId = _packetId++;
+    _enoceanRequests[deviceEnoceanId][packetId] = request;
     requestsGuard.unlock();
 
     std::unique_lock<std::mutex> lock(request->mutex);
@@ -263,7 +266,11 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
     for (uint32_t i = 0; i < retries + 1; i++) {
       if (!sendEnoceanPacket(packet)) {
         requestsGuard.lock();
-        _enoceanRequests.erase(deviceEnoceanId);
+        auto requestsIterator = _enoceanRequests.find(deviceEnoceanId);
+        if (requestsIterator != _enoceanRequests.end()) {
+          requestsIterator->second.erase(packetId);
+          if (requestsIterator->second.empty()) _enoceanRequests.erase(deviceEnoceanId);
+        }
         requestsGuard.unlock();
         return PEnOceanPacket();
       }
@@ -277,7 +284,11 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
     }
 
     requestsGuard.lock();
-    _enoceanRequests.erase(deviceEnoceanId);
+    auto requestsIterator = _enoceanRequests.find(deviceEnoceanId);
+    if (requestsIterator != _enoceanRequests.end()) {
+      requestsIterator->second.erase(packetId);
+      if (requestsIterator->second.empty()) _enoceanRequests.erase(deviceEnoceanId);
+    }
     requestsGuard.unlock();
 
     return request->response;
@@ -297,7 +308,8 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOcea
     request->filterData = filterData;
 
     std::unique_lock<std::mutex> requestsGuard(_enoceanRequestsMutex);
-    _enoceanRequests[deviceEnoceanId] = request;
+    uint32_t packetId = _packetId++;
+    _enoceanRequests[deviceEnoceanId][packetId] = request;
     requestsGuard.unlock();
 
     std::unique_lock<std::mutex> lock(request->mutex);
@@ -306,7 +318,11 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOcea
       for (auto &packet : packets) {
         if (!sendEnoceanPacket(packet)) {
           requestsGuard.lock();
-          _enoceanRequests.erase(deviceEnoceanId);
+          auto requestsIterator = _enoceanRequests.find(deviceEnoceanId);
+          if (requestsIterator != _enoceanRequests.end()) {
+            requestsIterator->second.erase(packetId);
+            if (requestsIterator->second.empty()) _enoceanRequests.erase(deviceEnoceanId);
+          }
           requestsGuard.unlock();
           return PEnOceanPacket();
         }
@@ -321,7 +337,11 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOcea
     }
 
     requestsGuard.lock();
-    _enoceanRequests.erase(deviceEnoceanId);
+    auto requestsIterator = _enoceanRequests.find(deviceEnoceanId);
+    if (requestsIterator != _enoceanRequests.end()) {
+      requestsIterator->second.erase(packetId);
+      if (requestsIterator->second.empty()) _enoceanRequests.erase(deviceEnoceanId);
+    }
     requestsGuard.unlock();
 
     return request->response;
