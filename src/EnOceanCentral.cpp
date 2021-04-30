@@ -438,6 +438,7 @@ bool EnOceanCentral::handlePairingRequest(const std::string &interfaceId, const 
       if (!peerExists(packet->senderAddress(), eep) && !peerExists(packet->senderAddress(), manufacturerEep)) {
         buildPeer(manufacturerEep, packet->senderAddress(), interfaceId, false, -1);
       } else {
+        //This is for backward compatibility only. Newly paired peers don't have RF_CHANNEL set anymore.
         std::list<PMyPeer> peers = getPeer(packet->senderAddress());
         if (peers.empty()) return false;
         for (auto &peer : peers) {
