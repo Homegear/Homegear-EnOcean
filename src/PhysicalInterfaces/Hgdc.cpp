@@ -283,6 +283,8 @@ void Hgdc::processPacket(int64_t familyId, const std::string &serialNumber, cons
       }
     }
 
+    if (Gd::bl->debugLevel >= 5) _out.printDebug("Debug: Serial packet received: " + BaseLib::HelperFunctions::getHexString(data));
+
     _lastPacketReceived = BaseLib::HelperFunctions::getTime();
 
     if (checkForSerialRequest(data)) return;

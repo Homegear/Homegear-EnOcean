@@ -304,6 +304,8 @@ void Usb300::listen() {
             continue;
           }
 
+          if (Gd::bl->debugLevel >= 5) _out.printDebug("Debug: Serial packet received: " + BaseLib::HelperFunctions::getHexString(data));
+
           processPacket(data);
 
           _lastPacketReceived = BaseLib::HelperFunctions::getTime();
