@@ -436,7 +436,7 @@ bool EnOceanCentral::handlePairingRequest(const std::string &interfaceId, const 
 
       int32_t rfChannel = 0;
       if (!peerExists(packet->senderAddress(), eep) && !peerExists(packet->senderAddress(), manufacturerEep)) {
-        buildPeer(manufacturerEep, packet->senderAddress(), interfaceId, true, -1);
+        buildPeer(manufacturerEep, packet->senderAddress(), interfaceId, false, -1);
       } else {
         std::list<PMyPeer> peers = getPeer(packet->senderAddress());
         if (peers.empty()) return false;
