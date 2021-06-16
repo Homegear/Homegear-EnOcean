@@ -1054,6 +1054,8 @@ void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
     std::map<uint32_t, std::shared_ptr<std::vector<PVariable>>> rpcValues;
 
     if (frameValues.empty()) {
+      if (Gd::bl->debugLevel >= 5) Gd::out.printDebug("Debug: No frame values found. Ignoring packet.");
+
       PRpcRequest rpcRequest;
       {
         std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
@@ -2126,7 +2128,7 @@ bool EnOceanPeer::sendPacket(PEnOceanPacket &packet, const std::string &response
           std::vector<uint8_t> parameterData = parameterIterator->second.getBinaryData();
           resends = parameterIterator->second.rpcParameter->convertFromPacket(parameterData, parameterIterator->second.mainRole(), false)->integerValue;
           if (resends < 0) resends = 0;
-          else if (resends > 12) resends = 12;
+          else if (resends > 20) resends = 20;
         }
         parameterIterator = channelIterator->second.find("RESEND_TIMEOUT");
         if (parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter) {
