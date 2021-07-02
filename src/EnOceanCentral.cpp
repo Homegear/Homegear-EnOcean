@@ -2213,7 +2213,7 @@ PVariable EnOceanCentral::updateFirmware(PRpcClientInfo clientInfo, std::vector<
           bool continueLoop = false;
           for (uint32_t i = 2; i < 10; i++) {
             auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x32, 0x10, (uint8_t)i});
-            if (!peer->sendPacket(packet, "", 900, false)) {
+            if (!peer->sendPacket(packet, "", 900, false, -1, "", std::vector<uint8_t>())) {
               continueLoop = true;
               break;
             }

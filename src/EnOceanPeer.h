@@ -120,7 +120,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
                             uint32_t retries = 0,
                             IEnOceanInterface::EnOceanRequestFilterType filterType = IEnOceanInterface::EnOceanRequestFilterType::senderAddress,
                             const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>());
-  bool sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait);
+  bool sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait, int32_t channel, const std::string &parameterId, const std::vector<uint8_t> &parameterData);
 
   void queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
   void queueGetDeviceConfiguration();
@@ -161,6 +161,12 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
     std::mutex conditionVariableMutex;
     std::condition_variable conditionVariable;
     std::string responseId;
+
+    //{{{ Variables to update value after successful sending
+    int32_t channel = -1;
+    std::string parameterId;
+    std::vector<uint8_t> parameterData;
+    //}}}
 
     std::atomic_bool wait;
     PEnOceanPacket packet;
@@ -254,6 +260,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void updateBlindSpeed();
 
   void updateBlindPosition();
+
+  void updateValue(const PRpcRequest &request);
 
   // {{{ Hooks
   /**

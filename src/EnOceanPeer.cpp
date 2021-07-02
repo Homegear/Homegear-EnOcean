@@ -74,7 +74,10 @@ void EnOceanPeer::worker() {
 
           setBestInterface();
           auto physicalInterface = getPhysicalInterface();
-          physicalInterface->sendEnoceanPacket(request.second->packet);
+          auto packets = encryptPacket(request.second->packet);
+          for (auto &packet2 : packets) {
+            if (!physicalInterface->sendEnoceanPacket(packet2)) break;
+          }
           request.second->lastResend = BaseLib::HelperFunctions::getTime();
           request.second->resends++;
         }
@@ -912,6 +915,42 @@ void EnOceanPeer::getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameVa
   }
 }
 
+void EnOceanPeer::updateValue(const PRpcRequest &request) {
+  try {
+    if (!request || request->channel < 0 || request->parameterId.empty() || request->parameterData.empty()) return;
+
+    auto channelIterator = valuesCentral.find(request->channel);
+    if (channelIterator == valuesCentral.end()) return;
+    auto variableIterator = channelIterator->second.find(request->parameterId);
+    if (variableIterator == channelIterator->second.end()) return;
+
+    auto &parameter = variableIterator->second;
+    if (!parameter.rpcParameter) return;
+
+    parameter.setBinaryData(request->parameterData);
+    if (parameter.databaseId > 0) saveParameter(parameter.databaseId, request->parameterData);
+    else saveParameter(0, ParameterGroup::Type::Enum::variables, request->channel, request->parameterId, request->parameterData);
+    if (_bl->debugLevel >= 4)
+      Gd::out.printInfo("Info: " + request->parameterId + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(request->channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(request->parameterData) + ".");
+
+    if (parameter.rpcParameter->readable) {
+      auto valueKeys = std::make_shared<std::vector<std::string>>();
+      auto values = std::make_shared<std::vector<PVariable>>();
+
+      valueKeys->push_back(request->parameterId);
+      values->push_back(parameter.rpcParameter->convertFromPacket(request->parameterData, parameter.mainRole(), true));
+
+      std::string eventSource = "device-" + std::to_string(_peerID);
+      std::string address(_serialNumber + ":" + std::to_string(request->channel));
+      raiseEvent(eventSource, _peerID, request->channel, valueKeys, values);
+      raiseRPCEvent(eventSource, _peerID, request->channel, address, valueKeys, values);
+    }
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
 void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
   try {
     if (_disposing || !packet || !_rpcDevice) return;
@@ -1069,6 +1108,7 @@ void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
         else {
           std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
           _rpcRequests.erase("ANY");
+          updateValue(rpcRequest);
         }
       }
     }
@@ -1093,6 +1133,7 @@ void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
           else {
             std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
             _rpcRequests.erase(a->frameID);
+            updateValue(rpcRequest);
           }
         } else {
           {
@@ -1107,6 +1148,7 @@ void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
             else {
               std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
               _rpcRequests.erase("ANY");
+              updateValue(rpcRequest);
             }
           }
         }
@@ -2114,7 +2156,7 @@ PEnOceanPacket EnOceanPeer::sendAndReceivePacket(std::shared_ptr<EnOceanPacket> 
   return PEnOceanPacket();
 }
 
-bool EnOceanPeer::sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait) {
+bool EnOceanPeer::sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait, int32_t channel, const std::string &parameterId, const std::vector<uint8_t> &parameterData) {
   try {
     //Protected by Mutex to not mess up rolling code order when using encryption
     std::lock_guard<std::mutex> sendPacketGuard(_sendPacketMutex);
@@ -2125,15 +2167,15 @@ bool EnOceanPeer::sendPacket(PEnOceanPacket &packet, const std::string &response
       if (channelIterator != configCentral.end()) {
         auto parameterIterator = channelIterator->second.find("RESENDS_WHEN_NO_ACK");
         if (parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter) {
-          std::vector<uint8_t> parameterData = parameterIterator->second.getBinaryData();
-          resends = parameterIterator->second.rpcParameter->convertFromPacket(parameterData, parameterIterator->second.mainRole(), false)->integerValue;
+          std::vector<uint8_t> parameterData2 = parameterIterator->second.getBinaryData();
+          resends = parameterIterator->second.rpcParameter->convertFromPacket(parameterData2, parameterIterator->second.mainRole(), false)->integerValue;
           if (resends < 0) resends = 0;
           else if (resends > 20) resends = 20;
         }
         parameterIterator = channelIterator->second.find("RESEND_TIMEOUT");
         if (parameterIterator != channelIterator->second.end() && parameterIterator->second.rpcParameter) {
-          std::vector<uint8_t> parameterData = parameterIterator->second.getBinaryData();
-          resendTimeout = parameterIterator->second.rpcParameter->convertFromPacket(parameterData, parameterIterator->second.mainRole(), false)->integerValue;
+          std::vector<uint8_t> parameterData2 = parameterIterator->second.getBinaryData();
+          resendTimeout = parameterIterator->second.rpcParameter->convertFromPacket(parameterData2, parameterIterator->second.mainRole(), false)->integerValue;
           if (resendTimeout < 10) resendTimeout = 10;
           else if (resendTimeout > 10000) resendTimeout = 10000;
         }
@@ -2158,6 +2200,9 @@ bool EnOceanPeer::sendPacket(PEnOceanPacket &packet, const std::string &response
           //Also used as an identifier for asynchronous requests
           rpcRequest->maxResends = resends;
           rpcRequest->resendTimeout = resendTimeout;
+          rpcRequest->channel = channel;
+          rpcRequest->parameterId = parameterId;
+          rpcRequest->parameterData = parameterData;
         }
         {
           std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
@@ -2230,10 +2275,10 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
     auto channelIterator = valuesCentral.find(channel);
     if (channelIterator == valuesCentral.end()) return Variable::createError(-2, "Unknown channel.");
     auto parameterIterator = channelIterator->second.find(valueKey);
-    if (parameterIterator == valuesCentral[channel].end()) return Variable::createError(-5, "Unknown parameter.");
+    if (parameterIterator == channelIterator->second.end()) return Variable::createError(-5, "Unknown parameter.");
     PParameter rpcParameter = parameterIterator->second.rpcParameter;
     if (!rpcParameter) return Variable::createError(-5, "Unknown parameter.");
-    BaseLib::Systems::RpcConfigurationParameter &parameter = valuesCentral[channel][valueKey];
+    BaseLib::Systems::RpcConfigurationParameter &parameter = parameterIterator->second;
     std::shared_ptr<std::vector<std::string>> valueKeys(new std::vector<std::string>());
     std::shared_ptr<std::vector<PVariable>> values(new std::vector<PVariable>());
 
@@ -2274,16 +2319,6 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
 
     std::vector<uint8_t> parameterData;
     rpcParameter->convertToPacket(value, parameter.mainRole(), parameterData);
-    parameter.setBinaryData(parameterData);
-    if (parameter.databaseId > 0) saveParameter(parameter.databaseId, parameterData);
-    else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey, parameterData);
-    if (_bl->debugLevel >= 4)
-      Gd::out.printInfo("Info: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + ".");
-
-    if (rpcParameter->readable) {
-      valueKeys->push_back(valueKey);
-      values->push_back(rpcParameter->convertFromPacket(parameterData, parameter.mainRole(), true));
-    }
 
     if (valueKey == "PAIRING" && (value->type == BaseLib::VariableType::tInteger || value->type == BaseLib::VariableType::tInteger64)) {
       if (value->integerValue == -1 && getRfChannel(_globalRfChannel ? 0 : channel) != -1) value->integerValue = getRfChannel(_globalRfChannel ? 0 : channel);
@@ -2297,13 +2332,14 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
       if (channelIterator2 != valuesCentral.end()) {
         auto parameterIterator2 = channelIterator2->second.find("RF_CHANNEL");
         if (parameterIterator2 != channelIterator2->second.end() && parameterIterator2->second.rpcParameter) {
-          parameterIterator2->second.rpcParameter->convertToPacket(value, parameterIterator2->second.mainRole(), parameterData);
-          parameterIterator2->second.setBinaryData(parameterData);
-          if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData);
-          else saveParameter(0, ParameterGroup::Type::Enum::variables, _globalRfChannel ? 0 : channel, "RF_CHANNEL", parameterData);
-          setRfChannel(_globalRfChannel ? 0 : channel, parameterIterator2->second.rpcParameter->convertFromPacket(parameterData, parameterIterator2->second.mainRole(), false)->integerValue);
+          std::vector<uint8_t> parameterData2;
+          parameterIterator2->second.rpcParameter->convertToPacket(value, parameterIterator2->second.mainRole(), parameterData2);
+          parameterIterator2->second.setBinaryData(parameterData2);
+          if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData2);
+          else saveParameter(0, ParameterGroup::Type::Enum::variables, _globalRfChannel ? 0 : channel, "RF_CHANNEL", parameterData2);
+          setRfChannel(_globalRfChannel ? 0 : channel, parameterIterator2->second.rpcParameter->convertFromPacket(parameterData2, parameterIterator2->second.mainRole(), false)->integerValue);
           if (_bl->debugLevel >= 4)
-            Gd::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + ".");
+            Gd::out.printInfo("Info: RF_CHANNEL of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData2) + ".");
           valueKeys->push_back("RF_CHANNEL");
           values->push_back(value);
         } else return Variable::createError(-5, "Parameter RF_CHANNEL not found.");
@@ -2318,10 +2354,11 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
             auto parameterIterator2 = channelIterator->second.find(valueKey == "UP" ? "DOWN" : "UP");
             if (parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter) {
               BaseLib::PVariable falseValue = std::make_shared<BaseLib::Variable>(false);
-              parameterIterator2->second.rpcParameter->convertToPacket(falseValue, parameterIterator2->second.mainRole(), parameterData);
-              parameterIterator2->second.setBinaryData(parameterData);
-              if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData);
-              else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey == "UP" ? "DOWN" : "UP", parameterData);
+              std::vector<uint8_t> parameterData2;
+              parameterIterator2->second.rpcParameter->convertToPacket(falseValue, parameterIterator2->second.mainRole(), parameterData2);
+              parameterIterator2->second.setBinaryData(parameterData2);
+              if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData2);
+              else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey == "UP" ? "DOWN" : "UP", parameterData2);
               valueKeys->push_back(valueKey == "UP" ? "DOWN" : "UP");
               values->push_back(falseValue);
             }
@@ -2329,7 +2366,7 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
             PEnOceanPacket packet(new EnOceanPacket((EnOceanPacket::Type)1, (uint8_t)0xF6, physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
             std::vector<uint8_t> data{0};
             packet->setPosition(8, 8, data);
-            sendPacket(packet, "ANY", 0, wait);
+            sendPacket(packet, "ANY", 0, wait, -1, "", std::vector<uint8_t>());
           }
 
           channelIterator = configCentral.find(0);
@@ -2338,8 +2375,8 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
             if (parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter) {
               _blindCurrentTargetPosition = valueKey == "DOWN" ? 10000 : 0;
               int32_t positionDifference = _blindCurrentTargetPosition - _blindPosition;
-              parameterData = parameterIterator2->second.getBinaryData();
-              _blindTransitionTime = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData, parameterIterator2->second.mainRole(), false)->integerValue * 1000;
+              auto parameterData2 = parameterIterator2->second.getBinaryData();
+              _blindTransitionTime = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData2, parameterIterator2->second.mainRole(), false)->integerValue * 1000;
               if (positionDifference != 0) _blindCurrentTransitionTime = _blindTransitionTime / (10000 / std::abs(positionDifference));
               else _blindCurrentTransitionTime = 0;
               _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentTransitionTime + (_blindCurrentTargetPosition == 0 || _blindCurrentTargetPosition == 10000 ? 5000 : 0);
@@ -2360,10 +2397,11 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
             auto parameterIterator2 = channelIterator->second.find(valueKey == "UP" ? "DOWN" : "UP");
             if (parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter) {
               BaseLib::PVariable falseValue = std::make_shared<BaseLib::Variable>(false);
-              parameterIterator2->second.rpcParameter->convertToPacket(falseValue, parameterIterator2->second.mainRole(), parameterData);
-              parameterIterator2->second.setBinaryData(parameterData);
-              if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData);
-              else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey == "UP" ? "DOWN" : "UP", parameterData);
+              std::vector<uint8_t> parameterData2;
+              parameterIterator2->second.rpcParameter->convertToPacket(falseValue, parameterIterator2->second.mainRole(), parameterData2);
+              parameterIterator2->second.setBinaryData(parameterData2);
+              if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData2);
+              else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey == "UP" ? "DOWN" : "UP", parameterData2);
               valueKeys->push_back(valueKey == "UP" ? "DOWN" : "UP");
               values->push_back(falseValue);
             }
@@ -2382,10 +2420,11 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
             auto parameterIterator2 = channelIterator->second.find(variable);
             if (parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter) {
               BaseLib::PVariable falseValue = std::make_shared<BaseLib::Variable>(false);
-              parameterIterator2->second.rpcParameter->convertToPacket(falseValue, parameterIterator2->second.mainRole(), parameterData);
-              parameterIterator2->second.setBinaryData(parameterData);
-              if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData);
-              else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, variable, parameterData);
+              std::vector<uint8_t> parameterData2;
+              parameterIterator2->second.rpcParameter->convertToPacket(falseValue, parameterIterator2->second.mainRole(), parameterData2);
+              parameterIterator2->second.setBinaryData(parameterData2);
+              if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData2);
+              else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, variable, parameterData2);
               valueKeys->push_back(variable);
               values->push_back(falseValue);
             }
@@ -2405,8 +2444,8 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
             if (channelIterator != configCentral.end()) {
               auto parameterIterator2 = channelIterator->second.find("SIGNAL_DURATION");
               if (parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter) {
-                parameterData = parameterIterator2->second.getBinaryData();
-                _blindTransitionTime = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData, parameterIterator2->second.mainRole(), false)->integerValue * 1000;
+                auto parameterData2 = parameterIterator2->second.getBinaryData();
+                _blindTransitionTime = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData2, parameterIterator2->second.mainRole(), false)->integerValue * 1000;
                 _blindCurrentTargetPosition = _blindPosition + positionDifference;
                 _blindCurrentTransitionTime = _blindTransitionTime / (10000 / std::abs(positionDifference));
                 _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentTransitionTime + (newPosition == 0 || newPosition == 10000 ? 5000 : 0);
@@ -2417,17 +2456,17 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
                 PEnOceanPacket packet(new EnOceanPacket((EnOceanPacket::Type)1, (uint8_t)0xF6, physicalInterface->getBaseAddress() | getRfChannel(_globalRfChannel ? 0 : channel), _address));
                 std::vector<uint8_t> data{_blindUp ? (uint8_t)0x30 : (uint8_t)0x10};
                 packet->setPosition(8, 8, data);
-                sendPacket(packet, "ANY", 0, wait);
+                sendPacket(packet, "ANY", 0, wait, -1, "", std::vector<uint8_t>());
 
                 channelIterator = valuesCentral.find(1);
                 if (channelIterator != valuesCentral.end()) {
                   parameterIterator2 = channelIterator->second.find(_blindUp ? "UP" : "DOWN");
                   if (parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter) {
                     BaseLib::PVariable trueValue = std::make_shared<BaseLib::Variable>(true);
-                    parameterIterator2->second.rpcParameter->convertToPacket(trueValue, parameterIterator2->second.mainRole(), parameterData);
-                    parameterIterator2->second.setBinaryData(parameterData);
-                    if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData);
-                    else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, _blindUp ? "UP" : "DOWN", parameterData);
+                    parameterIterator2->second.rpcParameter->convertToPacket(trueValue, parameterIterator2->second.mainRole(), parameterData2);
+                    parameterIterator2->second.setBinaryData(parameterData2);
+                    if (parameterIterator2->second.databaseId > 0) saveParameter(parameterIterator2->second.databaseId, parameterData2);
+                    else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, _blindUp ? "UP" : "DOWN", parameterData2);
                     valueKeys->push_back(_blindUp ? "UP" : "DOWN");
                     values->push_back(trueValue);
                   }
@@ -2451,8 +2490,8 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
             if (channelIterator != configCentral.end()) {
               auto parameterIterator2 = channelIterator->second.find("TRANSITION_TIME");
               if (parameterIterator2 != channelIterator->second.end() && parameterIterator2->second.rpcParameter) {
-                parameterData = parameterIterator2->second.getBinaryData();
-                _blindTransitionTime = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData, parameterIterator2->second.mainRole(), false)->integerValue;
+                auto parameterData2 = parameterIterator2->second.getBinaryData();
+                _blindTransitionTime = parameterIterator2->second.rpcParameter->convertFromPacket(parameterData2, parameterIterator2->second.mainRole(), false)->integerValue;
                 _blindCurrentTargetPosition = _blindPosition + positionDifference;
                 _blindCurrentTransitionTime = _blindTransitionTime / (10000 / std::abs(positionDifference));
                 _blindStateResetTime = BaseLib::HelperFunctions::getTime() + _blindCurrentTransitionTime;
@@ -2507,6 +2546,10 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
         }
       }
 
+      if (!sendPacket(packet, setRequest->responseId, setRequest->delay, wait, channel, valueKey, parameterData)) {
+        return Variable::createError(-100, "No answer from device.");
+      }
+
       if (!setRequest->autoReset.empty()) {
         for (std::vector<std::string>::iterator j = setRequest->autoReset.begin(); j != setRequest->autoReset.end(); ++j) {
           std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator resetParameterIterator = channelIterator->second.find(*j);
@@ -2526,9 +2569,18 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
           }
         }
       }
+    }
 
-      if (!sendPacket(packet, setRequest->responseId, setRequest->delay, wait)) {
-        return Variable::createError(-100, "No answer from device.");
+    if (wait) { //Store value after it has been sent to the device
+      parameter.setBinaryData(parameterData);
+      if (parameter.databaseId > 0) saveParameter(parameter.databaseId, parameterData);
+      else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey, parameterData);
+      if (_bl->debugLevel >= 4)
+        Gd::out.printInfo("Info: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + ".");
+
+      if (rpcParameter->readable) {
+        valueKeys->push_back(valueKey);
+        values->push_back(rpcParameter->convertFromPacket(parameterData, parameter.mainRole(), true));
       }
     }
 
