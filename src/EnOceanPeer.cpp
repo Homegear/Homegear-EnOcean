@@ -931,7 +931,9 @@ void EnOceanPeer::updateValue(const PRpcRequest &request) {
     if (parameter.databaseId > 0) saveParameter(parameter.databaseId, request->parameterData);
     else saveParameter(0, ParameterGroup::Type::Enum::variables, request->channel, request->parameterId, request->parameterData);
     if (_bl->debugLevel >= 4)
-      Gd::out.printInfo("Info: " + request->parameterId + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(request->channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(request->parameterData) + ".");
+      Gd::out.printInfo(
+          "Info: " + request->parameterId + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(request->channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(request->parameterData)
+              + ".");
 
     if (parameter.rpcParameter->readable) {
       auto valueKeys = std::make_shared<std::vector<std::string>>();
@@ -2525,15 +2527,15 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
         }
         //We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC.
         if ((*i)->parameterId == rpcParameter->physical->groupId) {
-          std::vector<uint8_t> data = valuesCentral[channel][valueKey].getBinaryData();
-          packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
+          //We have to use parameterData as the value is not stored in valuesCentral yet
+          packet->setPosition((*i)->bitIndex, (*i)->bitSize, parameterData);
         }
           //Search for all other parameters
         else {
           bool paramFound = false;
           int32_t currentChannel = (*i)->parameterChannel;
           if (currentChannel == -1) currentChannel = channel;
-          for (std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator j = valuesCentral[currentChannel].begin(); j != valuesCentral[currentChannel].end(); ++j) {
+          for (auto j = valuesCentral[currentChannel].begin(); j != valuesCentral[currentChannel].end(); ++j) {
             //Only compare id. Till now looking for value_id was not necessary.
             if ((*i)->parameterId == j->second.rpcParameter->physical->groupId) {
               std::vector<uint8_t> data = j->second.getBinaryData();
@@ -2551,8 +2553,8 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
       }
 
       if (!setRequest->autoReset.empty()) {
-        for (std::vector<std::string>::iterator j = setRequest->autoReset.begin(); j != setRequest->autoReset.end(); ++j) {
-          std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator resetParameterIterator = channelIterator->second.find(*j);
+        for (auto &autoReset : setRequest->autoReset) {
+          auto resetParameterIterator = channelIterator->second.find(autoReset);
           if (resetParameterIterator == channelIterator->second.end()) continue;
           PVariable logicalDefaultValue = resetParameterIterator->second.rpcParameter->logical->getDefaultValue();
           std::vector<uint8_t> defaultValue;
@@ -2560,10 +2562,10 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
           if (!resetParameterIterator->second.equals(defaultValue)) {
             resetParameterIterator->second.setBinaryData(defaultValue);
             if (resetParameterIterator->second.databaseId > 0) saveParameter(resetParameterIterator->second.databaseId, defaultValue);
-            else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, *j, defaultValue);
-            Gd::out.printInfo("Info: Parameter \"" + *j + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
+            else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, autoReset, defaultValue);
+            Gd::out.printInfo("Info: Parameter \"" + autoReset + "\" was reset to " + BaseLib::HelperFunctions::getHexString(defaultValue) + ". Peer: " + std::to_string(_peerID) + " Serial number: " + _serialNumber + " Frame: " + frame->id);
             if (rpcParameter->readable) {
-              valueKeys->push_back(*j);
+              valueKeys->push_back(autoReset);
               values->push_back(logicalDefaultValue);
             }
           }
