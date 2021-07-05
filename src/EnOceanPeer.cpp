@@ -1181,7 +1181,7 @@ void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
           else saveParameter(0, ParameterGroup::Type::Enum::variables, *j, i->first, i->second.value);
           if (_bl->debugLevel >= 4)
             Gd::out.printInfo(
-                "Info: " + i->first + " on channel " + std::to_string(*j) + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + " (Frame ID: "
+                "Info: " + i->first + " on channel " + std::to_string(*j) + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + " was set to 0x" + BaseLib::HelperFunctions::getHexString(i->second.value) + " (Frame ID coming from device: "
                     + a->frameID + ").");
 
           if (parameter.rpcParameter) {
@@ -2525,7 +2525,7 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
           packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
           continue;
         }
-        //We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC.
+        //We can't just search for param, because it is ambiguous (see for example LEVEL for HM-CC-TC in family HomeMatic BidCoS).
         if ((*i)->parameterId == rpcParameter->physical->groupId) {
           //We have to use parameterData as the value is not stored in valuesCentral yet
           packet->setPosition((*i)->bitIndex, (*i)->bitSize, parameterData);
@@ -2538,7 +2538,13 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
           for (auto j = valuesCentral[currentChannel].begin(); j != valuesCentral[currentChannel].end(); ++j) {
             //Only compare id. Till now looking for value_id was not necessary.
             if ((*i)->parameterId == j->second.rpcParameter->physical->groupId) {
-              std::vector<uint8_t> data = j->second.getBinaryData();
+              std::vector<uint8_t> data;
+              if (currentChannel == channel && (*i)->parameterId == valueKey) {
+                //We have to use parameterData as the value is not stored in valuesCentral yet
+                data = parameterData;
+              } else {
+                data = j->second.getBinaryData();
+              }
               packet->setPosition((*i)->bitIndex, (*i)->bitSize, data);
               paramFound = true;
               break;
@@ -2578,7 +2584,7 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
       if (parameter.databaseId > 0) saveParameter(parameter.databaseId, parameterData);
       else saveParameter(0, ParameterGroup::Type::Enum::variables, channel, valueKey, parameterData);
       if (_bl->debugLevel >= 4)
-        Gd::out.printInfo("Info: " + valueKey + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + ".");
+        Gd::out.printInfo("Info: " + valueKey + " on channel " + std::to_string(channel) + " of peer " + std::to_string(_peerID) + " with serial number " + _serialNumber + ":" + std::to_string(channel) + " was set to 0x" + BaseLib::HelperFunctions::getHexString(parameterData) + " on device.");
 
       if (rpcParameter->readable) {
         valueKeys->push_back(valueKey);
