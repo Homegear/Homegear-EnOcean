@@ -2539,7 +2539,7 @@ PVariable EnOceanPeer::setValue(BaseLib::PRpcClientInfo clientInfo, uint32_t cha
             //Only compare id. Till now looking for value_id was not necessary.
             if ((*i)->parameterId == j->second.rpcParameter->physical->groupId) {
               std::vector<uint8_t> data;
-              if (currentChannel == channel && (*i)->parameterId == valueKey) {
+              if (currentChannel == (int32_t)channel && (*i)->parameterId == valueKey) {
                 //We have to use parameterData as the value is not stored in valuesCentral yet
                 data = parameterData;
               } else {
