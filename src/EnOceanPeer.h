@@ -16,6 +16,14 @@ class EnOceanCentral;
 
 class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserverEventSink {
  public:
+  //{{{ Meshing
+  enum class RssiStatus {
+    undefined = -1,
+    good = 0,
+    bad = 1
+  };
+  //}}}
+
   EnOceanPeer(uint32_t parentID, IPeerEventSink *eventHandler);
   EnOceanPeer(int32_t id, int32_t address, std::string serialNumber, uint32_t parentID, IPeerEventSink *eventHandler);
   ~EnOceanPeer() override;
@@ -73,6 +81,15 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
     else if (_erp1SequenceCounter == 0) _erp1SequenceCounter = 1;
     saveVariable(31, (int32_t)value);
   }
+  uint64_t getRepeaterId() { return _repeaterId; }
+  void setRepeaterId(uint64_t value) {
+    _repeaterId = value;
+    saveVariable(32, (int64_t)value);
+  }
+  bool addRepeatedAddress(int32_t value);
+  std::unordered_set<int32_t> getRepeatedAddresses();
+  bool removeRepeatedAddress(int32_t value);
+  void resetRepeatedAddresses();
   //}}}
 
   std::shared_ptr<IEnOceanInterface> getPhysicalInterface();
@@ -84,6 +101,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   PRemanFeatures getRemanFeatures();
 
   void worker();
+  void pingWorker();
   std::string handleCliCommand(std::string command) override;
   void packetReceived(PEnOceanPacket &packet);
 
@@ -97,12 +115,21 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void removePeer(int32_t channel, int32_t address, int32_t remoteChannel);
   uint32_t getLinkCount();
   int32_t getChannelGroupedWith(int32_t channel) override { return -1; }
-  int32_t getNewFirmwareVersion() override { return 0; }
-  std::string getFirmwareVersionString(int32_t firmwareVersion) override { return "1.0"; }
-  bool firmwareUpdateAvailable() override { return false; }
+  int32_t getFirmwareVersion() override;
+  std::string getFirmwareVersionString() override;
+  std::string getFirmwareVersionString(int32_t firmwareVersion) override { return BaseLib::HelperFunctions::getHexString(firmwareVersion); };
+  int32_t getNewFirmwareVersion() override;
+  bool firmwareUpdateAvailable() override;
 
   uint32_t getRemanDestinationAddress();
   bool isWildcardPeer() { return _rpcDevice->addressSize == 25; }
+
+  //{{{ Meshing
+  RssiStatus getRssiStatus() { return _rssiStatus; }
+  int64_t getNextMeshingCheck() { return _nextMeshingCheck; }
+  bool hasFreeMeshingTableSlot();
+  void setNextMeshingCheck();
+  //}}}
 
   std::string printConfig();
 
@@ -117,9 +144,9 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void homegearShuttingDown() override;
 
   PEnOceanPacket sendAndReceivePacket(std::shared_ptr<EnOceanPacket> &packet,
-                            uint32_t retries = 0,
-                            IEnOceanInterface::EnOceanRequestFilterType filterType = IEnOceanInterface::EnOceanRequestFilterType::senderAddress,
-                            const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>());
+                                      uint32_t retries = 0,
+                                      IEnOceanInterface::EnOceanRequestFilterType filterType = IEnOceanInterface::EnOceanRequestFilterType::senderAddress,
+                                      const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>());
   bool sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait, int32_t channel, const std::string &parameterId, const std::vector<uint8_t> &parameterData);
 
   void queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
@@ -127,6 +154,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool getDeviceConfiguration();
   bool setDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
   bool sendInboundLinkTable();
+  int32_t remanGetPathInfoThroughPing(uint32_t destinationPingDeviceId);
+  int32_t getPingRssi();
   bool remanPing();
   bool remanSetRepeaterFilter(uint8_t filterControl, uint8_t filterType, uint32_t filterValue);
   bool remanSetRepeaterFunctions(uint8_t function, uint8_t level, uint8_t structure);
@@ -192,6 +221,9 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   int32_t _rollingCodeSize = -1;
   uint32_t _gatewayAddress = 0;
   uint8_t _erp1SequenceCounter = 1;
+  std::atomic<uint64_t> _repeaterId = 0;
+  std::mutex _repeatedAddressesMutex;
+  std::unordered_set<int32_t> _repeatedAddresses;
   //End
 
   uint32_t _lastRssiDevice = 0;
@@ -215,6 +247,11 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   // {{{ Variables for keep alives / pinging
   std::atomic<int64_t> _lastPing{0};
   std::atomic<int64_t> _pingInterval = 0;
+  // }}}
+
+  // {{{ Variables for meshing
+  std::atomic<RssiStatus> _rssiStatus{RssiStatus::undefined};
+  std::atomic<int64_t> _nextMeshingCheck{0};
   // }}}
 
   // {{{ Variables for blinds
@@ -262,6 +299,10 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void updateBlindPosition();
 
   void updateValue(const PRpcRequest &request);
+
+  //{{{ Meshing
+  bool updateMeshingTable();
+  //}}}
 
   // {{{ Hooks
   /**

@@ -46,6 +46,15 @@ PRemanFeatures RemanFeatureParser::parse(const PHomegearDevice &rpcDevice) {
           featureIterator = featureStruct->structValue->find("deviceConfigurationSize");
           if (featureIterator != featureStruct->structValue->end()) features->kDeviceConfigurationSize = featureIterator->second->integerValue;
 
+          featureIterator = featureStruct->structValue->find("meshingRepeater");
+          if (featureIterator != featureStruct->structValue->end()) features->kMeshingRepeater = featureIterator->second->booleanValue;
+
+          featureIterator = featureStruct->structValue->find("meshingEndpoint");
+          if (featureIterator != featureStruct->structValue->end()) features->kMeshingEndpoint = featureIterator->second->booleanValue;
+
+          featureIterator = featureStruct->structValue->find("firmwareUpdates");
+          if (featureIterator != featureStruct->structValue->end()) features->kFirmwareUpdates = featureIterator->second->booleanValue;
+
           featureIterator = featureStruct->structValue->find("unlock");
           if (featureIterator != featureStruct->structValue->end()) features->kUnlock = featureIterator->second->booleanValue;
 

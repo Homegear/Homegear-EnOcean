@@ -17,6 +17,11 @@ class GetDeviceConfiguration : public EnOceanPacket {
   GetDeviceConfiguration(uint32_t senderAddress, uint32_t destinationAddress, uint16_t startIndex, uint16_t endIndex, uint8_t length);
 };
 
+class GetPathInfoThroughPing : public EnOceanPacket {
+ public:
+  GetPathInfoThroughPing(uint32_t senderAddress, uint32_t destinationAddress, uint32_t destinationPingDeviceId);
+};
+
 class Lock : public EnOceanPacket {
  public:
   Lock(uint32_t senderAddress, uint32_t destinationAddress, uint32_t securityCode);

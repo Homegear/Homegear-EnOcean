@@ -59,6 +59,21 @@ struct RemanFeatures {
    */
   uint32_t kDeviceConfigurationSize = 0;
 
+  /**
+   * Device can be used as meshing repeater.
+   */
+  bool kMeshingRepeater = false;
+
+  /**
+   * Device can be used as meshing endpoint.
+   */
+  bool kMeshingEndpoint = false;
+
+  /**
+   * Device supports Homegear firmware updates.
+   */
+  bool kFirmwareUpdates = false;
+
   //{{{ Function support
   /**
    * 0x001

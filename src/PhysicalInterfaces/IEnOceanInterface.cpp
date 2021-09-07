@@ -97,7 +97,6 @@ bool IEnOceanInterface::checkForEnOceanRequest(PEnOceanPacket &packet) {
     if (requestIterator != _enoceanRequests.end()) {
       for (auto &element : requestIterator->second) {
         auto request = element.second;
-        requestsGuard.unlock();
 
         if (request->filterType == EnOceanRequestFilterType::remoteManagementFunction) {
           bool found = false;
@@ -115,8 +114,9 @@ bool IEnOceanInterface::checkForEnOceanRequest(PEnOceanPacket &packet) {
           }
           if (!found) continue;
         }
+        requestsGuard.unlock();
 
-        _out.printInfo("Info: Response packet received: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
+        _out.printInfo("Info: Response packet received (RSSI: " + std::to_string(packet->getRssi()) + " dBm): " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
 
         request->response = packet;
         {

@@ -13,14 +13,14 @@ class EnOceanCentral;
 class EnOcean : public BaseLib::Systems::DeviceFamily {
  public:
   EnOcean(BaseLib::SharedObjects *bl, BaseLib::Systems::IFamilyEventSink *eventHandler);
-  virtual ~EnOcean();
-  virtual void dispose();
+  ~EnOcean() override;
+  void dispose() override;
 
-  virtual bool hasPhysicalInterface() { return true; }
-  virtual PVariable getPairingInfo();
+  bool hasPhysicalInterface() override { return true; }
+  PVariable getPairingInfo() override;
  protected:
-  virtual std::shared_ptr<BaseLib::Systems::ICentral> initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber);
-  virtual void createCentral();
+  std::shared_ptr<BaseLib::Systems::ICentral> initializeCentral(uint32_t deviceId, int32_t address, std::string serialNumber) override;
+  void createCentral() override;
 };
 
 }

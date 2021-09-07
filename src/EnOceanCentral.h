@@ -96,10 +96,19 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
 
   std::atomic_bool _stopWorkerThread{false};
   std::thread _workerThread;
+  std::thread _pingWorkerThread;
+
+  //{{{ Firmware updates
+  std::atomic_bool _updatingFirmware{false};
+  std::mutex _updateFirmwareThreadMutex;
+  std::thread _updateFirmwareThread;
+  std::atomic<int64_t> _lastFirmwareUpdate = 0;
+  //}}}
 
   std::string getFreeSerialNumber(int32_t address);
   void init();
   void worker();
+  void pingWorker();
   void loadPeers() override;
   void savePeers(bool full) override;
   void loadVariables() override {}
@@ -114,7 +123,13 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   static uint64_t remoteManagementGetEep(const std::shared_ptr<IEnOceanInterface> &interface, uint32_t deviceAddress, uint32_t securityCode = 0);
   bool handlePairingRequest(const std::string &interfaceId, const PEnOceanPacket &packet, const PairingData &pairingData);
 
+  void updateFirmwares(std::vector<uint64_t> ids);
+  void updateFirmware(const std::unordered_set<uint64_t> &ids);
+
   //{{{ Family RPC methods
+  BaseLib::PVariable getMeshingInfo(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable resetMeshingTables(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanGetPathInfoThroughPing(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanPing(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetRepeaterFunctions(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetRepeaterFilter(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);

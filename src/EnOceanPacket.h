@@ -63,7 +63,8 @@ class EnOceanPacket : public BaseLib::Systems::Packet {
     setDeviceSecurityInfo = 0x235,
     getRepeaterFunctions = 0x250,
     setRepeaterFunctions = 0x251,
-    setRepeaterFilter = 0x252
+    setRepeaterFilter = 0x252,
+    getPathInfoThroughPing = 0x2A0
   };
 
   enum class RemoteManagementResponse : uint16_t {
@@ -79,7 +80,8 @@ class EnOceanPacket : public BaseLib::Systems::Packet {
     getDeviceConfigurationResponse = 0x830,
     getLinkBasedConfigurationResponse = 0x832,
     getDeviceSecurityInfoResponse = 0x834,
-    getProductIdResponse = 0x827
+    getProductIdResponse = 0x827,
+    getPathInfoThroughPingResponse = 0x8A0
   };
 
   enum class QueryStatusReturnCode : uint8_t {
