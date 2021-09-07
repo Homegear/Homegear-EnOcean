@@ -11,7 +11,7 @@ namespace EnOcean {
 
 class Hgdc : public IEnOceanInterface {
  public:
-  explicit Hgdc(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
+  Hgdc(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings, const std::string &firmwareVersion);
   ~Hgdc() override;
 
   void startListening() override;
@@ -24,12 +24,15 @@ class Hgdc : public IEnOceanInterface {
   DutyCycleInfo getDutyCycleInfo() override;
 
   bool isOpen() override { return !_stopped && _initComplete; }
+  std::string getSerialNumber() override { return _settings->serialNumber; }
+  std::string getFirmwareVersion() override { return _firmwareVersion; }
 
   bool sendEnoceanPacket(const PEnOceanPacket &packet) override;
  protected:
   int32_t _packetReceivedEventHandlerId = -1;
   std::atomic_bool _initComplete{false};
   std::thread _initThread;
+  std::string _firmwareVersion;
 
   void rawSend(std::vector<uint8_t> &packet) override;
   void processPacket(int64_t familyId, const std::string &serialNumber, const std::vector<uint8_t> &data);

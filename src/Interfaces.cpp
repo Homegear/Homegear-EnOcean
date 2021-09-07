@@ -167,7 +167,8 @@ void Interfaces::createHgdcInterfaces(bool reconnected) {
         Gd::out.printError("Error getting HGDC modules: " + modules->structValue->at("faultString")->stringValue);
       }
       for (auto &module : *modules->arrayValue) {
-        auto deviceId = module->structValue->at("serialNumber")->stringValue;;
+        auto deviceId = module->structValue->at("serialNumber")->stringValue;
+        auto firmwareVersion = module->structValue->at("firmwareVersion")->integerValue;
 
         if (_physicalInterfaces.find(deviceId) == _physicalInterfaces.end()) {
           std::shared_ptr<IEnOceanInterface> device;
@@ -176,7 +177,7 @@ void Interfaces::createHgdcInterfaces(bool reconnected) {
           settings->type = "hgdc";
           settings->id = deviceId;
           settings->serialNumber = settings->id;
-          device = std::make_shared<Hgdc>(settings);
+          device = std::make_shared<Hgdc>(settings, std::to_string(firmwareVersion));
           _physicalInterfaces[settings->id] = device;
           if (settings->isDefault || !_defaultPhysicalInterface || _defaultPhysicalInterface->getID().empty()) _defaultPhysicalInterface = device;
 
@@ -273,7 +274,7 @@ void Interfaces::hgdcModuleUpdateThread() {
           settings->type = "hgdc";
           settings->id = module.first;
           settings->serialNumber = settings->id;
-          device = std::make_shared<Hgdc>(settings);
+          device = std::make_shared<Hgdc>(settings, std::to_string(module.second->structValue->at("firmwareVersion")->integerValue));
 
           if (_physicalInterfaces.find(settings->id) != _physicalInterfaces.end()) Gd::out.printError("Error: id used for two devices: " + settings->id);
           _physicalInterfaces[settings->id] = device;

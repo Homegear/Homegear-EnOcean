@@ -103,6 +103,13 @@ class EnOceanPacket : public BaseLib::Systems::Packet {
     wrongData = 0x0F
   };
 
+  enum class RepeatingStatus : uint8_t {
+    kOriginal = 0,
+    kRepeatedOnce = 1,
+    kRepeatedTwice = 2,
+    kRepeatingDisabled = 0x0F
+  };
+
   EnOceanPacket();
   explicit EnOceanPacket(const std::vector<uint8_t> &espPacket);
   EnOceanPacket(Type type, uint8_t rorg, int32_t senderAddress, int32_t destinationAddress, const std::vector<uint8_t> &data = std::vector<uint8_t>());
@@ -113,6 +120,8 @@ class EnOceanPacket : public BaseLib::Systems::Packet {
   Type getType() { return _type; }
   uint8_t getRorg() { return _rorg; }
   int32_t getRssi() { return _rssi; }
+  uint8_t getStatus() { return _status; }
+  RepeatingStatus getRepeatingStatus() { return _repeatingStatus; }
   uint16_t getRemoteManagementFunction() { return _remoteManagementFunction; }
   uint16_t getRemoteManagementManufacturer() { return _remoteManagementManufacturer; }
   std::vector<uint8_t> getData() { return _data; }
@@ -131,6 +140,8 @@ class EnOceanPacket : public BaseLib::Systems::Packet {
   Type _type = Type::RESERVED;
   int32_t _rssi = 0;
   uint8_t _rorg = 0;
+  uint8_t _status = 0;
+  RepeatingStatus _repeatingStatus = RepeatingStatus::kOriginal;
   uint16_t _remoteManagementFunction = 0;
   uint16_t _remoteManagementManufacturer = 0;
   std::vector<uint8_t> _data;

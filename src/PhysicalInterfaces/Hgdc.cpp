@@ -5,8 +5,9 @@
 
 namespace EnOcean {
 
-Hgdc::Hgdc(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings) : IEnOceanInterface(settings) {
+Hgdc::Hgdc(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings, const std::string &firmwareVersion) : IEnOceanInterface(settings) {
   _settings = settings;
+  _firmwareVersion = firmwareVersion;
   _out.init(Gd::bl);
   _out.setPrefix(Gd::out.getPrefix() + "EnOcean HGDC \"" + settings->id + "\": ");
 

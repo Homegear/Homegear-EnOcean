@@ -9,7 +9,6 @@ EnOceanPacket::EnOceanPacket() {
 }
 
 EnOceanPacket::EnOceanPacket(const std::vector<uint8_t> &espPacket) : _packet(espPacket) {
-  _timeReceived = BaseLib::HelperFunctions::getTime();
   if (espPacket.size() < 6) return;
   uint32_t dataSize = ((uint16_t)espPacket[1] << 8) | espPacket[2];
   uint32_t optionalSize = espPacket[3];
@@ -18,13 +17,20 @@ EnOceanPacket::EnOceanPacket(const std::vector<uint8_t> &espPacket) : _packet(es
     Gd::out.printWarning("Warning: Tried to import packet with wrong size information: " + BaseLib::HelperFunctions::getHexString(espPacket));
     return;
   }
+  _timeReceived = BaseLib::HelperFunctions::getTime();
   _type = (Type)espPacket[4];
   _data.insert(_data.end(), espPacket.begin() + 6, espPacket.begin() + 6 + dataSize);
   _optionalData.insert(_optionalData.end(), espPacket.begin() + 6 + dataSize, espPacket.begin() + 6 + dataSize + optionalSize);
 
   if (_type == Type::RADIO_ERP1 || _type == Type::RADIO_ERP2) {
     if (!_data.empty()) _rorg = (uint8_t)_data[0];
-    if (_data.size() >= 6) _senderAddress = (((int32_t)(uint8_t)_data[_data.size() - 5]) << 24) | (((int32_t)(uint8_t)_data[_data.size() - 4]) << 16) | (((int32_t)(uint8_t)_data[_data.size() - 3]) << 8) | ((int32_t)(uint8_t)_data[_data.size() - 2]);
+    if (_data.size() >= 6) {
+      _senderAddress = (((int32_t)(uint8_t)_data[_data.size() - 5]) << 24) | (((int32_t)(uint8_t)_data[_data.size() - 4]) << 16) | (((int32_t)(uint8_t)_data[_data.size() - 3]) << 8) | ((int32_t)(uint8_t)_data[_data.size() - 2]);
+      //Bit 7 tells us which hash function is used (0 for summation based checksum and 1 for CRC)
+      //Bit 0 to 3 is the repeating status
+      _status = (uint8_t)_data[_data.size() - 1];
+      _repeatingStatus = (RepeatingStatus)(_status & 0x0F);
+    }
     //Destination address is unset for RADIO_ERP2
     if (_optionalData.size() >= 5) _destinationAddress = (((int32_t)(uint8_t)_optionalData[1]) << 24) | (((int32_t)(uint8_t)_optionalData[2]) << 16) | (((int32_t)(uint8_t)_optionalData[3]) << 8) | (int32_t)(uint8_t)_optionalData[4];
     if (_optionalData.size() >= 2) _rssi = _type == Type::RADIO_ERP1 ? -((int32_t)_optionalData[_optionalData.size() - 2]) : -((int32_t)_optionalData.back());
