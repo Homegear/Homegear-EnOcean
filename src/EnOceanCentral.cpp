@@ -256,7 +256,7 @@ void EnOceanCentral::pingWorker() {
                   auto remanFeatures = repeaterPeer->getRemanFeatures();
                   if (!remanFeatures || !remanFeatures->kMeshingRepeater || !repeaterPeer->hasFreeMeshingTableSlot()) continue;
                   auto rssi = repeaterPeer->remanGetPathInfoThroughPing(peer->getAddress());
-                  if (rssi != 0 && (rssi > bestRssi || bestRssi == 0)) {
+                  if (rssi < 0 && rssi > -85 && (rssi > bestRssi || bestRssi == 0)) {
                     bestRssi = rssi;
                     bestRepeater = repeaterPeer;
                   }
@@ -265,7 +265,7 @@ void EnOceanCentral::pingWorker() {
                 //}}}
 
                 //{{{ Enable repeating if required
-                if (bestRssi != 0 && bestRepeater) {
+                if (bestRssi != 0 && bestRepeater && peer->getRepeaterId() != bestRepeater->getID()) {
                   Gd::out.printInfo("Info: Found peer " + std::to_string(bestRepeater->getID()) + " as repeater for peer " + std::to_string(peer->getID()) + ". RSSI from repeater to peer is: " + std::to_string(bestRssi) + " dBm.");
                   bool error = false;
                   if (peer->getRepeaterId() != 0) {
@@ -2593,7 +2593,7 @@ BaseLib::PVariable EnOceanCentral::getMeshingInfo(const PRpcClientInfo &clientIn
             addressStruct->structValue->emplace("address", std::make_shared<BaseLib::Variable>(address));
             addressesArray->arrayValue->emplace_back(addressStruct);
           }
-          peerStruct->structValue->emplace("repeatedPeers", peerStruct);
+          peerStruct->structValue->emplace("repeatedPeers", addressesArray);
         }
         meshingInfo->structValue->emplace(std::to_string(peer->getID()), peerStruct);
       }

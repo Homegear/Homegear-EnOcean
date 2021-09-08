@@ -15,7 +15,7 @@ Interfaces::Interfaces(BaseLib::SharedObjects *bl, std::map<std::string, Systems
 Interfaces::~Interfaces() {
   if (Gd::bl->hgdc) {
     Gd::bl->hgdc->unregisterModuleUpdateEventHandler(_hgdcModuleUpdateEventHandlerId);
-    Gd::bl->hgdc->unregisterModuleUpdateEventHandler(_hgdcReconnectedEventHandlerId);
+    Gd::bl->hgdc->unregisterReconnectedEventHandler(_hgdcReconnectedEventHandlerId);
   }
 
   _physicalInterfaces.clear();
@@ -98,7 +98,7 @@ void Interfaces::stopListening() {
 
     if (Gd::bl->hgdc) {
       Gd::bl->hgdc->unregisterModuleUpdateEventHandler(_hgdcModuleUpdateEventHandlerId);
-      Gd::bl->hgdc->unregisterModuleUpdateEventHandler(_hgdcReconnectedEventHandlerId);
+      Gd::bl->hgdc->unregisterReconnectedEventHandler(_hgdcReconnectedEventHandlerId);
     }
 
     PhysicalInterfaces::stopListening();
@@ -113,7 +113,7 @@ std::vector<std::shared_ptr<IEnOceanInterface>> Interfaces::getInterfaces() {
   try {
     std::lock_guard<std::mutex> interfaceGuard(_physicalInterfacesMutex);
     interfaces.reserve(_physicalInterfaces.size());
-    for (auto interfaceBase : _physicalInterfaces) {
+    for (const auto &interfaceBase : _physicalInterfaces) {
       std::shared_ptr<IEnOceanInterface> interface(std::dynamic_pointer_cast<IEnOceanInterface>(interfaceBase.second));
       if (!interface) continue;
       if (interface->isOpen()) interfaces.push_back(interface);

@@ -41,8 +41,7 @@ EnOceanPeer::~EnOceanPeer() {
 void EnOceanPeer::init() {
   try {
     _lastPing = BaseLib::HelperFunctions::getTimeSeconds() + BaseLib::HelperFunctions::getRandomNumber(0, 60);
-    //_nextMeshingCheck = BaseLib::HelperFunctions::getTimeSeconds() + BaseLib::HelperFunctions::getRandomNumber(300, 1800);
-    _nextMeshingCheck = BaseLib::HelperFunctions::getTimeSeconds() + 30;
+    _nextMeshingCheck = BaseLib::HelperFunctions::getTimeSeconds() + BaseLib::HelperFunctions::getRandomNumber(300, 1800);
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -130,7 +129,7 @@ void EnOceanPeer::pingWorker() {
     if (_remanFeatures && ((_remanFeatures->kPing && _pingInterval > 0 && BaseLib::HelperFunctions::getTimeSeconds() >= (_lastPing + _pingInterval)) || _remanFeatures->kMeshingEndpoint)) {
       _lastPing = BaseLib::HelperFunctions::getTimeSeconds();
       auto pingRssi = getPingRssi();
-      if (pingRssi >= 0 || pingRssi < -78) _rssiStatus.store(RssiStatus::bad, std::memory_order_release);
+      if (pingRssi >= 0 || pingRssi < -80) _rssiStatus.store(RssiStatus::bad, std::memory_order_release);
       else _rssiStatus.store(RssiStatus::good, std::memory_order_release);
     }
   }
@@ -302,8 +301,7 @@ bool EnOceanPeer::hasFreeMeshingTableSlot() {
 }
 
 void EnOceanPeer::setNextMeshingCheck() {
-  //_nextMeshingCheck = BaseLib::HelperFunctions::getTimeSeconds() + 3600 + BaseLib::HelperFunctions::getRandomNumber(0, 7200);
-  _nextMeshingCheck = BaseLib::HelperFunctions::getTimeSeconds() + 30;
+  _nextMeshingCheck = BaseLib::HelperFunctions::getTimeSeconds() + 3600 + BaseLib::HelperFunctions::getRandomNumber(0, 7200);
 }
 
 std::string EnOceanPeer::printConfig() {
@@ -462,7 +460,7 @@ bool EnOceanPeer::updateMeshingTable() {
                                                               2,
                                                               IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                               {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
-      if (!response) return false;
+      //if (!response) return false; //Todo: Uncomment once we get an ACK
     }
 
     {
@@ -470,7 +468,7 @@ bool EnOceanPeer::updateMeshingTable() {
       auto setRepeaterFilter = std::make_shared<SetRepeaterFilter>(0, getRemanDestinationAddress(), 3, 0, 0);
       auto response = physicalInterface->sendAndReceivePacket(setRepeaterFilter,
                                                               _address,
-                                                              2,
+                                                              5,
                                                               IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                               {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
       if (!response) return false;
@@ -483,7 +481,7 @@ bool EnOceanPeer::updateMeshingTable() {
         auto setRepeaterFilter = std::make_shared<SetRepeaterFilter>(0, getRemanDestinationAddress(), 1, 0, address);
         auto response = physicalInterface->sendAndReceivePacket(setRepeaterFilter,
                                                                 _address,
-                                                                2,
+                                                                5,
                                                                 IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                                 {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
         if (!response) return false;
@@ -493,7 +491,7 @@ bool EnOceanPeer::updateMeshingTable() {
         auto setRepeaterFilter = std::make_shared<SetRepeaterFilter>(0, getRemanDestinationAddress(), 1, 3, address);
         auto response = physicalInterface->sendAndReceivePacket(setRepeaterFilter,
                                                                 _address,
-                                                                2,
+                                                                5,
                                                                 IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                                 {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
         if (!response) return false;
@@ -2094,7 +2092,7 @@ bool EnOceanPeer::remanSetRepeaterFunctions(uint8_t function, uint8_t level, uin
                                                             2,
                                                             IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                             {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
-    if (!response) return false;
+    //if (!response) return false; //Todo: Uncomment once we get an ACK
 
     remoteManagementLock();
 
