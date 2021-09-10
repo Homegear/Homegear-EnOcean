@@ -460,7 +460,7 @@ bool EnOceanPeer::updateMeshingTable() {
                                                               2,
                                                               IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                               {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
-      //if (!response) return false; //Todo: Uncomment once we get an ACK
+      if (!response) return false;
     }
 
     {
@@ -1686,7 +1686,11 @@ bool EnOceanPeer::setDeviceConfiguration(const std::map<uint32_t, std::vector<ui
       }
     }
 
-    if (result) remoteManagementApplyChanges(false, true);
+    if (result) {
+      if (!remoteManagementApplyChanges(false, true)) {
+        return false;
+      }
+    }
 
     remoteManagementLock();
 
@@ -1955,7 +1959,11 @@ bool EnOceanPeer::sendInboundLinkTable() {
       }
     }
 
-    if (result) remoteManagementApplyChanges(true, true);
+    if (result) {
+      if (!remoteManagementApplyChanges(true, true)) {
+        return false;
+      }
+    }
 
     remoteManagementLock();
 
@@ -2092,7 +2100,7 @@ bool EnOceanPeer::remanSetRepeaterFunctions(uint8_t function, uint8_t level, uin
                                                             2,
                                                             IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                             {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
-    //if (!response) return false; //Todo: Uncomment once we get an ACK
+    if (!response) return false;
 
     remoteManagementLock();
 
@@ -2142,7 +2150,7 @@ bool EnOceanPeer::remanSetCode(uint32_t securityCode) {
                                                             2,
                                                             IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                             {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
-    //if (!response) return false; //Todo: Uncomment, once ACK is implemented
+    if (!response) return false;
 
     setSecurityCode(securityCode);
 
@@ -2298,9 +2306,11 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
           Gd::out.printError("Error: Could not set repeater level on device.");
         }
 
-        remoteManagementApplyChanges(true, true);
-
         remoteManagementLock();
+
+        if (!remoteManagementApplyChanges(true, true)) {
+          return Variable::createError(-8, "Could not apply changes.");
+        }
       }
       //}}}
 
@@ -2460,6 +2470,43 @@ std::vector<PEnOceanPacket> EnOceanPeer::encryptPacket(PEnOceanPacket &packet) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return std::vector<PEnOceanPacket>();
+}
+
+std::string EnOceanPeer::queryFirmwareVersion() {
+  try {
+    if (_remanFeatures && _remanFeatures->kFirmwareUpdates) {
+      uint8_t blockNumber = 0;
+      {
+        auto interface = getPhysicalInterface();
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, interface->getBaseAddress(), _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+        auto response = sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+        auto data = response ? response->getData() : std::vector<uint8_t>();
+        if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
+          return "";
+        } else {
+          blockNumber = data.at(4);
+        }
+      }
+
+      if (blockNumber == 0xA5) {
+        auto interface = getPhysicalInterface();
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, interface->getBaseAddress(), _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x11});
+        auto response = sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+        auto data = response ? response->getData() : std::vector<uint8_t>();
+        if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4) {
+          return "";
+        } else {
+          return BaseLib::HelperFunctions::getHexString((((int32_t)data.at(3)) << 8) | data.at(4));
+        }
+      } else if (blockNumber != 0) {
+        return "1";
+      }
+    }
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return "";
 }
 
 PEnOceanPacket EnOceanPeer::sendAndReceivePacket(std::shared_ptr<EnOceanPacket> &packet, uint32_t retries, IEnOceanInterface::EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
@@ -2993,9 +3040,9 @@ void EnOceanPeer::remoteManagementLock() {
   }
 }
 
-void EnOceanPeer::remoteManagementApplyChanges(bool applyLinkTableChanges, bool applyConfigurationChanges) {
+bool EnOceanPeer::remoteManagementApplyChanges(bool applyLinkTableChanges, bool applyConfigurationChanges) {
   try {
-    if (!_remanFeatures || !_remanFeatures->kApplyChanges) return;
+    if (!_remanFeatures || !_remanFeatures->kApplyChanges) return false;
     auto physicalInterface = getPhysicalInterface();
     auto applyChanges = std::make_shared<ApplyChanges>(0, getRemanDestinationAddress(), applyLinkTableChanges, applyConfigurationChanges);
     auto response = physicalInterface->sendAndReceivePacket(applyChanges,
@@ -3005,11 +3052,15 @@ void EnOceanPeer::remoteManagementApplyChanges(bool applyLinkTableChanges, bool 
                                                             {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
     if (!response) {
       Gd::out.printWarning("Error: Could not apply changes.");
+      return false;
     }
+
+    return true;
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
+  return false;
 }
 
 }

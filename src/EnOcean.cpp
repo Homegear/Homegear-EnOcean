@@ -35,9 +35,9 @@ EnOcean::~EnOcean() {
 void EnOcean::dispose() {
   if (_disposed) return;
   DeviceFamily::dispose();
-  Gd::interfaces.reset();
   _physicalInterfaces.reset();
   _central.reset();
+  Gd::interfaces.reset();
 }
 
 void EnOcean::createCentral() {

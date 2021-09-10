@@ -3,10 +3,10 @@
 #include "EnOceanCentral.h"
 #include "Gd.h"
 #include "EnOceanPackets.h"
-#include "RemanFeatures.h"
+
+//#include <homegear-base/HelperFunctions/Ha.h>
 
 #include <iomanip>
-#include <memory>
 
 namespace EnOcean {
 
@@ -67,6 +67,11 @@ void EnOceanCentral::init() {
 
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters)>>("getMeshingInfo",
                                                                                                                                                                     std::bind(&EnOceanCentral::getMeshingInfo,
+                                                                                                                                                                              this,
+                                                                                                                                                                              std::placeholders::_1,
+                                                                                                                                                                              std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters)>>("queryFirmwareVersion",
+                                                                                                                                                                    std::bind(&EnOceanCentral::queryFirmwareVersion,
                                                                                                                                                                               this,
                                                                                                                                                                               std::placeholders::_1,
                                                                                                                                                                               std::placeholders::_2)));
@@ -139,6 +144,7 @@ void EnOceanCentral::worker() {
             }
           }
 
+          //if (!Gd::bl->slaveMode && BaseLib::Ha::getInstanceType() != BaseLib::HaInstanceType::kSlave) {
           if (!Gd::bl->slaveMode) {
             // {{{ Check for and install firmware updates
             if (BaseLib::HelperFunctions::getTime() >= nextFirmwareUpdateCheck) {
@@ -1889,9 +1895,11 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids) {
 
       if (blockNumber == 0xA5) {
         //{{{ Get version
-        uint32_t deviceVersion = peer->getFirmwareVersion();
+        auto deviceVersion = BaseLib::Math::getUnsignedNumber(peer->queryFirmwareVersion(), true);
         if (deviceVersion == 0) continue;
         if (deviceVersion >= version) {
+          peer->setFirmwareVersion(deviceVersion);
+          peer->setFirmwareVersionString(BaseLib::HelperFunctions::getHexString(deviceVersion));
           Gd::out.printInfo("Info: Peer " + std::to_string(peerId) + " already has current firmware version " + BaseLib::HelperFunctions::getHexString(deviceVersion) + ".");
           continue;
         }
@@ -2607,6 +2615,22 @@ BaseLib::PVariable EnOceanCentral::getMeshingInfo(const PRpcClientInfo &clientIn
   return Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable EnOceanCentral::queryFirmwareVersion(const PRpcClientInfo &clientInfo, const PArray &parameters) {
+  try {
+    if (parameters->empty()) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
+
+    auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
+    if (!peer) return BaseLib::Variable::createError(-1, "Unknown peer.");
+
+    return std::make_shared<BaseLib::Variable>(peer->queryFirmwareVersion());
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable EnOceanCentral::resetMeshingTables(const PRpcClientInfo &clientInfo, const PArray &parameters) {
   try {
     if (!parameters->empty()) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
@@ -2628,17 +2652,24 @@ BaseLib::PVariable EnOceanCentral::resetMeshingTables(const PRpcClientInfo &clie
 
 BaseLib::PVariable EnOceanCentral::remanGetPathInfoThroughPing(const PRpcClientInfo &clientInfo, const PArray &parameters) {
   try {
-    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->size() != 2 && parameters->size() != 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
     if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
     if (parameters->at(1)->type != BaseLib::VariableType::tInteger && parameters->at(1)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type Integer.");
+    if (parameters->size() > 2 && parameters->at(2)->type != BaseLib::VariableType::tBoolean) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type Boolean.");
 
     auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
     if (!peer) return BaseLib::Variable::createError(-1, "Unknown peer.");
 
-    auto peer2 = getPeer((uint64_t)parameters->at(1)->integerValue64);
-    if (!peer2) return BaseLib::Variable::createError(-1, "Unknown destination peer.");
+    bool parameterIsAddress = false;
+    if (parameters->size() > 2) parameterIsAddress = parameters->at(2)->booleanValue;
+    if (parameterIsAddress) {
+      return std::make_shared<BaseLib::Variable>(peer->remanGetPathInfoThroughPing(parameters->at(1)->integerValue));
+    } else {
+      auto peer2 = getPeer((uint64_t)parameters->at(1)->integerValue64);
+      if (!peer2) return BaseLib::Variable::createError(-1, "Unknown destination peer.");
 
-    return std::make_shared<BaseLib::Variable>(peer->remanGetPathInfoThroughPing(peer2->getAddress()));
+      return std::make_shared<BaseLib::Variable>(peer->remanGetPathInfoThroughPing(peer2->getAddress()));
+    }
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

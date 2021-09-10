@@ -13,10 +13,7 @@ Interfaces::Interfaces(BaseLib::SharedObjects *bl, std::map<std::string, Systems
 }
 
 Interfaces::~Interfaces() {
-  if (Gd::bl->hgdc) {
-    Gd::bl->hgdc->unregisterModuleUpdateEventHandler(_hgdcModuleUpdateEventHandlerId);
-    Gd::bl->hgdc->unregisterReconnectedEventHandler(_hgdcReconnectedEventHandlerId);
-  }
+  stopListening();
 
   _physicalInterfaces.clear();
   _defaultPhysicalInterface.reset();

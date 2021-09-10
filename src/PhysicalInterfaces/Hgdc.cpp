@@ -25,12 +25,12 @@ void Hgdc::startListening() {
   try {
     Gd::bl->hgdc->unregisterPacketReceivedEventHandler(_packetReceivedEventHandlerId);
     _packetReceivedEventHandlerId = Gd::bl->hgdc->registerPacketReceivedEventHandler(MY_FAMILY_ID,
-                                                                                     std::function < void(int64_t,
-    const std::string &, const std::vector<uint8_t> &)>(std::bind(&Hgdc::processPacket,
-                                                                  this,
-                                                                  std::placeholders::_1,
-                                                                  std::placeholders::_2,
-                                                                  std::placeholders::_3)));
+                                                                                     std::function<void(int64_t,
+                                                                                                        const std::string &, const std::vector<uint8_t> &)>(std::bind(&Hgdc::processPacket,
+                                                                                                                                                                      this,
+                                                                                                                                                                      std::placeholders::_1,
+                                                                                                                                                                      std::placeholders::_2,
+                                                                                                                                                                      std::placeholders::_3)));
     IPhysicalInterface::startListening();
 
     _stopped = false;
@@ -75,16 +75,15 @@ void Hgdc::init() {
         return;
       }
       _baseAddress = ((uint32_t)(uint8_t)
-      response[7] << 24) | ((uint32_t)(uint8_t)
-      response[8] << 16) | ((uint32_t)(uint8_t)
-      response[9] << 8) | (uint8_t)response[10];
+          response[7] << 24) | ((uint32_t)(uint8_t)
+          response[8] << 16) | ((uint32_t)(uint8_t)
+          response[9] << 8) | (uint8_t)response[10];
       remainingChanges = response[11];
       break;
     }
 
     std::string appVersion;
     std::string apiVersion;
-    uint32_t chipId = 0;
     std::string appDescription;
     for (int32_t i = 0; i < 10; i++) {
       // Get info
@@ -100,10 +99,7 @@ void Hgdc::init() {
       }
       appVersion = std::to_string(response[7]) + '.' + std::to_string(response[8]) + '.' + std::to_string(response[9]) + '.' + std::to_string(response[10]);
       apiVersion = std::to_string(response[11]) + '.' + std::to_string(response[12]) + '.' + std::to_string(response[13]) + '.' + std::to_string(response[14]);
-      chipId = ((uint32_t)(uint8_t)
-      response[15] << 24) | ((uint32_t)(uint8_t)
-      response[16] << 16) | ((uint32_t)(uint8_t)
-      response[17] << 8) | (uint8_t)response[18];
+      _chipId = ((uint32_t)(uint8_t)response[15] << 24) | ((uint32_t)(uint8_t)response[16] << 16) | ((uint32_t)(uint8_t)response[17] << 8) | (uint8_t)response[18];
       appDescription.insert(appDescription.end(), response.begin() + 23, response.begin() + 23 + 16);
       appDescription.resize(strlen(appDescription.c_str())); //Trim to null terminator
       break;
@@ -111,7 +107,7 @@ void Hgdc::init() {
 
     _out.printInfo(
         "Info: Init complete.\n  - Base address: 0x" + BaseLib::HelperFunctions::getHexString(_baseAddress, 8) + " (remaining changes: " + std::to_string(remainingChanges) + ")\n  - App version: " + appVersion + "\n  - API version: " + apiVersion
-            + "\n  - Chip address: 0x" + BaseLib::HelperFunctions::getHexString(chipId, 8) + "\n  - App description: " + appDescription);
+            + "\n  - Chip address: 0x" + BaseLib::HelperFunctions::getHexString(_chipId, 8) + "\n  - App description: " + appDescription);
 
     auto familySetting = Gd::family->getFamilySetting("forcebaseid");
     if (familySetting) {
@@ -174,9 +170,9 @@ int32_t Hgdc::setBaseAddress(uint32_t value) {
         return -1;
       }
       _baseAddress = ((int32_t)(uint8_t)
-      response[7] << 24) | ((int32_t)(uint8_t)
-      response[8] << 16) | ((int32_t)(uint8_t)
-      response[9] << 8) | (uint8_t)response[10];
+          response[7] << 24) | ((int32_t)(uint8_t)
+          response[8] << 16) | ((int32_t)(uint8_t)
+          response[9] << 8) | (uint8_t)response[10];
       break;
     }
 

@@ -149,6 +149,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
                                       const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>());
   bool sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait, int32_t channel, const std::string &parameterId, const std::vector<uint8_t> &parameterData);
 
+  std::string queryFirmwareVersion();
   void queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
   void queueGetDeviceConfiguration();
   bool getDeviceConfiguration();
@@ -285,7 +286,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
 
   bool remoteManagementUnlock();
   void remoteManagementLock();
-  void remoteManagementApplyChanges(bool applyLinkTableChanges = true, bool applyConfigurationChanges = true);
+  bool remoteManagementApplyChanges(bool applyLinkTableChanges = true, bool applyConfigurationChanges = true);
 
   void getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameValues> &frameValue);
 

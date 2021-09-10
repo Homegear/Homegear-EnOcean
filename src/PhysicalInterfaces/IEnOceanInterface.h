@@ -27,6 +27,7 @@ class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface {
 
   int32_t getAddress() override { return _baseAddress; }
   uint32_t getBaseAddress() const { return _baseAddress; }
+  uint32_t getChipId() const { return _chipId; }
   int32_t getRssi(int32_t address, bool wildcardPeer);
   void decrementRssi(uint32_t address, bool wildcardPeer);
   virtual int32_t setBaseAddress(uint32_t value) { return -1; }
@@ -116,6 +117,7 @@ class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface {
   BaseLib::SharedObjects *_bl = nullptr;
   BaseLib::Output _out;
   std::atomic<uint32_t> _baseAddress{0};
+  std::atomic<uint32_t> _chipId{0};
 
   std::mutex _getResponseMutex;
 
