@@ -144,8 +144,7 @@ void EnOceanCentral::worker() {
             }
           }
 
-          //if (!Gd::bl->slaveMode && BaseLib::Ha::getInstanceType() != BaseLib::HaInstanceType::kSlave) {
-          if (!Gd::bl->slaveMode) {
+          if (!Gd::bl->slaveMode && BaseLib::Ha::getInstanceType() != BaseLib::HaInstanceType::kSlave) {
             // {{{ Check for and install firmware updates
             if (BaseLib::HelperFunctions::getTime() >= nextFirmwareUpdateCheck) {
               Gd::out.printInfo("Info: Checking for firmware updates.");
