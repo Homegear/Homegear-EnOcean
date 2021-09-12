@@ -4,7 +4,7 @@
 #include "Gd.h"
 #include "EnOceanPackets.h"
 
-//#include <homegear-base/HelperFunctions/Ha.h>
+#include <homegear-base/HelperFunctions/Ha.h>
 
 #include <iomanip>
 
