@@ -157,6 +157,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool sendInboundLinkTable();
   int32_t remanGetPathInfoThroughPing(uint32_t destinationPingDeviceId);
   int32_t getPingRssi();
+  int32_t getRssiRepeater();
+  int32_t getRssi();
   bool remanPing();
   bool remanSetRepeaterFilter(uint8_t filterControl, uint8_t filterType, uint32_t filterValue);
   bool remanSetRepeaterFunctions(uint8_t function, uint8_t level, uint8_t structure);
@@ -235,6 +237,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
 
   std::mutex _sendPacketMutex;
   PEnOceanPacket _lastPacket;
+  std::atomic<int32_t> _rssi = 0;
+  std::atomic<int32_t> _rssiRepeater = 0;
 
   bool _forceEncryption = false;
   PSecurity _security;

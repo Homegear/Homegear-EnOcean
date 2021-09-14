@@ -157,7 +157,7 @@ void EnOceanCentral::worker() {
                   peersToUpdate.emplace_back(peer->getID());
                 }
               }
-              if (!peersToUpdate.empty()) updateFirmwares(peersToUpdate);
+              if (!peersToUpdate.empty()) updateFirmwares(peersToUpdate, false);
               nextFirmwareUpdateCheck = BaseLib::HelperFunctions::getTime() + BaseLib::HelperFunctions::getRandomNumber(1200000, 2400000);
             }
             // }}}
@@ -996,11 +996,15 @@ std::string EnOceanCentral::handleCliCommand(std::string command) {
         const int32_t addressWidth = 8;
         const int32_t typeWidth1 = 8;
         const int32_t typeWidth2 = 45;
+        const int32_t rssiWidth = 8;
+        const int32_t rssiRepeaterWidth = 8;
+        const int32_t repeaterIdWidth = 8;
         const int32_t firmwareWidth = 8;
         std::string nameHeader("Name");
         nameHeader.resize(nameWidth, ' ');
         std::string typeStringHeader("Type Description");
         typeStringHeader.resize(typeWidth2, ' ');
+        stringStream << std::dec;
         stringStream << std::setfill(' ')
                      << std::setw(idWidth) << "ID" << bar
                      << nameHeader << bar
@@ -1008,9 +1012,12 @@ std::string EnOceanCentral::handleCliCommand(std::string command) {
                      << std::setw(addressWidth) << "Address" << bar
                      << std::setw(typeWidth1) << "Type" << bar
                      << typeStringHeader << bar
+                     << std::setw(rssiWidth) << "RSSI" << bar
+                     << std::setw(rssiRepeaterWidth) << "RSSI Rpt" << bar
+                     << std::setw(repeaterIdWidth) << "Repeater" << bar
                      << std::setw(firmwareWidth) << "Firmware"
                      << std::endl;
-        stringStream << "─────────┼───────────────────────────┼───────────────┼──────────┼──────────┼───────────────────────────────────────────────┼──────────" << std::endl;
+        stringStream << "─────────┼───────────────────────────┼───────────────┼──────────┼──────────┼───────────────────────────────────────────────┼──────────┼──────────┼──────────┼──────────" << std::endl;
         stringStream << std::setfill(' ')
                      << std::setw(idWidth) << " " << bar
                      << std::setw(nameWidth) << " " << bar
@@ -1018,9 +1025,15 @@ std::string EnOceanCentral::handleCliCommand(std::string command) {
                      << std::setw(addressWidth) << " " << bar
                      << std::setw(typeWidth1) << " " << bar
                      << std::setw(typeWidth2) << " " << bar
+                     << std::setw(rssiWidth) << " " << bar
+                     << std::setw(rssiRepeaterWidth) << " " << bar
+                     << std::setw(repeaterIdWidth) << " " << bar
                      << std::setw(firmwareWidth)
                      << std::endl;
         for (auto &peer : peers) {
+          auto enoceanPeer = std::dynamic_pointer_cast<EnOceanPeer>(peer);
+          if (!enoceanPeer) continue;
+
           if (filterType == "id") {
             uint64_t id = BaseLib::Math::getNumber(filterValue, false);
             if (peer->getID() != id) continue;
@@ -1041,7 +1054,7 @@ std::string EnOceanCentral::handleCliCommand(std::string command) {
           std::string name = peer->getName();
           size_t nameSize = BaseLib::HelperFunctions::utf8StringSize(name);
           if (nameSize > (unsigned)nameWidth) {
-            name = BaseLib::HelperFunctions::utf8Substring(name, 0, nameSize - 3);
+            name = BaseLib::HelperFunctions::utf8Substring(name, 0, nameWidth - 3);
             name += "...";
           } else name.resize(nameWidth + (name.size() - nameSize), ' ');
           stringStream << name << bar
@@ -1054,19 +1067,27 @@ std::string EnOceanCentral::handleCliCommand(std::string command) {
             if (type) typeID = type->description;
             auto type2Size = BaseLib::HelperFunctions::utf8StringSize(typeID);
             if (type2Size > (unsigned)typeWidth2) {
-              typeID = BaseLib::HelperFunctions::utf8Substring(typeID, 0, type2Size - 3);
+              typeID = BaseLib::HelperFunctions::utf8Substring(typeID, 0, typeWidth2 - 3);
               typeID += "...";
             } else typeID.resize(typeWidth2 + (typeID.size() - type2Size), ' ');
             stringStream << typeID << bar;
           } else stringStream << std::setw(typeWidth2) << " ";
+
+          stringStream << std::setw(rssiWidth) << std::to_string(enoceanPeer->getRssi()) << bar;
+          auto rssiRepeater = enoceanPeer->getRssiRepeater();
+          stringStream << std::setw(rssiRepeaterWidth) << (rssiRepeater == 0 ? "" : std::to_string(rssiRepeater)) << bar;
+
+          auto repeaterId = enoceanPeer->getRepeaterId();
+          stringStream << std::setw(repeaterIdWidth) << (repeaterId == 0 ? "" : std::to_string(repeaterId)) << bar;
+
           if (peer->getFirmwareVersion() == 0) stringStream << std::setfill(' ') << std::setw(firmwareWidth) << " ";
           else if (peer->firmwareUpdateAvailable()) {
             stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + peer->getFirmwareVersionString());
             firmwareUpdates = true;
           } else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << peer->getFirmwareVersionString();
-          stringStream << std::endl << std::dec;
+          stringStream << std::endl;
         }
-        stringStream << "─────────┴───────────────────────────┴───────────────┴──────────┴──────────┴───────────────────────────────────────────────┴──────────" << std::endl;
+        stringStream << "─────────┴───────────────────────────┴───────────────┴──────────┴──────────┴───────────────────────────────────────────────┴──────────┴──────────┴──────────┴──────────" << std::endl;
         if (firmwareUpdates) stringStream << std::endl << "*: Firmware update available." << std::endl;
 
         return stringStream.str();
@@ -1788,7 +1809,7 @@ uint64_t EnOceanCentral::remoteManagementGetEep(const std::shared_ptr<IEnOceanIn
   return 0;
 }
 
-void EnOceanCentral::updateFirmwares(std::vector<uint64_t> ids) {
+void EnOceanCentral::updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi) {
   try {
     if (_updatingFirmware) return;
     _updatingFirmware = true;
@@ -1803,7 +1824,7 @@ void EnOceanCentral::updateFirmwares(std::vector<uint64_t> ids) {
     //}}}
     for (auto &type : sortedIds) {
       Gd::out.printInfo("Info: Updating firmware of devices with type 0x" + BaseLib::HelperFunctions::getHexString(type.first));
-      updateFirmware(type.second);
+      updateFirmware(type.second, ignoreRssi);
     }
   } catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1811,7 +1832,7 @@ void EnOceanCentral::updateFirmwares(std::vector<uint64_t> ids) {
   _updatingFirmware = false;
 }
 
-void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids) {
+void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, bool ignoreRssi) {
   try {
     struct UpdateData {
       bool abort = false;
@@ -1887,7 +1908,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids) {
         }
       }
 
-      if (rssi > -30 || rssi < -90) {
+      if ((rssi > -30 || rssi < -90) && !ignoreRssi) {
         Gd::out.printMessage("Not updating peer " + std::to_string(peerId) + ", because RSSI is out of allowed range (RSSI is " + std::to_string(rssi) + ").");
         continue;
       }
@@ -2566,7 +2587,7 @@ PVariable EnOceanCentral::updateFirmware(PRpcClientInfo clientInfo, std::vector<
     std::lock_guard<std::mutex> updateFirmwareThreadGuard(_updateFirmwareThreadMutex);
     if (_updatingFirmware) return Variable::createError(-1, "Central is already already updating a device. Please wait until the current update is finished.");
     if (_disposing) return Variable::createError(-32500, "Central is disposing.");
-    _bl->threadManager.start(_updateFirmwareThread, false, &EnOceanCentral::updateFirmwares, this, ids);
+    _bl->threadManager.start(_updateFirmwareThread, false, &EnOceanCentral::updateFirmwares, this, ids, manual);
     return std::make_shared<BaseLib::Variable>(true);
   }
   catch (const std::exception &ex) {

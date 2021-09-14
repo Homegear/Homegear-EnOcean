@@ -1226,6 +1226,7 @@ void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
     setLastPacketReceived();
     if (_lastPacket && BaseLib::HelperFunctions::getTime() - _lastPacket->getTimeReceived() < 1000 && _lastPacket->getBinary() == packet->getBinary()) return;
     setRssiDevice(packet->getRssi() * -1);
+    _rssi = packet->getRssi();
     serviceMessages->endUnreach();
 
     auto physicalInterface = getPhysicalInterface();
@@ -2004,6 +2005,14 @@ int32_t EnOceanPeer::remanGetPathInfoThroughPing(uint32_t destinationPingDeviceI
   return false;
 }
 
+int32_t EnOceanPeer::getRssi() {
+  return _rssi;
+}
+
+int32_t EnOceanPeer::getRssiRepeater() {
+  return _rssiRepeater;
+}
+
 int32_t EnOceanPeer::getPingRssi() {
   try {
     if (!_remanFeatures || !_remanFeatures->kPing) return 0;
@@ -2013,7 +2022,9 @@ int32_t EnOceanPeer::getPingRssi() {
       if (!central) return 0;
       auto repeaterPeer = central->getPeer(_repeaterId);
       if (!repeaterPeer) return 0;
-      return repeaterPeer->remanGetPathInfoThroughPing(_address);
+      auto rssi = repeaterPeer->remanGetPathInfoThroughPing(_address);
+      _rssiRepeater = rssi;
+      return rssi;
     } else {
       setBestInterface();
       auto physicalInterface = getPhysicalInterface();
@@ -2030,8 +2041,11 @@ int32_t EnOceanPeer::getPingRssi() {
       Gd::out.printDebug("Debug (peer " + std::to_string(_peerID) + "): Got ping response.");
       auto data = response->getData();
       if (data.size() < 8) return 0;
-      if (data.at(7) == 0) return response->getRssi();
-      else return -((int32_t)data.at(7));
+      int32_t rssi = 0;
+      if (data.at(7) == 0) rssi = response->getRssi();
+      else rssi = -((int32_t)data.at(7));
+      _rssi = rssi;
+      return rssi;
     }
   }
   catch (const std::exception &ex) {

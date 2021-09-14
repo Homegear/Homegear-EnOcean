@@ -123,8 +123,8 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   static uint64_t remoteManagementGetEep(const std::shared_ptr<IEnOceanInterface> &interface, uint32_t deviceAddress, uint32_t securityCode = 0);
   bool handlePairingRequest(const std::string &interfaceId, const PEnOceanPacket &packet, const PairingData &pairingData);
 
-  void updateFirmwares(std::vector<uint64_t> ids);
-  void updateFirmware(const std::unordered_set<uint64_t> &ids);
+  void updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi);
+  void updateFirmware(const std::unordered_set<uint64_t> &ids, bool ignoreRssi);
 
   //{{{ Family RPC methods
   BaseLib::PVariable getMeshingInfo(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
