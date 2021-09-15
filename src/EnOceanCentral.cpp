@@ -203,16 +203,16 @@ void EnOceanCentral::worker() {
 
 void EnOceanCentral::pingWorker() {
   try {
-    size_t sleepingTime(20);
-    uint32_t counter = 0;
-    uint64_t lastPeer;
-    lastPeer = 0;
+    size_t sleepingTime(60);
+    uint64_t lastPeer = 0;
 
     {
       std::lock_guard<std::mutex> peersGuard(_peersMutex);
-      sleepingTime = 180u / _peersById.size();
+      if (!_peersById.empty()) sleepingTime = 180u / _peersById.size();
       if (sleepingTime == 0) sleepingTime = 1;
     }
+
+    Gd::out.printInfo("Info: Ping worker sleeping time set to " + std::to_string(sleepingTime) + "s.");
 
     while (!_stopWorkerThread && !Gd::bl->shuttingDown) {
       try {
@@ -293,7 +293,6 @@ void EnOceanCentral::pingWorker() {
           }
           //}}}
         }
-        counter++;
       }
       catch (const std::exception &ex) {
         Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1939,6 +1938,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
 
           std::this_thread::sleep_for(std::chrono::milliseconds(2000)); //Wait for flash to be deleted
 
+          //Old 2-channel actuators have a bug that requires to wait up to at least 30 seconds. When they return the current block, they are ready.
           for (uint32_t retries2 = 0; retries2 < 20; retries2++) {
             //Get first block number
             auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
