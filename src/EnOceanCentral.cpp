@@ -218,8 +218,8 @@ void EnOceanCentral::pingWorker() {
       try {
         for (uint32_t i = 0; i < sleepingTime; i++) {
           std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+          if (_stopWorkerThread || Gd::bl->shuttingDown) return;
         }
-        if (_stopWorkerThread || Gd::bl->shuttingDown) return;
 
         if (!Gd::bl->slaveMode) {
           //{{{ Execute peer workers
