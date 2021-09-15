@@ -203,26 +203,23 @@ void EnOceanCentral::worker() {
 
 void EnOceanCentral::pingWorker() {
   try {
-    std::chrono::milliseconds sleepingTime(100);
+    size_t sleepingTime(20);
     uint32_t counter = 0;
     uint64_t lastPeer;
     lastPeer = 0;
 
+    {
+      std::lock_guard<std::mutex> peersGuard(_peersMutex);
+      sleepingTime = 180u / _peersById.size();
+      if (sleepingTime == 0) sleepingTime = 1;
+    }
+
     while (!_stopWorkerThread && !Gd::bl->shuttingDown) {
       try {
-        std::this_thread::sleep_for(sleepingTime);
-        if (_stopWorkerThread || Gd::bl->shuttingDown) return;
-        if (counter > 1000) {
-          counter = 0;
-
-          {
-            std::lock_guard<std::mutex> peersGuard(_peersMutex);
-            if (!_peersById.empty()) {
-              int32_t windowTimePerPeer = _bl->settings.workerThreadWindow() / 8 / _peersById.size();
-              sleepingTime = std::chrono::milliseconds(windowTimePerPeer);
-            }
-          }
+        for (uint32_t i = 0; i < sleepingTime; i++) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
+        if (_stopWorkerThread || Gd::bl->shuttingDown) return;
 
         if (!Gd::bl->slaveMode) {
           //{{{ Execute peer workers
