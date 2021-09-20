@@ -1848,9 +1848,12 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
     peersInBootloader.reserve(ids.size());
     peersInBootloaderOld.reserve(ids.size());
 
-    std::shared_ptr<EnOceanPeer> firstPeer;
     for (auto &peerId: ids) {
       Gd::out.printMessage("Starting firmware update for peer " + std::to_string(peerId));
+    }
+
+    std::shared_ptr<EnOceanPeer> firstPeer;
+    for (auto &peerId: ids) {
       firstPeer = getPeer(peerId);
       if (firstPeer) break;
     }
@@ -1894,7 +1897,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       uint8_t blockNumber = 0;
       int32_t rssi = 0;
       for (uint32_t retries = 0; retries < 3; retries++) {
-        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
@@ -1930,7 +1933,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
           blockNumber = 0;
           bool continueLoop = false;
           for (uint32_t i = 2; i < 10; i++) {
-            auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x32, 0x10, (uint8_t)i});
+            auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x32, 0x10, (uint8_t)i});
             if (!peer->sendPacket(packet, "", 900, false, -1, "", std::vector<uint8_t>())) {
               continueLoop = true;
               break;
@@ -1943,7 +1946,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
           //Old 2-channel actuators have a bug that requires to wait up to at least 30 seconds. When they return the current block, they are ready.
           for (uint32_t retries2 = 0; retries2 < 20; retries2++) {
             //Get first block number
-            auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+            auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
             auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
             auto data = response ? response->getData() : std::vector<uint8_t>();
             if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
@@ -2043,7 +2046,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         auto peer = getPeer(updateData.peerId);
         if (!peer) continue;
         //Get first block number
-        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = peer->sendAndReceivePacket(packet, 20, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {

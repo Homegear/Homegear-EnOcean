@@ -301,7 +301,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
 
 PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets, uint32_t deviceEnoceanId, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
   try {
-    if (_stopped || packets.empty()) return PEnOceanPacket();
+    if (_stopped || packets.empty()) return {};
 
     std::shared_ptr<EnOceanRequest> request = std::make_shared<EnOceanRequest>();
     request->filterType = filterType;
@@ -324,7 +324,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOcea
             if (requestsIterator->second.empty()) _enoceanRequests.erase(deviceEnoceanId);
           }
           requestsGuard.unlock();
-          return PEnOceanPacket();
+          return {};
         }
       }
 

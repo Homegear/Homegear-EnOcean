@@ -919,7 +919,7 @@ int32_t EnOceanPeer::getFirmwareVersion() {
       uint8_t blockNumber = 0;
       {
         auto interface = getPhysicalInterface();
-        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, interface->getBaseAddress(), _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, interface->getBaseAddress() | getRfChannel(0), _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
@@ -931,7 +931,7 @@ int32_t EnOceanPeer::getFirmwareVersion() {
 
       if (blockNumber == 0xA5) {
         auto interface = getPhysicalInterface();
-        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, interface->getBaseAddress(), _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x11});
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, interface->getBaseAddress() | getRfChannel(0), _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x11});
         auto response = sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4) {
@@ -2492,7 +2492,7 @@ std::string EnOceanPeer::queryFirmwareVersion() {
       uint8_t blockNumber = 0;
       {
         auto interface = getPhysicalInterface();
-        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, interface->getBaseAddress(), _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, interface->getBaseAddress() | getRfChannel(0), _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
@@ -2504,7 +2504,7 @@ std::string EnOceanPeer::queryFirmwareVersion() {
 
       if (blockNumber == 0xA5) {
         auto interface = getPhysicalInterface();
-        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, interface->getBaseAddress(), _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x11});
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, interface->getBaseAddress() | getRfChannel(0), _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x11});
         auto response = sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4) {
@@ -2533,7 +2533,7 @@ PEnOceanPacket EnOceanPeer::sendAndReceivePacket(std::shared_ptr<EnOceanPacket> 
 
       if (packet->getType() == EnOceanPacket::Type::RADIO_ERP1) {
         packets = encryptPacket(packet);
-        if (packets.empty()) return PEnOceanPacket();
+        if (packets.empty()) return {};
       } else {
         packets.push_back(packet);
       }
@@ -2542,7 +2542,7 @@ PEnOceanPacket EnOceanPeer::sendAndReceivePacket(std::shared_ptr<EnOceanPacket> 
       auto physicalInterface = getPhysicalInterface();
       auto response = physicalInterface->sendAndReceivePacket(packets, _address, 0, filterType, filterData);
       if (response) {
-        if (!decryptPacket(response)) return PEnOceanPacket();
+        if (!decryptPacket(response)) return {};
         return response;
       }
     }
@@ -2550,7 +2550,7 @@ PEnOceanPacket EnOceanPeer::sendAndReceivePacket(std::shared_ptr<EnOceanPacket> 
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return PEnOceanPacket();
+  return {};
 }
 
 bool EnOceanPeer::sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait, int32_t channel, const std::string &parameterId, const std::vector<uint8_t> &parameterData) {
