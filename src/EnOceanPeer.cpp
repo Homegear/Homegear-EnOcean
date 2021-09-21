@@ -131,8 +131,6 @@ void EnOceanPeer::pingWorker() {
       auto pingRssi = getPingRssi();
       if (pingRssi >= 0 || pingRssi < -80) _rssiStatus.store(RssiStatus::bad, std::memory_order_release);
       else _rssiStatus.store(RssiStatus::good, std::memory_order_release);
-      setRssiDevice(pingRssi * -1);
-      _rssi.store(pingRssi, std::memory_order_release);
     }
   }
   catch (const std::exception &ex) {
