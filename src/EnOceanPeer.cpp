@@ -290,7 +290,6 @@ uint32_t EnOceanPeer::getRemanDestinationAddress() {
 }
 
 EnOceanPeer::RssiStatus EnOceanPeer::getRssiStatus() {
-  if (_remanFeatures && _remanFeatures->kEnforceMeshing && _repeaterId == 0) return RssiStatus::bad;
   return _rssiStatus;
 }
 
@@ -412,7 +411,7 @@ std::unordered_set<int32_t> EnOceanPeer::getRepeatedAddresses() {
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return std::unordered_set<int32_t>();
+  return {};
 }
 
 bool EnOceanPeer::removeRepeatedAddress(int32_t value) {
@@ -442,6 +441,19 @@ void EnOceanPeer::resetRepeatedAddresses() {
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
+}
+
+BaseLib::PVariable EnOceanPeer::getMeshingLog() {
+  if (!_meshingLog) return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+  return _meshingLog;
+}
+
+void EnOceanPeer::setMeshingLog(const PVariable &value) {
+  _meshingLog = value;
+  BaseLib::Rpc::RpcEncoder rpcEncoder;
+  std::vector<uint8_t> binaryData;
+  rpcEncoder.encodeResponse(value, binaryData);
+  saveVariable(34, binaryData);
 }
 
 bool EnOceanPeer::updateMeshingTable() {
@@ -636,6 +648,13 @@ void EnOceanPeer::loadVariables(BaseLib::Systems::ICentral *central, std::shared
           }
           break;
         }
+        case 34: {
+          if (!row.second.at(5)->binaryValue->empty()) {
+            BaseLib::Rpc::RpcDecoder rpcDecoder;
+            _meshingLog = rpcDecoder.decodeResponse(*row.second.at(5)->binaryValue);
+          }
+          break;
+        }
       }
     }
 
@@ -694,6 +713,14 @@ void EnOceanPeer::saveVariables() {
       std::vector<uint8_t> binaryData;
       rpcEncoder.encodeResponse(serializedData, binaryData);
       saveVariable(33, binaryData);
+    }
+
+    { //Save meshing log
+      auto meshingLog = _meshingLog;
+      BaseLib::Rpc::RpcEncoder rpcEncoder;
+      std::vector<uint8_t> binaryData;
+      rpcEncoder.encodeResponse(meshingLog, binaryData);
+      saveVariable(34, binaryData);
     }
   }
   catch (const std::exception &ex) {

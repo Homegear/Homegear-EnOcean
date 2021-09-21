@@ -90,6 +90,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   std::unordered_set<int32_t> getRepeatedAddresses();
   bool removeRepeatedAddress(int32_t value);
   void resetRepeatedAddresses();
+  BaseLib::PVariable getMeshingLog();
+  void setMeshingLog(const BaseLib::PVariable &value);
   //}}}
 
   std::shared_ptr<IEnOceanInterface> getPhysicalInterface();
@@ -228,6 +230,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   std::atomic<uint64_t> _repeaterId = 0;
   std::mutex _repeatedAddressesMutex;
   std::unordered_set<int32_t> _repeatedAddresses;
+  BaseLib::PVariable _meshingLog;
   //End
 
   std::atomic<uint32_t> _lastRssiDevice{0};

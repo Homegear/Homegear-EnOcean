@@ -244,13 +244,31 @@ void EnOceanCentral::pingWorker() {
 
             if (BaseLib::HelperFunctions::getTimeSeconds() > peer->getNextMeshingCheck()) {
               peer->setNextMeshingCheck();
-              if (peer->getRssiStatus() == EnOceanPeer::RssiStatus::bad || peer->enforceMeshing()) {
+
+              int32_t repeaterRssi = 0;
+
+              if (peer->getRepeaterId() != 0)
+              {
+                repeaterRssi = -100;
+                auto repeaterPeer = getPeer(peer->getRepeaterId());
+                if (repeaterPeer) repeaterRssi = repeaterPeer->getRssi();
+              }
+
+              if (peer->getRssiStatus() == EnOceanPeer::RssiStatus::bad || peer->enforceMeshing() || repeaterRssi < -85) {
                 // {{{ Find peer that has best connection to this peer
                 Gd::out.printInfo("Info: Peer " + std::to_string(peer->getID()) + " has bad RSSI. Trying to find a repeater.");
+                auto meshingLog = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                meshingLog->structValue->emplace("time", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTime()));
+                meshingLog->structValue->emplace("rssi", std::make_shared<BaseLib::Variable>(peer->getRssi()));
+                meshingLog->structValue->emplace("rssiRepeater", std::make_shared<BaseLib::Variable>(peer->getRssiRepeater()));
+                meshingLog->structValue->emplace("rssiStatus", std::make_shared<BaseLib::Variable>((int32_t)peer->getRssiStatus()));
+                meshingLog->structValue->emplace("enforceMeshing", std::make_shared<BaseLib::Variable>(peer->enforceMeshing()));
+                auto repeaters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                meshingLog->structValue->emplace("repeaters", repeaters);
                 auto peers = getPeers();
-                int32_t bestRssi = 0;
+                int32_t bestQualityIndicator = 100;
                 std::shared_ptr<EnOceanPeer> bestRepeater;
-                int32_t bestRssiRoom = 0;
+                int32_t bestQualityIndicatorRoom = 100;
                 std::shared_ptr<EnOceanPeer> bestRepeaterRoom;
 
                 auto peerRoom = peer->getRoom(-1);
@@ -260,43 +278,104 @@ void EnOceanCentral::pingWorker() {
                     auto repeaterPeer = std::dynamic_pointer_cast<EnOceanPeer>(iterator);
                     if (!repeaterPeer) continue;
                     auto remanFeatures = repeaterPeer->getRemanFeatures();
-                    if (!remanFeatures || !remanFeatures->kMeshingRepeater || !repeaterPeer->hasFreeMeshingTableSlot()) continue;
-                    if (j == 0 && repeaterPeer->getRoom(-1) != peerRoom) continue; //Only check repeaters in same room
-                    else if (j == 1 && repeaterPeer->getRoom(-1) == peerRoom) continue; //Do not check repeaters in same room again
-                    auto rssi = repeaterPeer->remanGetPathInfoThroughPing(peer->getAddress());
-                    if (rssi < 0 && rssi > -85 && (rssi > bestRssi || bestRssi == 0)) {
-                      if (j == 0) {
-                        bestRssiRoom = rssi;
+                    if (!remanFeatures || !remanFeatures->kMeshingRepeater) {
+                      continue;
+                    }
+                    if ((j == 0 && repeaterPeer->getRoom(-1) != peerRoom) || //Only check repeaters in same room
+                        (j == 1 && repeaterPeer->getRoom(-1) == peerRoom)) { //Do not check repeaters in same room again
+                      continue;
+                    }
+
+                    auto repeaterLog = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+                    repeaters->structValue->emplace(std::to_string(repeaterPeer->getID()), repeaterLog);
+
+                    if (repeaterPeer->getRepeaterId() != 0) {
+                      repeaterLog->structValue->emplace("hasRepeater", std::make_shared<BaseLib::Variable>(true));
+                      continue;
+                    }
+
+                    auto rssiHomegearToRepeater = repeaterPeer->getRssi();
+                    if (rssiHomegearToRepeater == 0) rssiHomegearToRepeater = repeaterPeer->getPingRssi();
+                    if (rssiHomegearToRepeater < -85 || rssiHomegearToRepeater == 0) {
+                      repeaterLog->structValue->emplace("badRssi", std::make_shared<BaseLib::Variable>(true));
+                      repeaterLog->structValue->emplace("badRssiValue", std::make_shared<BaseLib::Variable>(rssiHomegearToRepeater));
+                      continue;
+                    }
+
+                    if (remanFeatures && remanFeatures->kMeshingRepeater && !repeaterPeer->hasFreeMeshingTableSlot()) {
+                      Gd::out.printInfo("Info: Peer " + std::to_string(repeaterPeer->getID()) + " has no free meshing table slot.");
+                      repeaterLog->structValue->emplace("meshingTableFull", std::make_shared<BaseLib::Variable>(true));
+                      continue;
+                    }
+
+                    auto rssiRepeaterToPeer = repeaterPeer->remanGetPathInfoThroughPing(peer->getAddress());
+                    repeaterLog->structValue->emplace("rssiHomegearToRepeater", std::make_shared<BaseLib::Variable>(rssiHomegearToRepeater));
+                    repeaterLog->structValue->emplace("rssiRepeaterToPeer", std::make_shared<BaseLib::Variable>(rssiRepeaterToPeer));
+
+                    //{{{ Scale to a value between 0 and 15 and calculate quality indicator
+                    auto qualityValue1 = rssiHomegearToRepeater;
+                    auto qualityValue2 = rssiRepeaterToPeer;
+                    bool validQualityValue2 = qualityValue2 != 0;
+                    if (qualityValue1 > -70) qualityValue1 = -70;
+                    qualityValue1 = 15 - (85 + qualityValue1); //0 = best, 15 = worst
+                    if (validQualityValue2) {
+                      if (qualityValue2 > -70) qualityValue2 = -70;
+                      qualityValue2 = 15 - (85 + qualityValue2); //0 = best, 15 = worst
+                    }
+                    auto qualityValue3 = std::abs(qualityValue1 - qualityValue2); //0 = best, 15 = worst
+                    auto qualityIndicator = validQualityValue2 ? qualityValue1 + qualityValue2 + qualityValue3 : 100; //0 = best
+                    repeaterLog->structValue->emplace("qualityValue1", std::make_shared<BaseLib::Variable>(qualityValue1));
+                    repeaterLog->structValue->emplace("qualityValue2", std::make_shared<BaseLib::Variable>(qualityValue2));
+                    repeaterLog->structValue->emplace("qualityValue3", std::make_shared<BaseLib::Variable>(qualityValue3));
+                    repeaterLog->structValue->emplace("qualityIndicator", std::make_shared<BaseLib::Variable>(qualityIndicator));
+                    //}}}
+
+                    if ((rssiRepeaterToPeer >= 0 || rssiRepeaterToPeer < -85) && !(peer->enforceMeshing() && j == 0 && bestQualityIndicatorRoom == 100)) {
+                      continue;
+                    }
+
+                    if (j == 0) {
+                      if (qualityIndicator < bestQualityIndicatorRoom) {
+                        bestQualityIndicatorRoom = qualityIndicator;
                         bestRepeaterRoom = repeaterPeer;
-                      } else {
-                        bestRssi = rssi;
+                      }
+                    } else {
+                      if (qualityIndicator < bestQualityIndicator) {
+                        bestQualityIndicator = qualityIndicator;
                         bestRepeater = repeaterPeer;
                       }
                     }
-                    if (peer->enforceMeshing() && j == 0 && bestRssiRoom == 0) {
+
+                    if (peer->enforceMeshing() && j == 0 && bestQualityIndicatorRoom == 100) {
                       //Set repeater in same room for devices with firmware version < 449. Here remanGetPathInfoThroughPing returns 0.
-                      bestRssiRoom = -89; //Set to a bad value
                       bestRepeaterRoom = repeaterPeer;
                     }
-                    if (rssi >= -70) break; //Good reception
+                    if (rssiHomegearToRepeater >= -70 && rssiRepeaterToPeer >= -70 && rssiRepeaterToPeer < 0) break; //Good reception
                   }
                 }
-                if (bestRssiRoom != 0) {
-                  if (bestRssi != 0) {
-                    if (std::abs(bestRssiRoom - bestRssi) <= 5) {
-                      bestRssi = bestRssiRoom;
+                if (bestQualityIndicatorRoom < 100) {
+                  if (bestQualityIndicator < 100) {
+                    if (std::abs(bestQualityIndicatorRoom - bestQualityIndicator) <= 5) {
+                      bestQualityIndicator = bestQualityIndicatorRoom;
                       bestRepeater = bestRepeaterRoom;
                     }
                   } else {
-                    bestRssi = bestRssiRoom;
+                    bestQualityIndicator = bestQualityIndicatorRoom;
                     bestRepeater = bestRepeaterRoom;
                   }
                 }
                 //}}}
 
+                if (bestRepeater) {
+                  meshingLog->structValue->emplace("bestLqi", std::make_shared<BaseLib::Variable>(bestQualityIndicator));
+                  meshingLog->structValue->emplace("bestLqiRepeater", std::make_shared<BaseLib::Variable>(bestRepeater->getID()));
+                }
+
+                peer->setMeshingLog(meshingLog);
+
                 //{{{ Enable repeating if required
-                if (bestRssi != 0 && bestRepeater && peer->getRepeaterId() != bestRepeater->getID()) {
-                  Gd::out.printInfo("Info: Found peer " + std::to_string(bestRepeater->getID()) + " as repeater for peer " + std::to_string(peer->getID()) + ". RSSI from repeater to peer is: " + std::to_string(bestRssi) + " dBm.");
+                if (bestQualityIndicator < 100 && bestRepeater && peer->getRepeaterId() != bestRepeater->getID()) {
+                  Gd::out.printInfo("Info: Found peer " + std::to_string(bestRepeater->getID()) + " as repeater for peer " + std::to_string(peer->getID()) + ". LQI from repeater to peer is: " + std::to_string(bestQualityIndicator) + " dBm.");
                   bool error = false;
                   if (peer->getRepeaterId() != 0) {
                     auto oldRepeater = getPeer(peer->getRepeaterId());
@@ -313,7 +392,7 @@ void EnOceanCentral::pingWorker() {
                     bestRepeater->addRepeatedAddress(peer->getAddress());
                   }
                 } else {
-                  Gd::out.printInfo("Info: No repeater found for peer " + std::to_string(peer->getID()));
+                  Gd::out.printInfo("Info: No (new) repeater found for peer " + std::to_string(peer->getID()));
                 }
                 // }}}
               }
@@ -2645,9 +2724,11 @@ BaseLib::PVariable EnOceanCentral::getMeshingInfo(const PRpcClientInfo &clientIn
     auto peers = getPeers();
     for (auto &peer: peers) {
       auto enoceanPeer = std::dynamic_pointer_cast<EnOceanPeer>(peer);
+      if (!enoceanPeer) continue;
       auto repeaterId = enoceanPeer->getRepeaterId();
       auto repeatedAddresses = enoceanPeer->getRepeatedAddresses();
-      if (repeaterId != 0 || !repeatedAddresses.empty()) {
+      auto meshingLog = enoceanPeer->getMeshingLog();
+      if (repeaterId != 0 || !repeatedAddresses.empty() || !meshingLog->structValue->empty()) {
         auto peerStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
         if (repeaterId != 0) peerStruct->structValue->emplace("repeaterPeerId", std::make_shared<BaseLib::Variable>(repeaterId));
         if (!repeatedAddresses.empty()) {
@@ -2661,6 +2742,9 @@ BaseLib::PVariable EnOceanCentral::getMeshingInfo(const PRpcClientInfo &clientIn
             addressesArray->arrayValue->emplace_back(addressStruct);
           }
           peerStruct->structValue->emplace("repeatedPeers", addressesArray);
+        }
+        if (!meshingLog->structValue->empty()) {
+          peerStruct->structValue->emplace("log", meshingLog);
         }
         meshingInfo->structValue->emplace(std::to_string(peer->getID()), peerStruct);
       }
