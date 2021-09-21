@@ -2154,8 +2154,8 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
 
     //{{{ //Set inbound link table (pairing)
     if (features->kInboundLinkTableSize != 0) {
-      //Only set a rfChannel other than 0 when RF_CHANNEL exists. Most newer devices don't require RF_CHANNEL.
-      auto channelIterator = rpcDevice->functions.find(0);
+      //Do not use RF_CHANNEL when remote commissioning is used.
+      /*auto channelIterator = rpcDevice->functions.find(0);
       if (channelIterator != rpcDevice->functions.end()) {
         auto parameterIterator = channelIterator->second->variables->parameters.find("RF_CHANNEL");
         if (parameterIterator != channelIterator->second->variables->parameters.end()) {
@@ -2166,7 +2166,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
             return 0;
           }
         }
-      }
+      }*/
 
       static constexpr uint32_t entrySize = 9;
 
