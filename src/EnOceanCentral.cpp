@@ -289,6 +289,8 @@ void EnOceanCentral::pingWorker() {
                     auto repeaterLog = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                     repeaters->structValue->emplace(std::to_string(repeaterPeer->getID()), repeaterLog);
 
+                    repeaterLog->structValue->emplace("inRoom", std::make_shared<BaseLib::Variable>(j == 0));
+
                     if (repeaterPeer->getRepeaterId() != 0) {
                       repeaterLog->structValue->emplace("hasRepeater", std::make_shared<BaseLib::Variable>(true));
                       continue;
@@ -349,6 +351,7 @@ void EnOceanCentral::pingWorker() {
                     if (peer->enforceMeshing() && j == 0 && bestQualityIndicatorRoom == 100) {
                       //Set repeater in same room for devices with firmware version < 449. Here remanGetPathInfoThroughPing returns 0.
                       bestRepeaterRoom = repeaterPeer;
+                      bestQualityIndicatorRoom = 99;
                     }
                     if (rssiHomegearToRepeater >= -70 && rssiRepeaterToPeer >= -70 && rssiRepeaterToPeer < 0) break; //Good reception
                   }
