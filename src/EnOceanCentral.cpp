@@ -244,24 +244,53 @@ void EnOceanCentral::pingWorker() {
 
             if (BaseLib::HelperFunctions::getTimeSeconds() > peer->getNextMeshingCheck()) {
               peer->setNextMeshingCheck();
-              if (peer->getRssiStatus() == EnOceanPeer::RssiStatus::bad) {
+              if (peer->getRssiStatus() == EnOceanPeer::RssiStatus::bad || peer->enforceMeshing()) {
                 // {{{ Find peer that has best connection to this peer
                 Gd::out.printInfo("Info: Peer " + std::to_string(peer->getID()) + " has bad RSSI. Trying to find a repeater.");
                 auto peers = getPeers();
                 int32_t bestRssi = 0;
                 std::shared_ptr<EnOceanPeer> bestRepeater;
-                for (auto &iterator: peers) {
-                  if (iterator->getID() == peer->getID()) continue;
-                  auto repeaterPeer = std::dynamic_pointer_cast<EnOceanPeer>(iterator);
-                  if (!repeaterPeer) continue;
-                  auto remanFeatures = repeaterPeer->getRemanFeatures();
-                  if (!remanFeatures || !remanFeatures->kMeshingRepeater || !repeaterPeer->hasFreeMeshingTableSlot()) continue;
-                  auto rssi = repeaterPeer->remanGetPathInfoThroughPing(peer->getAddress());
-                  if (rssi < 0 && rssi > -85 && (rssi > bestRssi || bestRssi == 0)) {
-                    bestRssi = rssi;
-                    bestRepeater = repeaterPeer;
+                int32_t bestRssiRoom = 0;
+                std::shared_ptr<EnOceanPeer> bestRepeaterRoom;
+
+                auto peerRoom = peer->getRoom(-1);
+                for (uint32_t j = 0; j < 2; j++) { //Two loops. First loop checks for best repeater in room, second loop checks for overall best repeater.
+                  for (auto &iterator: peers) {
+                    if (iterator->getID() == peer->getID()) continue;
+                    auto repeaterPeer = std::dynamic_pointer_cast<EnOceanPeer>(iterator);
+                    if (!repeaterPeer) continue;
+                    auto remanFeatures = repeaterPeer->getRemanFeatures();
+                    if (!remanFeatures || !remanFeatures->kMeshingRepeater || !repeaterPeer->hasFreeMeshingTableSlot()) continue;
+                    if (j == 0 && repeaterPeer->getRoom(-1) != peerRoom) continue; //Only check repeaters in same room
+                    else if (j == 1 && repeaterPeer->getRoom(-1) == peerRoom) continue; //Do not check repeaters in same room again
+                    auto rssi = repeaterPeer->remanGetPathInfoThroughPing(peer->getAddress());
+                    if (rssi < 0 && rssi > -85 && (rssi > bestRssi || bestRssi == 0)) {
+                      if (j == 0) {
+                        bestRssiRoom = rssi;
+                        bestRepeaterRoom = repeaterPeer;
+                      } else {
+                        bestRssi = rssi;
+                        bestRepeater = repeaterPeer;
+                      }
+                    }
+                    if (peer->enforceMeshing() && j == 0 && bestRssiRoom == 0) {
+                      //Set repeater in same room for devices with firmware version < 449. Here remanGetPathInfoThroughPing returns 0.
+                      bestRssiRoom = -89; //Set to a bad value
+                      bestRepeaterRoom = repeaterPeer;
+                    }
+                    if (rssi >= -70) break; //Good reception
                   }
-                  if (rssi >= -70) break; //Good reception
+                }
+                if (bestRssiRoom != 0) {
+                  if (bestRssi != 0) {
+                    if (std::abs(bestRssiRoom - bestRssi) <= 5) {
+                      bestRssi = bestRssiRoom;
+                      bestRepeater = bestRepeaterRoom;
+                    }
+                  } else {
+                    bestRssi = bestRssiRoom;
+                    bestRepeater = bestRepeaterRoom;
+                  }
                 }
                 //}}}
 
@@ -1813,16 +1842,24 @@ void EnOceanCentral::updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi)
     _updatingFirmware = true;
     _lastFirmwareUpdate = BaseLib::HelperFunctions::getTime();
     std::unordered_map<uint64_t, std::unordered_set<uint64_t>> sortedIds;
+    std::unordered_set<uint64_t> addressedIds;
     //{{{ Sort ids by device type
     for (auto id: ids) {
       auto peer = getPeer(id);
       if (!peer) continue;
-      sortedIds[peer->getDeviceType()].emplace(id);
+      if (peer->getRepeaterId() != 0) addressedIds.emplace(id);
+      else sortedIds[peer->getDeviceType()].emplace(id);
     }
     //}}}
     for (auto &type: sortedIds) {
       Gd::out.printInfo("Info: Updating firmware of devices with type 0x" + BaseLib::HelperFunctions::getHexString(type.first));
       updateFirmware(type.second, ignoreRssi);
+    }
+    for (auto &id: addressedIds) {
+      Gd::out.printInfo("Info: Updating firmware of peer " + std::to_string(id));
+      std::unordered_set<uint64_t> addressedId;
+      addressedId.emplace(id);
+      updateFirmware(addressedId, ignoreRssi);
     }
   } catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1895,7 +1932,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       }
 
       uint8_t blockNumber = 0;
-      int32_t rssi = 0;
+      int32_t rssi = peer->getRepeaterId() > 0 ? peer->getRssiRepeater() : peer->getRssi();
       for (uint32_t retries = 0; retries < 3; retries++) {
         auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
@@ -1904,7 +1941,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
           continue;
         } else {
           blockNumber = data.at(4);
-          rssi = response->getRssi();
+          if (rssi == 0) rssi = response->getRssi();
           break;
         }
       }
@@ -2033,7 +2070,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
           filePos += 3;
         }
 
-        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, 0xFFFFFFFF, data);
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peersInBootloader.size() == 1 ? peersInBootloader.front().address : 0xFFFFFFFF, data);
         if (!interface->sendEnoceanPacket(packet)) {
           break;
         }

@@ -125,7 +125,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool isWildcardPeer() { return _rpcDevice->addressSize == 25; }
 
   //{{{ Meshing
-  RssiStatus getRssiStatus() { return _rssiStatus; }
+  RssiStatus getRssiStatus();
+  bool enforceMeshing();
   int64_t getNextMeshingCheck() { return _nextMeshingCheck; }
   bool hasFreeMeshingTableSlot();
   void setNextMeshingCheck();
@@ -229,7 +230,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   std::unordered_set<int32_t> _repeatedAddresses;
   //End
 
-  uint32_t _lastRssiDevice = 0;
+  std::atomic<uint32_t> _lastRssiDevice{0};
   bool _globalRfChannel = false;
   std::mutex _rfChannelsMutex;
   std::unordered_map<int32_t, int32_t> _rfChannels;

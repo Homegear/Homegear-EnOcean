@@ -70,6 +70,11 @@ struct RemanFeatures {
   bool kMeshingEndpoint = false;
 
   /**
+   * Always use a repeater to reach this device.
+   */
+  bool kEnforceMeshing = false;
+
+  /**
    * Device supports Homegear firmware updates.
    */
   bool kFirmwareUpdates = false;
