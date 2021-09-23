@@ -128,9 +128,7 @@ void EnOceanPeer::pingWorker() {
   try {
     if (_remanFeatures && ((_remanFeatures->kPing && _pingInterval > 0 && BaseLib::HelperFunctions::getTimeSeconds() >= (_lastPing + _pingInterval)) || _remanFeatures->kMeshingEndpoint)) {
       _lastPing = BaseLib::HelperFunctions::getTimeSeconds();
-      auto pingRssi = getPingRssi();
-      if (pingRssi >= 0 || pingRssi < -80) _rssiStatus.store(RssiStatus::bad, std::memory_order_release);
-      else _rssiStatus.store(RssiStatus::good, std::memory_order_release);
+      remanPing();
     }
   }
   catch (const std::exception &ex) {
@@ -290,7 +288,11 @@ uint32_t EnOceanPeer::getRemanDestinationAddress() {
 }
 
 EnOceanPeer::RssiStatus EnOceanPeer::getRssiStatus() {
-  return _rssiStatus;
+  auto pingRssi = getPingRssi();
+  RssiStatus rssiStatus;
+  if ((pingRssi.first >= 0 || pingRssi.first < -80) && (pingRssi.second >= 0 || pingRssi.second < -80)) rssiStatus = RssiStatus::bad;
+  else rssiStatus = RssiStatus::good;
+  return rssiStatus;
 }
 
 bool EnOceanPeer::enforceMeshing() {
@@ -2049,45 +2051,51 @@ int32_t EnOceanPeer::getRssiRepeater() {
   return _rssiRepeater;
 }
 
-int32_t EnOceanPeer::getPingRssi() {
+std::pair<int32_t, int32_t> EnOceanPeer::getPingRssi() {
   try {
-    if (!_remanFeatures || !_remanFeatures->kPing) return 0;
+    if (!_remanFeatures || !_remanFeatures->kPing) return {};
+
+    std::pair<int32_t, int32_t> rssiPair;
 
     if (_repeaterId != 0) {
       std::shared_ptr<EnOceanCentral> central = std::dynamic_pointer_cast<EnOceanCentral>(getCentral());
-      if (!central) return 0;
-      auto repeaterPeer = central->getPeer(_repeaterId);
-      if (!repeaterPeer) return 0;
-      auto rssi = repeaterPeer->remanGetPathInfoThroughPing(_address);
-      _rssiRepeater = rssi;
-      return rssi;
-    } else {
-      setBestInterface();
-      auto physicalInterface = getPhysicalInterface();
-      auto ping = std::make_shared<PingPacket>(0, getRemanDestinationAddress());
-      auto response = physicalInterface->sendAndReceivePacket(ping,
-                                                              _address,
-                                                              2,
-                                                              IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                              {{(uint16_t)EnOceanPacket::RemoteManagementResponse::pingResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::pingResponse}});
-      if (!response) {
-        Gd::out.printInfo("Info (peer " + std::to_string(_peerID) + "): No ping response received.");
-        return 0;
+      if (central) {
+        auto repeaterPeer = central->getPeer(_repeaterId);
+        if (repeaterPeer) {
+          auto rssi = repeaterPeer->remanGetPathInfoThroughPing(_address);
+          _rssiRepeater = rssi;
+          rssiPair.second = rssi;
+        }
       }
-      Gd::out.printDebug("Debug (peer " + std::to_string(_peerID) + "): Got ping response.");
-      auto data = response->getData();
-      if (data.size() < 8) return 0;
-      int32_t rssi = 0;
-      if (data.at(7) == 0) rssi = response->getRssi();
-      else rssi = -((int32_t)data.at(7));
-      _rssi = rssi;
-      return rssi;
+
     }
+
+    setBestInterface();
+    auto physicalInterface = getPhysicalInterface();
+    auto ping = std::make_shared<PingPacket>(0, getRemanDestinationAddress());
+    auto response = physicalInterface->sendAndReceivePacket(ping,
+                                                            _address,
+                                                            2,
+                                                            IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::pingResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::pingResponse}});
+    if (!response) {
+      Gd::out.printInfo("Info (peer " + std::to_string(_peerID) + "): No ping response received.");
+      return rssiPair;
+    }
+    Gd::out.printDebug("Debug (peer " + std::to_string(_peerID) + "): Got ping response.");
+    auto data = response->getData();
+    if (data.size() < 8) return rssiPair;
+    int32_t rssi = 0;
+    if (data.at(7) == 0) rssi = response->getRssi();
+    else rssi = -((int32_t)data.at(7));
+    _rssi = rssi;
+    rssiPair.first = rssi;
+    return rssiPair;
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return 0;
+  return {};
 }
 
 bool EnOceanPeer::remanPing() {
@@ -2096,7 +2104,9 @@ bool EnOceanPeer::remanPing() {
 
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
-    auto ping = std::make_shared<PingPacket>(0, getRemanDestinationAddress());
+    uint8_t sequenceCounter = _erp1SequenceCounter;
+    setErp1SequenceCounter(sequenceCounter + 1);
+    auto ping = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xC5, physicalInterface->getBaseAddress() | getRfChannel(0), getRemanDestinationAddress(), std::vector<uint8_t>{0xC5, 0x40, 0, 0x7F, 0xF0, 6, 0, 0, 0, 0});
     auto response = physicalInterface->sendAndReceivePacket(ping,
                                                             _address,
                                                             2,

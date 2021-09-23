@@ -272,7 +272,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
           if (requestsIterator->second.empty()) _enoceanRequests.erase(deviceEnoceanId);
         }
         requestsGuard.unlock();
-        return PEnOceanPacket();
+        return {};
       }
 
       if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(3000), [&] { return request->mutexReady; })) {
@@ -296,7 +296,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return std::shared_ptr<EnOceanPacket>();
+  return {};
 }
 
 PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets, uint32_t deviceEnoceanId, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {

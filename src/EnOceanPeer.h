@@ -159,7 +159,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool setDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
   bool sendInboundLinkTable();
   int32_t remanGetPathInfoThroughPing(uint32_t destinationPingDeviceId);
-  int32_t getPingRssi();
+  std::pair<int32_t, int32_t> getPingRssi();
   int32_t getRssiRepeater();
   int32_t getRssi();
   bool remanPing();
@@ -259,7 +259,6 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   // }}}
 
   // {{{ Variables for meshing
-  std::atomic<RssiStatus> _rssiStatus{RssiStatus::undefined};
   std::atomic<int64_t> _nextMeshingCheck{0};
   // }}}
 

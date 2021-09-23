@@ -90,6 +90,11 @@ void EnOceanCentral::init() {
                                                                                                                                                                               this,
                                                                                                                                                                               std::placeholders::_1,
                                                                                                                                                                               std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters)>>("remanPingAddress",
+                                                                                                                                                                    std::bind(&EnOceanCentral::remanPingAddress,
+                                                                                                                                                                              this,
+                                                                                                                                                                              std::placeholders::_1,
+                                                                                                                                                                              std::placeholders::_2)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters)>>("remanSetCode",
                                                                                                                                                                     std::bind(&EnOceanCentral::remanSetCode,
                                                                                                                                                                               this,
@@ -245,23 +250,23 @@ void EnOceanCentral::pingWorker() {
             if (BaseLib::HelperFunctions::getTimeSeconds() > peer->getNextMeshingCheck()) {
               peer->setNextMeshingCheck();
 
+              auto rssiStatus = peer->getRssiStatus(); //Updates RSSI and repeater RSSI
+              int32_t rssi = peer->getRssi();
               int32_t repeaterRssi = 0;
 
-              if (peer->getRepeaterId() != 0)
-              {
-                repeaterRssi = -100;
-                auto repeaterPeer = getPeer(peer->getRepeaterId());
-                if (repeaterPeer) repeaterRssi = repeaterPeer->getRssi();
+              if (peer->getRepeaterId() != 0) {
+                repeaterRssi = peer->getRssiRepeater();
+                if (repeaterRssi == 0) repeaterRssi = -100;
               }
 
-              if (peer->getRssiStatus() == EnOceanPeer::RssiStatus::bad || peer->enforceMeshing() || repeaterRssi < -85) {
+              if (rssiStatus == EnOceanPeer::RssiStatus::bad || peer->enforceMeshing() || repeaterRssi < -80) {
                 // {{{ Find peer that has best connection to this peer
                 Gd::out.printInfo("Info: Peer " + std::to_string(peer->getID()) + " has bad RSSI. Trying to find a repeater.");
                 auto meshingLog = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 meshingLog->structValue->emplace("time", std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTime()));
                 meshingLog->structValue->emplace("rssi", std::make_shared<BaseLib::Variable>(peer->getRssi()));
                 meshingLog->structValue->emplace("rssiRepeater", std::make_shared<BaseLib::Variable>(peer->getRssiRepeater()));
-                meshingLog->structValue->emplace("rssiStatus", std::make_shared<BaseLib::Variable>((int32_t)peer->getRssiStatus()));
+                meshingLog->structValue->emplace("rssiStatus", std::make_shared<BaseLib::Variable>((int32_t)rssiStatus));
                 meshingLog->structValue->emplace("enforceMeshing", std::make_shared<BaseLib::Variable>(peer->enforceMeshing()));
                 auto repeaters = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
                 meshingLog->structValue->emplace("repeaters", repeaters);
@@ -297,8 +302,8 @@ void EnOceanCentral::pingWorker() {
                     }
 
                     auto rssiHomegearToRepeater = repeaterPeer->getRssi();
-                    if (rssiHomegearToRepeater == 0) rssiHomegearToRepeater = repeaterPeer->getPingRssi();
-                    if (rssiHomegearToRepeater < -85 || rssiHomegearToRepeater == 0) {
+                    if (rssiHomegearToRepeater == 0) rssiHomegearToRepeater = repeaterPeer->getPingRssi().first;
+                    if (rssiHomegearToRepeater < -85 || rssiHomegearToRepeater < rssi || rssiHomegearToRepeater == 0) {
                       repeaterLog->structValue->emplace("badRssi", std::make_shared<BaseLib::Variable>(true));
                       repeaterLog->structValue->emplace("badRssiValue", std::make_shared<BaseLib::Variable>(rssiHomegearToRepeater));
                       continue;
@@ -2832,6 +2837,29 @@ BaseLib::PVariable EnOceanCentral::remanPing(const PRpcClientInfo &clientInfo, c
     if (!peer) return BaseLib::Variable::createError(-1, "Unknown peer.");
 
     return std::make_shared<BaseLib::Variable>(peer->remanPing());
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable EnOceanCentral::remanPingAddress(const PRpcClientInfo &clientInfo, const PArray &parameters) {
+  try {
+    if (parameters->empty()) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
+
+    uint32_t address = parameters->at(0)->integerValue;
+
+    auto interface = Gd::interfaces->getDefaultInterface();
+    auto ping = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xC5, 0, address, std::vector<uint8_t>{0xC5, 0x40, 0, 0x7F, 0xF0, 6, 0, 0, 0, 0});
+    auto response = interface->sendAndReceivePacket(ping,
+                                                    address,
+                                                    2,
+                                                    IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                    {{(uint16_t)EnOceanPacket::RemoteManagementResponse::pingResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::pingResponse}});
+
+    return std::make_shared<BaseLib::Variable>((bool)response);
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

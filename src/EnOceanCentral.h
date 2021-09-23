@@ -132,6 +132,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   BaseLib::PVariable resetMeshingTables(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanGetPathInfoThroughPing(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanPing(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanPingAddress(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetRepeaterFunctions(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetRepeaterFilter(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetSecurityProfile(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
