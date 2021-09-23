@@ -2019,6 +2019,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       }
 
       uint8_t blockNumber = 0;
+      peer->getPingRssi(); //Updates RSSI and repeater RSSI
       int32_t rssi = peer->getRepeaterId() > 0 ? peer->getRssiRepeater() : peer->getRssi();
       for (uint32_t retries = 0; retries < 3; retries++) {
         auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
@@ -2028,12 +2029,11 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
           continue;
         } else {
           blockNumber = data.at(4);
-          if (rssi == 0) rssi = response->getRssi();
           break;
         }
       }
 
-      if ((rssi > -30 || rssi < -90) && !ignoreRssi) {
+      if ((rssi > -30 || rssi < -90) && rssi != 0 && !ignoreRssi) {
         Gd::out.printMessage("Not updating peer " + std::to_string(peerId) + ", because RSSI is out of allowed range (RSSI is " + std::to_string(rssi) + ").");
         continue;
       }
