@@ -2106,7 +2106,7 @@ bool EnOceanPeer::remanPing() {
     auto physicalInterface = getPhysicalInterface();
     uint8_t sequenceCounter = _erp1SequenceCounter;
     setErp1SequenceCounter(sequenceCounter + 1);
-    auto ping = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xC5, physicalInterface->getBaseAddress() | getRfChannel(0), getRemanDestinationAddress(), std::vector<uint8_t>{0xC5, 0x40, 0, 0x7F, 0xF0, 6, 0, 0, 0, 0});
+    auto ping = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xC5, physicalInterface->getBaseAddress() | getRfChannel(0), getRemanDestinationAddress(), std::vector<uint8_t>{0xC5, (uint8_t)(sequenceCounter << 6), 0, 0x7F, 0xF0, 6});
     auto response = physicalInterface->sendAndReceivePacket(ping,
                                                             _address,
                                                             2,

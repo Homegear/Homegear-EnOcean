@@ -2852,7 +2852,7 @@ BaseLib::PVariable EnOceanCentral::remanPingAddress(const PRpcClientInfo &client
     uint32_t address = parameters->at(0)->integerValue;
 
     auto interface = Gd::interfaces->getDefaultInterface();
-    auto ping = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xC5, 0, address, std::vector<uint8_t>{0xC5, 0x40, 0, 0x7F, 0xF0, 6, 0, 0, 0, 0});
+    auto ping = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xC5, 0, address, std::vector<uint8_t>{0xC5, 0x40, 0, 0x7F, 0xF0, 6});
     auto response = interface->sendAndReceivePacket(ping,
                                                     address,
                                                     2,
