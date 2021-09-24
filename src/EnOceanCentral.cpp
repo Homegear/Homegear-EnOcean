@@ -246,8 +246,9 @@ void EnOceanCentral::pingWorker() {
 
           if (peer && !peer->deleting) {
             peer->pingWorker();
+            auto remanFeatures = peer->getRemanFeatures();
 
-            if (BaseLib::HelperFunctions::getTimeSeconds() > peer->getNextMeshingCheck()) {
+            if (remanFeatures && remanFeatures->kMeshingEndpoint && BaseLib::HelperFunctions::getTimeSeconds() > peer->getNextMeshingCheck()) {
               peer->setNextMeshingCheck();
 
               auto rssiStatus = peer->getRssiStatus(); //Updates RSSI and repeater RSSI
@@ -282,8 +283,8 @@ void EnOceanCentral::pingWorker() {
                     if (iterator->getID() == peer->getID()) continue;
                     auto repeaterPeer = std::dynamic_pointer_cast<EnOceanPeer>(iterator);
                     if (!repeaterPeer) continue;
-                    auto remanFeatures = repeaterPeer->getRemanFeatures();
-                    if (!remanFeatures || !remanFeatures->kMeshingRepeater) {
+                    auto remanFeaturesRepeater = repeaterPeer->getRemanFeatures();
+                    if (!remanFeaturesRepeater || !remanFeaturesRepeater->kMeshingRepeater) {
                       continue;
                     }
                     if ((j == 0 && repeaterPeer->getRoom(-1) != peerRoom) || //Only check repeaters in same room
@@ -309,7 +310,7 @@ void EnOceanCentral::pingWorker() {
                       continue;
                     }
 
-                    if (remanFeatures && remanFeatures->kMeshingRepeater && !repeaterPeer->hasFreeMeshingTableSlot()) {
+                    if (remanFeaturesRepeater && remanFeaturesRepeater->kMeshingRepeater && !repeaterPeer->hasFreeMeshingTableSlot()) {
                       Gd::out.printInfo("Info: Peer " + std::to_string(repeaterPeer->getID()) + " has no free meshing table slot.");
                       repeaterLog->structValue->emplace("meshingTableFull", std::make_shared<BaseLib::Variable>(true));
                       continue;
