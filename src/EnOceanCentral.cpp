@@ -248,7 +248,7 @@ void EnOceanCentral::pingWorker() {
             peer->pingWorker();
             auto remanFeatures = peer->getRemanFeatures();
 
-            if (remanFeatures && remanFeatures->kMeshingEndpoint && BaseLib::HelperFunctions::getTimeSeconds() > peer->getNextMeshingCheck()) {
+            if (remanFeatures && remanFeatures->kMeshingEndpoint && BaseLib::HelperFunctions::getTimeSeconds() > peer->getNextMeshingCheck() && !_updatingFirmware) {
               peer->setNextMeshingCheck();
 
               auto rssiStatus = peer->getRssiStatus(); //Updates RSSI and repeater RSSI
@@ -447,6 +447,24 @@ void EnOceanCentral::loadPeers() {
   }
 }
 
+void EnOceanCentral::loadVariables() {
+  try {
+    std::shared_ptr<BaseLib::Database::DataTable> rows = _bl->db->getDeviceVariables(_deviceId);
+    for (auto &row: *rows) {
+      _variableDatabaseIds[row.second.at(2)->intValue] = row.second.at(0)->intValue;
+      switch (row.second.at(2)->intValue) {
+        case 1: {
+          _lastForeignFirmwareUpdatePacket = row.second.at(3)->intValue;
+          break;
+        }
+      }
+    }
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
 std::shared_ptr<EnOceanPeer> EnOceanCentral::getPeer(uint64_t id) {
   try {
     std::lock_guard<std::mutex> peersGuard(_peersMutex);
@@ -547,6 +565,17 @@ bool EnOceanCentral::onPacketReceived(std::string &senderId, std::shared_ptr<Bas
       }
       _bl->out.printInfo(BaseLib::HelperFunctions::getTimeString(myPacket->getTimeReceived()) + " EnOcean packet received (" + senderId + std::string(", RSSI: ") + std::to_string(myPacket->getRssi()) + " dBm" + "): "
                              + BaseLib::HelperFunctions::getHexString(myPacket->getBinary()) + " - Sender address (= EnOcean ID): 0x" + BaseLib::HelperFunctions::getHexString(myPacket->senderAddress(), 8) + repeatingStatus);
+    }
+
+    if (myPacket->getRorg() == 0xD1) {
+      auto data = myPacket->getData();
+      if (data.at(1) == 0x03 && data.at(2) == 0x33) {
+        if (!_updatingFirmware) { //When we are updating, we are receiving our own repeated packets.
+          Gd::out.printInfo("Info: Update packet received from other central. Blocking firmware updates for 1 hour.");
+          _lastForeignFirmwareUpdatePacket = BaseLib::HelperFunctions::getTime();
+          saveVariable(1, _lastForeignFirmwareUpdatePacket);
+        }
+      }
     }
 
     std::list<PMyPeer> peers = getPeer(myPacket->senderAddress());
@@ -1967,6 +1996,11 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
     };
 
     if (ids.empty()) return;
+
+    if (BaseLib::HelperFunctions::getTime() - _lastFirmwareUpdate < 3600000) {
+      Gd::out.printInfo("Info: Not updating firmware, because another central is updating.");
+      return;
+    }
 
     std::vector<UpdateData> peersInBootloader;
     std::vector<UpdateData> peersInBootloaderOld;

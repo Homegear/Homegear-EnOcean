@@ -102,7 +102,8 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   std::atomic_bool _updatingFirmware{false};
   std::mutex _updateFirmwareThreadMutex;
   std::thread _updateFirmwareThread;
-  std::atomic<int64_t> _lastFirmwareUpdate = 0;
+  std::atomic<int64_t> _lastFirmwareUpdate{0};
+  std::atomic<int64_t> _lastForeignFirmwareUpdatePacket{0};
   //}}}
 
   std::string getFreeSerialNumber(int32_t address);
@@ -111,7 +112,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   void pingWorker();
   void loadPeers() override;
   void savePeers(bool full) override;
-  void loadVariables() override {}
+  void loadVariables() override;
   void saveVariables() override {}
   std::shared_ptr<EnOceanPeer> createPeer(uint64_t eep, int32_t address, std::string serialNumber, bool save = true);
   std::shared_ptr<EnOceanPeer> buildPeer(uint64_t eep, int32_t address, const std::string &interfaceId, bool requiresRfChannel, int32_t rfChannel);
