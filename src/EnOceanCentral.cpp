@@ -2106,7 +2106,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
           for (uint32_t retries2 = 0; retries2 < 20; retries2++) {
             //Get first block number
             auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
-            auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+            auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress, {}, 3000);
             auto data = response ? response->getData() : std::vector<uint8_t>();
             if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
               continue;
@@ -2372,12 +2372,11 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
           chunk.insert(chunk.end(), linkTable.begin() + i, linkTable.begin() + i + entrySize);
           if (chunk.size() + entrySize > features->kMaxDataLength) {
             auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, destinationAddress, true, chunk);
-
             auto response = interface->sendAndReceivePacket(setLinkTablePacket,
                                                             deviceAddress,
                                                             2,
                                                             IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
             _pairingInfo.pairingProgress = (100 / 16) * 4;
             if (!response) {
               Gd::out.printError("Error: Could not set link table on device.");
@@ -2391,12 +2390,11 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
 
         if (!chunk.empty()) {
           auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, destinationAddress, true, chunk);
-
           auto response = interface->sendAndReceivePacket(setLinkTablePacket,
                                                           deviceAddress,
                                                           2,
                                                           IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                          {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                          {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
           _pairingInfo.pairingProgress = (100 / 16) * 4;
           if (!response) {
             Gd::out.printError("Error: Could not set link table on device.");
@@ -2411,7 +2409,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
                                                         deviceAddress,
                                                         2,
                                                         IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                        {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                        {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
         _pairingInfo.pairingProgress = (100 / 16) * 5;
         if (!response) {
           Gd::out.printError("Error: Could not set link table on device.");
@@ -2452,7 +2450,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
                                                             deviceAddress,
                                                             2,
                                                             IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
             _pairingInfo.pairingProgress = (100 / 16) * 6;
             if (!response) {
               Gd::out.printError("Error: Could not set link table on device.");
@@ -2466,12 +2464,11 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
 
         if (!chunk.empty()) {
           auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, destinationAddress, false, chunk);
-
           auto response = interface->sendAndReceivePacket(setLinkTablePacket,
                                                           deviceAddress,
                                                           2,
                                                           IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                          {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                          {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
           _pairingInfo.pairingProgress = (100 / 16) * 8;
           if (!response) {
             Gd::out.printError("Error: Could not set link table on device.");
@@ -2481,12 +2478,11 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         }
       } else {
         auto setLinkTable = std::make_shared<SetLinkTable>(0, destinationAddress, false, linkTable);
-
         auto response = interface->sendAndReceivePacket(setLinkTable,
                                                         deviceAddress,
                                                         2,
                                                         IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                        {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                        {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
         _pairingInfo.pairingProgress = (100 / 16) * 8;
         if (!response) {
           _pairingInfo.pairingError = true;
@@ -2543,7 +2539,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
                                                  deviceAddress,
                                                  2,
                                                  IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                 {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                 {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
       _pairingInfo.pairingProgress = (100 / 16) * 11;
       if (!response) {
         Gd::out.printWarning("Warning: Could not set security profile.");
@@ -2555,7 +2551,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
                                                    deviceAddress,
                                                    2,
                                                    IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                   {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                   {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
         _pairingInfo.pairingProgress = (100 / 16) * 12;
 
         if (!response) {
@@ -2573,7 +2569,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
                                                  deviceAddress,
                                                  2,
                                                  IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                 {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                 {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
       _pairingInfo.pairingProgress = (100 / 16) * 13;
     }
     //}}}

@@ -149,7 +149,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   PEnOceanPacket sendAndReceivePacket(std::shared_ptr<EnOceanPacket> &packet,
                                       uint32_t retries = 0,
                                       IEnOceanInterface::EnOceanRequestFilterType filterType = IEnOceanInterface::EnOceanRequestFilterType::senderAddress,
-                                      const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>());
+                                      const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>(), uint32_t timeout = 1000);
   bool sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait, int32_t channel, const std::string &parameterId, const std::vector<uint8_t> &parameterData);
 
   std::string queryFirmwareVersion();

@@ -248,9 +248,9 @@ bool IEnOceanInterface::sendEnoceanPacket(const PEnOceanPacket &packet) {
   return false;
 }
 
-PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &packet, uint32_t deviceEnoceanId, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
+PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &packet, uint32_t deviceEnoceanId, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData, uint32_t timeout) {
   try {
-    if (_stopped) return PEnOceanPacket();
+    if (_stopped) return {};
 
     std::shared_ptr<EnOceanRequest> request = std::make_shared<EnOceanRequest>();
     request->filterType = filterType;
@@ -275,7 +275,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
         return {};
       }
 
-      if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(3000), [&] { return request->mutexReady; })) {
+      if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&] { return request->mutexReady; })) {
         if (i < retries) _out.printInfo("Info: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()) + ". Retrying...");
         else _out.printError("Error: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
       }
@@ -299,7 +299,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
   return {};
 }
 
-PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets, uint32_t deviceEnoceanId, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
+PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets, uint32_t deviceEnoceanId, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData, uint32_t timeout) {
   try {
     if (_stopped || packets.empty()) return {};
 
@@ -328,7 +328,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOcea
         }
       }
 
-      if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(3000), [&] { return request->mutexReady; })) {
+      if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&] { return request->mutexReady; })) {
         if (i < retries) _out.printInfo("Info: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packets.at(0)->getBinary()) + ". Retrying...");
         else _out.printError("Error: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packets.at(0)->getBinary()));
       }
@@ -349,7 +349,7 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOcea
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return std::shared_ptr<EnOceanPacket>();
+  return {};
 }
 
 }

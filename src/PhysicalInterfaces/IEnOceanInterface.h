@@ -46,13 +46,13 @@ class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface {
                                       uint32_t deviceEnoceanId,
                                       uint32_t retries = 0,
                                       EnOceanRequestFilterType filterType = EnOceanRequestFilterType::senderAddress,
-                                      const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>());
+                                      const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>(), uint32_t timeout = 1000);
 
   PEnOceanPacket sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets,
                                       uint32_t deviceEnoceanId,
                                       uint32_t retries = 0,
                                       EnOceanRequestFilterType filterType = EnOceanRequestFilterType::senderAddress,
-                                      const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>());
+                                      const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>(), uint32_t timeout = 1000);
  protected:
   struct SerialRequest {
     std::mutex mutex;

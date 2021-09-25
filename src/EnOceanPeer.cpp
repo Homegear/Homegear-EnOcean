@@ -1963,7 +1963,7 @@ bool EnOceanPeer::sendInboundLinkTable() {
                                                                   _address,
                                                                   2,
                                                                   IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                                  {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                                  {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
           if (!response) {
             result = false;
             Gd::out.printError("Error: Could not set link table on device.");
@@ -1979,7 +1979,7 @@ bool EnOceanPeer::sendInboundLinkTable() {
                                                                 _address,
                                                                 2,
                                                                 IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                                {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                                {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
         if (!response) {
           result = false;
           Gd::out.printError("Error: Could not set link table on device.");
@@ -1991,7 +1991,7 @@ bool EnOceanPeer::sendInboundLinkTable() {
                                                               _address,
                                                               2,
                                                               IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                              {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                              {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
       if (!response) {
         Gd::out.printError("Error: Could not set link table on device.");
         result = false;
@@ -2185,7 +2185,7 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
                                                             _address,
                                                             2,
                                                             IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
     if (!response) return false;
 
     remoteManagementLock();
@@ -2569,7 +2569,7 @@ std::string EnOceanPeer::queryFirmwareVersion() {
   return "";
 }
 
-PEnOceanPacket EnOceanPeer::sendAndReceivePacket(std::shared_ptr<EnOceanPacket> &packet, uint32_t retries, IEnOceanInterface::EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData) {
+PEnOceanPacket EnOceanPeer::sendAndReceivePacket(std::shared_ptr<EnOceanPacket> &packet, uint32_t retries, IEnOceanInterface::EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData, uint32_t timeout) {
   try {
     //Protected by Mutex to not mess up rolling code order when using encryption
     std::lock_guard<std::mutex> sendPacketGuard(_sendPacketMutex);
@@ -2586,7 +2586,7 @@ PEnOceanPacket EnOceanPeer::sendAndReceivePacket(std::shared_ptr<EnOceanPacket> 
 
       setBestInterface();
       auto physicalInterface = getPhysicalInterface();
-      auto response = physicalInterface->sendAndReceivePacket(packets, _address, 0, filterType, filterData);
+      auto response = physicalInterface->sendAndReceivePacket(packets, _address, 0, filterType, filterData, timeout);
       if (response) {
         if (!decryptPacket(response)) return {};
         return response;
@@ -3109,7 +3109,7 @@ bool EnOceanPeer::remoteManagementApplyChanges(bool applyLinkTableChanges, bool 
                                                             _address,
                                                             2,
                                                             IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
+                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
     if (!response) {
       Gd::out.printWarning("Error: Could not apply changes.");
       return false;
