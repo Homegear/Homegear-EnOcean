@@ -308,18 +308,18 @@ void EnOceanCentral::pingWorker() {
                     repeaterLog->structValue->emplace("inRoom", std::make_shared<BaseLib::Variable>(j == 0));
 
                     if (repeaterPeer->getRepeaterId() != 0) {
-                      repeaterLog->structValue->emplace("hasRepeater", std::make_shared<BaseLib::Variable>(true));
                       if (peer->enforceMeshing() && j == 0 && bestQualityIndicatorRoom == 100) {
                         //When there is a repeater, but it requires a repeater itself, use the repeater for this repeater.
                         bestRepeaterRoom = getPeer(repeaterPeer->getRepeaterId());
                         bestQualityIndicatorRoom = 99;
                       }
-                      continue;
+                      //Allow repeater with bad RSSI for peers with no connection (rssi == 0)
+                      if (rssi < 0) continue;
                     }
 
                     auto rssiHomegearToRepeater = repeaterPeer->getRssi();
                     if (rssiHomegearToRepeater == 0) rssiHomegearToRepeater = repeaterPeer->getPingRssi().first;
-                    if (rssiHomegearToRepeater < -85 || rssiHomegearToRepeater < rssi || rssiHomegearToRepeater == 0) {
+                    if (rssiHomegearToRepeater < -85 || (rssi < 0 && rssiHomegearToRepeater < rssi) || rssiHomegearToRepeater == 0) {
                       repeaterLog->structValue->emplace("badRssi", std::make_shared<BaseLib::Variable>(true));
                       repeaterLog->structValue->emplace("badRssiValue", std::make_shared<BaseLib::Variable>(rssiHomegearToRepeater));
                       continue;
@@ -353,7 +353,7 @@ void EnOceanCentral::pingWorker() {
                     repeaterLog->structValue->emplace("qualityIndicator", std::make_shared<BaseLib::Variable>(qualityIndicator));
                     //}}}
 
-                    if ((rssiRepeaterToPeer >= 0 || rssiRepeaterToPeer < -85) && !(peer->enforceMeshing() && j == 0 && bestQualityIndicatorRoom == 100)) {
+                    if (rssiRepeaterToPeer >= 0 && !(peer->enforceMeshing() && j == 0 && bestQualityIndicatorRoom == 100)) {
                       continue;
                     }
 
@@ -2775,10 +2775,37 @@ BaseLib::PVariable EnOceanCentral::addMeshingEntry(const PRpcClientInfo &clientI
     if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
     if (parameters->at(1)->type != BaseLib::VariableType::tInteger && parameters->at(1)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type Integer.");
 
-    auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
-    if (!peer) return Variable::createError(-1, "Unknown repeater.");
+    auto repeaterId = (uint64_t)parameters->at(0)->integerValue64;
+    auto peerAddress = parameters->at(1)->integerValue;
 
-    auto result = peer->addRepeatedAddress(parameters->at(1)->integerValue);
+    auto repeater = getPeer(repeaterId);
+    if (!repeater) return Variable::createError(-1, "Unknown repeater.");
+
+    auto peers = getPeer(peerAddress);
+    for (auto &peer: peers) {
+      if (peer->getRepeaterId() != 0) {
+        return Variable::createError(-2, "At least one peer already has a repeater assigned.");
+      }
+    }
+
+    auto result = repeater->addRepeatedAddress(peerAddress);
+
+    if (result) {
+      for (auto &peer: peers) {
+        peer->setRepeaterId(repeaterId);
+
+        auto meshingLog = peer->getMeshingLog();
+        auto newMeshingLog = std::make_shared<BaseLib::Variable>();
+        //Create copy, because underlying variable is not protected by mutex and changes are not allowed because of that.
+        *newMeshingLog = *meshingLog;
+        auto logIterator = newMeshingLog->structValue->find("manualRepeater");
+        if (logIterator != newMeshingLog->structValue->end() && logIterator->second->integerValue64 == (int64_t)repeaterId) {
+          newMeshingLog->structValue->erase("manualRepeater");
+        }
+        newMeshingLog->structValue->emplace("manualRepeater", std::make_shared<BaseLib::Variable>(repeaterId));
+        peer->setMeshingLog(newMeshingLog);
+      }
+    }
 
     return std::make_shared<BaseLib::Variable>(result);
   }
@@ -3024,10 +3051,32 @@ BaseLib::PVariable EnOceanCentral::removeMeshingEntry(const PRpcClientInfo &clie
     if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
     if (parameters->at(1)->type != BaseLib::VariableType::tInteger && parameters->at(1)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type Integer.");
 
-    auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
-    if (!peer) return Variable::createError(-1, "Unknown repeater.");
+    auto repeaterId = (uint64_t)parameters->at(0)->integerValue64;
+    auto peerAddress = parameters->at(1)->integerValue;
 
-    auto result = peer->removeRepeatedAddress(parameters->at(1)->integerValue);
+    auto repeater = getPeer(repeaterId);
+    if (!repeater) return Variable::createError(-1, "Unknown repeater.");
+
+    auto result = repeater->removeRepeatedAddress(peerAddress);
+
+    if (result) {
+      auto peers = getPeer(peerAddress);
+      if (!peers.empty()) {
+        for (auto &peer: peers) {
+          peer->setRepeaterId(0);
+
+          auto meshingLog = peer->getMeshingLog();
+          auto newMeshingLog = std::make_shared<BaseLib::Variable>();
+          //Create copy, because underlying variable is not protected by mutex and changes are not allowed because of that.
+          *newMeshingLog = *meshingLog;
+          auto logIterator = newMeshingLog->structValue->find("manualRepeater");
+          if (logIterator != newMeshingLog->structValue->end() && logIterator->second->integerValue64 == (int64_t)repeaterId) {
+            newMeshingLog->structValue->erase("manualRepeater");
+            peer->setMeshingLog(newMeshingLog);
+          }
+        }
+      }
+    }
 
     return std::make_shared<BaseLib::Variable>(result);
   }

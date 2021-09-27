@@ -393,6 +393,7 @@ bool EnOceanPeer::addRepeatedAddress(int32_t value) {
       std::lock_guard<std::mutex> repeatedAddressesGuard(_repeatedAddressesMutex);
       if (_repeatedAddresses.size() == 30) {
         Gd::out.printError("Error: Peer " + std::to_string(_peerID) + " can't add address to meshing table, because the table is full.");
+        return false;
       }
       _repeatedAddresses.emplace(value);
     }
@@ -1639,7 +1640,7 @@ bool EnOceanPeer::getParamsetHook2(PRpcClientInfo clientInfo, PParameter paramet
   return false;
 }
 
-void EnOceanPeer::queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters) {
+bool EnOceanPeer::queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters) {
   try {
     if (_rpcDevice->receiveModes & BaseLib::DeviceDescription::HomegearDevice::ReceiveModes::Enum::wakeUp2) {
       serviceMessages->setConfigPending(true);
@@ -1654,11 +1655,16 @@ void EnOceanPeer::queueSetDeviceConfiguration(const std::map<uint32_t, std::vect
       }
 
       saveUpdatedParameters();
-    } else setDeviceConfiguration(updatedParameters);
+
+      return true;
+    } else {
+      return setDeviceConfiguration(updatedParameters);
+    }
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
+  return false;
 }
 
 bool EnOceanPeer::setDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters) {
@@ -2376,7 +2382,9 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
 
       //{{{ Build and send packet
       if (!updatedParameters.empty()) {
-        queueSetDeviceConfiguration(updatedParameters);
+        if (!queueSetDeviceConfiguration(updatedParameters)) {
+          return Variable::createError(-9, "Could not set configuration parameters.");
+        }
       }
       //}}}
 

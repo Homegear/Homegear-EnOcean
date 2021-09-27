@@ -153,7 +153,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait, int32_t channel, const std::string &parameterId, const std::vector<uint8_t> &parameterData);
 
   std::string queryFirmwareVersion();
-  void queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
+  bool queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
   void queueGetDeviceConfiguration();
   bool getDeviceConfiguration();
   bool setDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
