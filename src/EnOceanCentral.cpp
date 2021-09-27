@@ -65,6 +65,11 @@ void EnOceanCentral::init() {
     _stopWorkerThread = false;
     _timeLeftInPairingMode = 0;
 
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters)>>("addMeshingEntry",
+                                                                                                                                                                    std::bind(&EnOceanCentral::addMeshingEntry,
+                                                                                                                                                                              this,
+                                                                                                                                                                              std::placeholders::_1,
+                                                                                                                                                                              std::placeholders::_2)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters)>>("getMeshingInfo",
                                                                                                                                                                     std::bind(&EnOceanCentral::getMeshingInfo,
                                                                                                                                                                               this,
@@ -112,6 +117,11 @@ void EnOceanCentral::init() {
                                                                                                                                                                               std::placeholders::_2)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters)>>("remanSetSecurityProfile",
                                                                                                                                                                     std::bind(&EnOceanCentral::remanSetSecurityProfile,
+                                                                                                                                                                              this,
+                                                                                                                                                                              std::placeholders::_1,
+                                                                                                                                                                              std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters)>>("removeMeshingEntry",
+                                                                                                                                                                    std::bind(&EnOceanCentral::removeMeshingEntry,
                                                                                                                                                                               this,
                                                                                                                                                                               std::placeholders::_1,
                                                                                                                                                                               std::placeholders::_2)));
@@ -2759,6 +2769,25 @@ PVariable EnOceanCentral::updateFirmware(PRpcClientInfo clientInfo, std::vector<
 }
 
 //{{{ Family RPC methods
+BaseLib::PVariable EnOceanCentral::addMeshingEntry(const PRpcClientInfo &clientInfo, const PArray &parameters) {
+  try {
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
+    if (parameters->at(1)->type != BaseLib::VariableType::tInteger && parameters->at(1)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type Integer.");
+
+    auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
+    if (!peer) return Variable::createError(-1, "Unknown repeater.");
+
+    auto result = peer->addRepeatedAddress(parameters->at(1)->integerValue);
+
+    return std::make_shared<BaseLib::Variable>(result);
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable EnOceanCentral::getMeshingInfo(const PRpcClientInfo &clientInfo, const PArray &parameters) {
   try {
     if (!parameters->empty()) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
@@ -2982,6 +3011,25 @@ BaseLib::PVariable EnOceanCentral::remanSetCode(const BaseLib::PRpcClientInfo &c
     if (!peer) return BaseLib::Variable::createError(-1, "Unknown peer.");
 
     return std::make_shared<BaseLib::Variable>(peer->remanSetCode((uint32_t)parameters->at(1)->integerValue64));
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable EnOceanCentral::removeMeshingEntry(const PRpcClientInfo &clientInfo, const PArray &parameters) {
+  try {
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
+    if (parameters->at(1)->type != BaseLib::VariableType::tInteger && parameters->at(1)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type Integer.");
+
+    auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
+    if (!peer) return Variable::createError(-1, "Unknown repeater.");
+
+    auto result = peer->removeRepeatedAddress(parameters->at(1)->integerValue);
+
+    return std::make_shared<BaseLib::Variable>(result);
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

@@ -128,6 +128,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   void updateFirmware(const std::unordered_set<uint64_t> &ids, bool enforce);
 
   //{{{ Family RPC methods
+  BaseLib::PVariable addMeshingEntry(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable getMeshingInfo(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable queryFirmwareVersion(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable resetMeshingTables(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
@@ -138,6 +139,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   BaseLib::PVariable remanSetRepeaterFilter(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetSecurityProfile(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetCode(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable removeMeshingEntry(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   //}}}
 };
 
