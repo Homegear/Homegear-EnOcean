@@ -125,7 +125,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   bool handlePairingRequest(const std::string &interfaceId, const PEnOceanPacket &packet, const PairingData &pairingData);
 
   void updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi);
-  void updateFirmware(const std::unordered_set<uint64_t> &ids, bool ignoreRssi);
+  void updateFirmware(const std::unordered_set<uint64_t> &ids, bool enforce);
 
   //{{{ Family RPC methods
   BaseLib::PVariable getMeshingInfo(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);

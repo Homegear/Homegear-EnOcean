@@ -299,6 +299,11 @@ void EnOceanCentral::pingWorker() {
 
                     if (repeaterPeer->getRepeaterId() != 0) {
                       repeaterLog->structValue->emplace("hasRepeater", std::make_shared<BaseLib::Variable>(true));
+                      if (peer->enforceMeshing() && j == 0 && bestQualityIndicatorRoom == 100) {
+                        //When there is a repeater, but it requires a repeater itself, use the repeater for this repeater.
+                        bestRepeaterRoom = getPeer(repeaterPeer->getRepeaterId());
+                        bestQualityIndicatorRoom = 99;
+                      }
                       continue;
                     }
 
@@ -1984,7 +1989,7 @@ void EnOceanCentral::updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi)
   _updatingFirmware = false;
 }
 
-void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, bool ignoreRssi) {
+void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, bool enforce) {
   try {
     struct UpdateData {
       bool abort = false;
@@ -1997,7 +2002,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
 
     if (ids.empty()) return;
 
-    if (BaseLib::HelperFunctions::getTime() - _lastFirmwareUpdate < 3600000) {
+    if (BaseLib::HelperFunctions::getTime() - _lastForeignFirmwareUpdatePacket < 3600000 && !enforce) {
       Gd::out.printInfo("Info: Not updating firmware, because another central is updating.");
       return;
     }
@@ -2068,7 +2073,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         }
       }
 
-      if ((rssi > -30 || rssi < -90) && rssi != 0 && !ignoreRssi) {
+      if ((rssi > -30 || rssi < -90) && rssi != 0 && !enforce) {
         Gd::out.printMessage("Not updating peer " + std::to_string(peerId) + ", because RSSI is out of allowed range (RSSI is " + std::to_string(rssi) + ").");
         continue;
       }
