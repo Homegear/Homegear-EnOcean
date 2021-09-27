@@ -1265,7 +1265,7 @@ void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
     setLastPacketReceived();
     if (_lastPacket && BaseLib::HelperFunctions::getTime() - _lastPacket->getTimeReceived() < 1000 && _lastPacket->getBinary() == packet->getBinary()) return;
     setRssiDevice(packet->getRssi() * -1);
-    _rssi = packet->getRssi();
+    if (_repeaterId == 0) _rssi = packet->getRssi();
     serviceMessages->endUnreach();
 
     auto physicalInterface = getPhysicalInterface();
@@ -2113,7 +2113,11 @@ bool EnOceanPeer::remanPing() {
     uint8_t sequenceCounter = _erp1SequenceCounter;
     setErp1SequenceCounter(sequenceCounter + 1);
     auto
-        ping = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xC5, physicalInterface->getBaseAddress() | getRfChannel(0), getRemanDestinationAddress(), std::vector<uint8_t>{0xC5, (uint8_t)(sequenceCounter << 6), 0, 0x7F, 0xF0, 6, 0, 0, 0, 0});
+        ping = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1,
+                                               0xC5,
+                                               physicalInterface->getBaseAddress() | getRfChannel(0),
+                                               getRemanDestinationAddress(),
+                                               std::vector<uint8_t>{0xC5, (uint8_t)(sequenceCounter << 6), 0, 0x7F, 0xF0, 6, 0, 0, 0, 0});
     auto response = sendAndReceivePacket(ping,
                                          2,
                                          IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,

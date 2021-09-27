@@ -307,6 +307,8 @@ void EnOceanCentral::pingWorker() {
 
                     repeaterLog->structValue->emplace("inRoom", std::make_shared<BaseLib::Variable>(j == 0));
 
+                    auto rssiHomegearToRepeater = repeaterPeer->getRssi();
+
                     if (repeaterPeer->getRepeaterId() != 0) {
                       if (peer->enforceMeshing() && j == 0 && bestQualityIndicatorRoom == 100) {
                         //When there is a repeater, but it requires a repeater itself, use the repeater for this repeater.
@@ -315,11 +317,11 @@ void EnOceanCentral::pingWorker() {
                       }
                       //Allow repeater with bad RSSI for peers with no connection (rssi == 0)
                       if (rssi < 0) continue;
+                      rssiHomegearToRepeater = -100; //Assume bad RSSI - getRssi() returns the repeated value when repeater is enabled.
                     }
 
-                    auto rssiHomegearToRepeater = repeaterPeer->getRssi();
                     if (rssiHomegearToRepeater == 0) rssiHomegearToRepeater = repeaterPeer->getPingRssi().first;
-                    if (rssiHomegearToRepeater < -85 || (rssi < 0 && rssiHomegearToRepeater < rssi) || rssiHomegearToRepeater == 0) {
+                    if ((rssi < 0 && rssiHomegearToRepeater < rssi) || rssiHomegearToRepeater == 0) {
                       repeaterLog->structValue->emplace("badRssi", std::make_shared<BaseLib::Variable>(true));
                       repeaterLog->structValue->emplace("badRssiValue", std::make_shared<BaseLib::Variable>(rssiHomegearToRepeater));
                       continue;
@@ -340,12 +342,12 @@ void EnOceanCentral::pingWorker() {
                     auto qualityValue2 = rssiRepeaterToPeer;
                     bool validQualityValue2 = qualityValue2 != 0;
                     if (qualityValue1 > -70) qualityValue1 = -70;
-                    qualityValue1 = 15 - (85 + qualityValue1); //0 = best, 15 = worst
+                    qualityValue1 = 15 - (85 + qualityValue1); //0 = best, ~30 = worst
                     if (validQualityValue2) {
                       if (qualityValue2 > -70) qualityValue2 = -70;
-                      qualityValue2 = 15 - (85 + qualityValue2); //0 = best, 15 = worst
+                      qualityValue2 = 15 - (85 + qualityValue2); //0 = best, ~30 = worst
                     }
-                    auto qualityValue3 = std::abs(qualityValue1 - qualityValue2); //0 = best, 15 = worst
+                    auto qualityValue3 = std::abs(qualityValue1 - qualityValue2); //0 = best, ~30 = worst
                     auto qualityIndicator = validQualityValue2 ? qualityValue1 + qualityValue2 + qualityValue3 : 100; //0 = best
                     repeaterLog->structValue->emplace("qualityValue1", std::make_shared<BaseLib::Variable>(qualityValue1));
                     repeaterLog->structValue->emplace("qualityValue2", std::make_shared<BaseLib::Variable>(qualityValue2));
