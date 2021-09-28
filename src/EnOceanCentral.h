@@ -139,6 +139,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   BaseLib::PVariable remanSetRepeaterFilter(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetSecurityProfile(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetCode(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanUpdateSecurityProfile(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable removeMeshingEntry(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   //}}}
 };

@@ -166,7 +166,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool remanSetRepeaterFilter(uint8_t filterControl, uint8_t filterType, uint32_t filterValue);
   bool remanSetRepeaterFunctions(uint8_t function, uint8_t level, uint8_t structure);
   bool remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId, uint32_t sourceId);
-  bool remanSetCode(uint32_t securityCode);
+  bool remanSetCode(uint32_t securityCode, bool enforce);
+  bool remanUpdateSecurityProfile();
 
   //RPC methods
   PVariable forceConfigUpdate(PRpcClientInfo clientInfo) override;
@@ -256,6 +257,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   // {{{ Variables for keep alives / pinging
   std::atomic<int64_t> _lastPing{0};
   std::atomic<int64_t> _pingInterval = 0;
+  std::atomic<uint32_t> _missedPings{0};
   // }}}
 
   // {{{ Variables for meshing

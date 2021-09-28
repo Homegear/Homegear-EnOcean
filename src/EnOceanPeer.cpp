@@ -2110,19 +2110,45 @@ bool EnOceanPeer::remanPing() {
 
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
+
     uint8_t sequenceCounter = _erp1SequenceCounter;
     setErp1SequenceCounter(sequenceCounter + 1);
-    auto
-        ping = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1,
-                                               0xC5,
-                                               physicalInterface->getBaseAddress() | getRfChannel(0),
-                                               getRemanDestinationAddress(),
-                                               std::vector<uint8_t>{0xC5, (uint8_t)(sequenceCounter << 6), 0, 0x7F, 0xF0, 6, 0, 0, 0, 0});
-    auto response = sendAndReceivePacket(ping,
-                                         2,
-                                         IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                         {{(uint16_t)EnOceanPacket::RemoteManagementResponse::pingResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::pingResponse}});
-    return (bool)response;
+    auto ping = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1,
+                                                0xC5,
+                                                physicalInterface->getBaseAddress() | getRfChannel(0),
+                                                getRemanDestinationAddress(),
+                                                std::vector<uint8_t>{0xC5, (uint8_t)(sequenceCounter << 6), 0, 0x7F, 0xF0, 6, 0, 0, 0, 0});
+    auto response = (bool)sendAndReceivePacket(ping,
+                                               2,
+                                               IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                               {{(uint16_t)EnOceanPacket::RemoteManagementResponse::pingResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::pingResponse}});
+    if (response) {
+      _missedPings = 0;
+    } else {
+      _missedPings++;
+    }
+
+    if (_missedPings >= 10 && _forceEncryption) {
+      Gd::out.printWarning("Warning: Peer " + std::to_string(_peerID) + " is not reachable. Trying rolling code recovery.");
+
+      auto ping2 = std::make_shared<PingPacket>(0, _address);
+      response = (bool)physicalInterface->sendAndReceivePacket(ping2,
+                                                               _address,
+                                                               2,
+                                                               IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                               {{(uint16_t)EnOceanPacket::RemoteManagementResponse::pingResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::pingResponse}});
+      if (response) {
+        Gd::out.printWarning("Warning: Peer " + std::to_string(_peerID) + " is reachable using REMAN ping from another sender address. Resetting rolling code...");
+        if (remanUpdateSecurityProfile()) {
+          Gd::out.printWarning("Warning: Update of rolling code of peer " + std::to_string(_peerID) + " was successful.");
+        } else {
+          Gd::out.printWarning("Warning: Update of rolling code of peer " + std::to_string(_peerID) + " was not successful.");
+          return false;
+        }
+      }
+    }
+
+    return response;
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2206,7 +2232,7 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
   return false;
 }
 
-bool EnOceanPeer::remanSetCode(uint32_t securityCode) {
+bool EnOceanPeer::remanSetCode(uint32_t securityCode, bool enforce) {
   try {
     if (!_remanFeatures || !_remanFeatures->kSetCode) return false;
 
@@ -2220,12 +2246,56 @@ bool EnOceanPeer::remanSetCode(uint32_t securityCode) {
                                                             2,
                                                             IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                             {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}});
-    if (!response) return false;
+    if (!response && !enforce) return false;
 
     setSecurityCode(securityCode);
 
     remoteManagementLock();
 
+    return true;
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return false;
+}
+
+bool EnOceanPeer::remanUpdateSecurityProfile() {
+  try {
+    if (!_remanFeatures || !_remanFeatures->kSetSecurityProfile) return false;
+
+    remoteManagementUnlock();
+
+    setBestInterface();
+    auto physicalInterface = getPhysicalInterface();
+    auto setSecurityProfile =
+        std::make_shared<SetSecurityProfile>(0, _address, _remanFeatures->kRecomVersion == 0x11, false, _rollingCodeInbound, _remanFeatures->kSlf, 0, _aesKeyInbound, _address, physicalInterface->getBaseAddress() | getRfChannel(0));
+    auto response = physicalInterface->sendAndReceivePacket(setSecurityProfile,
+                                                            _address,
+                                                            2,
+                                                            IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
+    if (!response) {
+      Gd::out.printWarning("Warning: Could not set security profile.");
+      remoteManagementLock();
+      return false;
+    } else {
+      setSecurityProfile =
+          std::make_shared<SetSecurityProfile>(0, _address, _remanFeatures->kRecomVersion == 0x11, true, _rollingCodeOutbound, _remanFeatures->kSlf, 0, _aesKeyOutbound, physicalInterface->getBaseAddress() | getRfChannel(0), _address);
+      response = physicalInterface->sendAndReceivePacket(setSecurityProfile,
+                                                         _address,
+                                                         2,
+                                                         IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                         {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
+
+      if (!response) {
+        Gd::out.printWarning("Warning: Could not set security profile.");
+        remoteManagementLock();
+        return false;
+      }
+    }
+
+    remoteManagementLock();
     return true;
   }
   catch (const std::exception &ex) {

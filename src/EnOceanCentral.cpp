@@ -120,6 +120,11 @@ void EnOceanCentral::init() {
                                                                                                                                                                               this,
                                                                                                                                                                               std::placeholders::_1,
                                                                                                                                                                               std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters)>>("remanUpdateSecurityProfile",
+                                                                                                                                                                    std::bind(&EnOceanCentral::remanUpdateSecurityProfile,
+                                                                                                                                                                              this,
+                                                                                                                                                                              std::placeholders::_1,
+                                                                                                                                                                              std::placeholders::_2)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters)>>("removeMeshingEntry",
                                                                                                                                                                     std::bind(&EnOceanCentral::removeMeshingEntry,
                                                                                                                                                                               this,
@@ -3032,14 +3037,33 @@ BaseLib::PVariable EnOceanCentral::remanSetSecurityProfile(const BaseLib::PRpcCl
 
 BaseLib::PVariable EnOceanCentral::remanSetCode(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters) {
   try {
-    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->size() != 2 && parameters->size() != 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
     if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
     if (parameters->at(1)->type != BaseLib::VariableType::tInteger && parameters->at(1)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type Integer.");
+    if (parameters->size() > 2 && parameters->at(2)->type != BaseLib::VariableType::tBoolean) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type Boolean.");
+
+    bool enforce = parameters->size() > 2 && parameters->at(2)->booleanValue;
 
     auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
     if (!peer) return BaseLib::Variable::createError(-1, "Unknown peer.");
 
-    return std::make_shared<BaseLib::Variable>(peer->remanSetCode((uint32_t)parameters->at(1)->integerValue64));
+    return std::make_shared<BaseLib::Variable>(peer->remanSetCode((uint32_t)parameters->at(1)->integerValue64, enforce));
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable EnOceanCentral::remanUpdateSecurityProfile(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
+
+    auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
+    if (!peer) return BaseLib::Variable::createError(-1, "Unknown peer.");
+
+    return std::make_shared<BaseLib::Variable>(peer->remanUpdateSecurityProfile());
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
