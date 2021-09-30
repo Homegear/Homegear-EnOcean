@@ -7,34 +7,33 @@
 #include "IEnOceanInterface.h"
 #include <homegear-base/BaseLib.h>
 
-namespace EnOcean
-{
+namespace EnOcean {
 
-class Usb300 : public IEnOceanInterface
-{
-public:
-	Usb300(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
-	virtual ~Usb300();
+class Usb300 : public IEnOceanInterface {
+ public:
+  explicit Usb300(std::shared_ptr<BaseLib::Systems::PhysicalInterfaceSettings> settings);
+  ~Usb300() override;
 
-	virtual void startListening();
-	virtual void stopListening();
-	virtual void setup(int32_t userID, int32_t groupID, bool setPermissions);
+  void startListening() override;
+  void stopListening() override;
+  void setup(int32_t userID, int32_t groupID, bool setPermissions) override;
 
-	virtual int32_t setBaseAddress(uint32_t value);
+  int32_t setBaseAddress(uint32_t value) override;
+  DutyCycleInfo getDutyCycleInfo() override;
 
-	virtual bool isOpen() { return _serial && _serial->isOpen() && !_stopped; }
+  bool isOpen() override { return _serial && _serial->isOpen() && !_stopped; }
 
-	virtual bool sendEnoceanPacket(const PEnOceanPacket& packet);
-protected:
-	std::unique_ptr<BaseLib::SerialReaderWriter> _serial;
-    std::atomic_bool _initComplete;
-	std::thread _initThread;
+  bool sendEnoceanPacket(const PEnOceanPacket &packet) override;
+ protected:
+  std::unique_ptr<BaseLib::SerialReaderWriter> _serial;
+  std::atomic_bool _initComplete;
+  std::thread _initThread;
 
-	void init();
-	void reconnect();
-	void listen();
-	virtual void rawSend(std::vector<uint8_t>& packet);
-	void processPacket(std::vector<uint8_t>& data);
+  void init();
+  void reconnect();
+  void listen();
+  void rawSend(std::vector<uint8_t> &packet) override;
+  void processPacket(std::vector<uint8_t> &data);
 };
 
 }

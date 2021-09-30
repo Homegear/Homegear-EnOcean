@@ -11,88 +11,137 @@
 #include <mutex>
 #include <string>
 
-namespace EnOcean
-{
+namespace EnOcean {
 
-class EnOceanCentral : public BaseLib::Systems::ICentral
-{
-public:
-	EnOceanCentral(ICentralEventSink* eventHandler);
-	EnOceanCentral(uint32_t deviceType, std::string serialNumber, ICentralEventSink* eventHandler);
-	~EnOceanCentral() override;
-	void dispose(bool wait = true) override;
+class EnOceanCentral : public BaseLib::Systems::ICentral {
+ public:
+  EnOceanCentral(ICentralEventSink *eventHandler);
+  EnOceanCentral(uint32_t deviceType, std::string serialNumber, ICentralEventSink *eventHandler);
+  ~EnOceanCentral() override;
+  void dispose(bool wait = true) override;
 
-	std::string handleCliCommand(std::string command);
-	virtual bool onPacketReceived(std::string& senderId, std::shared_ptr<BaseLib::Systems::Packet> packet);
+  std::string handleCliCommand(std::string command);
+  virtual bool onPacketReceived(std::string &senderId, std::shared_ptr<BaseLib::Systems::Packet> packet);
 
-	int32_t getFreeRfChannel(const std::string& interfaceId);
+  int32_t getFreeRfChannel(const std::string &interfaceId);
 
-	uint64_t getPeerIdFromSerial(std::string& serialNumber) { std::shared_ptr<EnOceanPeer> peer = getPeer(serialNumber); if(peer) return peer->getID(); else return 0; }
-	PMyPeer getPeer(uint64_t id);
-	std::list<PMyPeer> getPeer(int32_t address);
-	PMyPeer getPeer(std::string serialNumber);
+  uint64_t getPeerIdFromSerial(std::string &serialNumber) {
+    std::shared_ptr<EnOceanPeer> peer = getPeer(serialNumber);
+    if (peer) return peer->getID(); else return 0;
+  }
+  PMyPeer getPeer(uint64_t id);
+  std::list<PMyPeer> getPeer(int32_t address);
+  PMyPeer getPeer(std::string serialNumber);
 
-	bool peerExists(uint64_t id);
-	bool peerExists(std::string serialNumber);
-	bool peerExists(int32_t address, uint64_t eep);
+  bool peerExists(uint64_t id);
+  bool peerExists(std::string serialNumber);
+  bool peerExists(int32_t address, uint64_t eep = 0);
 
-    PVariable addLink(BaseLib::PRpcClientInfo clientInfo, uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description) override;
-	PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId) override;
-    PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, const std::string& code) override;
-	PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags) override;
-	PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags) override;
-	PVariable getSniffedDevices(BaseLib::PRpcClientInfo clientInfo) override;
-    PVariable getPairingState(BaseLib::PRpcClientInfo clientInfo) override;
-    PVariable removeLink(BaseLib::PRpcClientInfo clientInfo, uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel) override;
-	PVariable setInstallMode(BaseLib::PRpcClientInfo clientInfo, bool on, uint32_t duration, BaseLib::PVariable metadata, bool debugOutput = true) override;
-	PVariable setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string interfaceId) override;
-	PVariable startSniffing(BaseLib::PRpcClientInfo clientInfo) override;
-	PVariable stopSniffing(BaseLib::PRpcClientInfo clientInfo) override;
-protected:
-	bool _sniff = false;
-	std::mutex _sniffedPacketsMutex;
-	std::map<int32_t, std::vector<PEnOceanPacket>> _sniffedPackets;
+  PVariable addLink(BaseLib::PRpcClientInfo clientInfo, uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel, std::string name, std::string description) override;
+  PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, int32_t deviceType, std::string serialNumber, int32_t address, int32_t firmwareVersion, std::string interfaceId) override;
+  PVariable createDevice(BaseLib::PRpcClientInfo clientInfo, const std::string &code) override;
+  PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, std::string serialNumber, int32_t flags) override;
+  PVariable deleteDevice(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, int32_t flags) override;
+  PVariable getPairingState(BaseLib::PRpcClientInfo clientInfo) override;
+  PVariable getSniffedDevices(BaseLib::PRpcClientInfo clientInfo) override;
+  PVariable invokeFamilyMethod(BaseLib::PRpcClientInfo clientInfo, std::string &method, PArray parameters) override;
+  PVariable removeLink(BaseLib::PRpcClientInfo clientInfo, uint64_t senderID, int32_t senderChannel, uint64_t receiverID, int32_t receiverChannel) override;
+  PVariable setInstallMode(BaseLib::PRpcClientInfo clientInfo, bool on, uint32_t duration, BaseLib::PVariable metadata, bool debugOutput) override;
+  PVariable setInterface(BaseLib::PRpcClientInfo clientInfo, uint64_t peerId, std::string interfaceId) override;
+  PVariable startSniffing(BaseLib::PRpcClientInfo clientInfo) override;
+  PVariable stopSniffing(BaseLib::PRpcClientInfo clientInfo) override;
+  PVariable updateFirmware(PRpcClientInfo clientInfo, std::vector<uint64_t> ids, bool manual) override;
+ protected:
+  struct PairingInfo {
+    std::mutex pairingMutex;
+    std::mutex recomMutex;
+    std::mutex pairingModeThreadMutex;
+    std::mutex processedAddressesMutex;
+    std::mutex pairingDataMutex;
+    std::atomic_bool stopPairingModeThread{false};
+    std::thread pairingModeThread;
+    std::queue<std::pair<std::string, uint32_t>> remoteCommissioningAddressQueue;
+    std::unordered_set<int32_t> processedAddresses;
+    std::atomic_bool pairingStarted{false};
+    std::atomic_bool pairingError{false};
+    std::atomic<uint32_t> pairingProgress{0};
+  };
 
-	std::map<int32_t, std::list<PMyPeer>> _peers;
-	std::mutex _wildcardPeersMutex;
-	std::map<int32_t, std::list<PMyPeer>> _wildcardPeers;
+  struct PairingData {
+    std::string pairingInterface;
+    bool remoteCommissioning{false};
+    uint32_t remoteCommissioningSecurityCode{0};
+    uint32_t remoteCommissioningGatewayAddress{0};
+    uint32_t remoteCommissioningDeviceAddress{0};
+    uint64_t eep{0};
+    int8_t rfChannel{-1};
+    bool remoteCommissioningWaitForSignal{false};
+    int32_t minRssi{0};
+    std::vector<uint8_t> aesKeyInbound;
+    std::vector<uint8_t> aesKeyOutbound;
+  };
 
-	//{{{ Pairing
-    std::mutex _pairingMutex;
-    std::string _pairingInterface;
-	std::atomic_bool _stopPairingModeThread{false};
-	std::mutex _pairingModeThreadMutex;
-	std::thread _pairingModeThread;
-	std::mutex _processedAddressesMutex;
-	std::unordered_set<int32_t> _processedAddresses;
-    std::atomic_bool _remoteCommissioning{false};
-	std::atomic<uint32_t> _remoteCommissioningSecurityCode{0};
-    std::atomic<uint32_t> _remoteCommissioningGatewayAddress{0};
-	std::atomic<uint32_t> _remoteCommissioningDeviceAddress{0};
-	std::atomic<uint64_t> _remoteCommissioningEep{0};
-    std::atomic_bool _remoteCommissioningWaitForSignal{false};
-	std::queue<std::pair<std::string, uint32_t>> _remoteCommissioningAddressQueue;
-	//}}}
+  std::map<std::string, std::function<BaseLib::PVariable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters)>> _localRpcMethods;
 
-	std::atomic_bool _stopWorkerThread{false};
-	std::thread _workerThread;
+  bool _sniff = false;
+  std::mutex _sniffedPacketsMutex;
+  std::map<int32_t, std::vector<PEnOceanPacket>> _sniffedPackets;
 
-	std::string getFreeSerialNumber(int32_t address);
-	void init();
-	void worker();
-	void loadPeers() override;
-	void savePeers(bool full) override;
-	void loadVariables() override {}
-	void saveVariables() override {}
-	std::shared_ptr<EnOceanPeer> createPeer(uint64_t eep, int32_t address, std::string serialNumber, bool save = true);
-    std::shared_ptr<EnOceanPeer> buildPeer(uint64_t eep, int32_t address, const std::string& interfaceId, int32_t rfChannel);
-	void deletePeer(uint64_t id);
+  std::map<int32_t, std::list<PMyPeer>> _peers;
+  std::mutex _wildcardPeersMutex;
+  std::map<int32_t, std::list<PMyPeer>> _wildcardPeers;
 
-	void pairingModeTimer(int32_t duration, bool debugOutput = true);
-	void handleRemoteCommissioningQueue();
-	uint64_t remoteCommissionPeer(const std::shared_ptr<IEnOceanInterface>& interface, uint32_t deviceAddress, uint64_t eep, uint32_t securityCode = 0, uint32_t gatewayAddress = 0);
-	static uint64_t remoteManagementGetEep(const std::shared_ptr<IEnOceanInterface>& interface, uint32_t deviceAddress, uint32_t securityCode = 0);
-	bool handlePairingRequest(std::string& interfaceId, PEnOceanPacket packet);
+  PairingInfo _pairingInfo;
+  PairingData _pairingData;
+
+  std::atomic_bool _stopWorkerThread{false};
+  std::thread _workerThread;
+  std::thread _pingWorkerThread;
+
+  //{{{ Firmware updates
+  std::atomic_bool _updatingFirmware{false};
+  std::mutex _updateFirmwareThreadMutex;
+  std::thread _updateFirmwareThread;
+  std::atomic<int64_t> _lastFirmwareUpdate{0};
+  std::atomic<int64_t> _lastForeignFirmwareUpdatePacket{0};
+  //}}}
+
+  std::string getFreeSerialNumber(int32_t address);
+  void init();
+  void worker();
+  void pingWorker();
+  void loadPeers() override;
+  void savePeers(bool full) override;
+  void loadVariables() override;
+  void saveVariables() override {}
+  std::shared_ptr<EnOceanPeer> createPeer(uint64_t eep, int32_t address, std::string serialNumber, bool save = true);
+  std::shared_ptr<EnOceanPeer> buildPeer(uint64_t eep, int32_t address, const std::string &interfaceId, bool requiresRfChannel, int32_t rfChannel);
+  void deletePeer(uint64_t id);
+
+  void pairingModeTimer(int32_t duration, bool debugOutput = true);
+  void handleRemoteCommissioningQueue();
+  uint64_t remoteCommissionPeer(const std::shared_ptr<IEnOceanInterface> &interface, uint32_t deviceAddress, const PairingData &pairingData);
+  static uint64_t remoteManagementGetEep(const std::shared_ptr<IEnOceanInterface> &interface, uint32_t deviceAddress, uint32_t securityCode = 0);
+  bool handlePairingRequest(const std::string &interfaceId, const PEnOceanPacket &packet, const PairingData &pairingData);
+
+  void updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi);
+  void updateFirmware(const std::unordered_set<uint64_t> &ids, bool enforce);
+
+  //{{{ Family RPC methods
+  BaseLib::PVariable addMeshingEntry(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable getMeshingInfo(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable queryFirmwareVersion(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable resetMeshingTables(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanGetPathInfoThroughPing(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanPing(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanPingAddress(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanSetRepeaterFunctions(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanSetRepeaterFilter(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanSetSecurityProfile(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanSetCode(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanUpdateSecurityProfile(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable removeMeshingEntry(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  //}}}
 };
 
 }
