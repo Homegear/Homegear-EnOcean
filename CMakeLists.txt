@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(homegear_enocean)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 set(SOURCE_FILES
         src/PhysicalInterfaces/IEnOceanInterface.cpp
@@ -10,8 +10,8 @@ set(SOURCE_FILES
         src/PhysicalInterfaces/Usb300.h
         src/Factory.cpp
         src/Factory.h
-        src/GD.cpp
-        src/GD.h
+        src/Gd.cpp
+        src/Gd.h
         src/Interfaces.cpp
         src/Interfaces.h
         src/EnOceanCentral.cpp
@@ -24,7 +24,7 @@ set(SOURCE_FILES
         src/EnOceanPeer.h
         src/Security.cpp
         src/Security.h
-        src/PhysicalInterfaces/HomegearGateway.cpp src/PhysicalInterfaces/HomegearGateway.h src/PhysicalInterfaces/Hgdc.cpp src/PhysicalInterfaces/Hgdc.h src/EnOceanPackets.cpp src/EnOceanPackets.h)
+        src/PhysicalInterfaces/HomegearGateway.cpp src/PhysicalInterfaces/HomegearGateway.h src/PhysicalInterfaces/Hgdc.cpp src/PhysicalInterfaces/Hgdc.h src/EnOceanPackets.cpp src/EnOceanPackets.h src/RemanFeatures.h src/RemanFeatures.cpp)
 
 add_custom_target(homegear COMMAND ../../makeAll.sh SOURCES ${SOURCE_FILES})
 

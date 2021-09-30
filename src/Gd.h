@@ -10,20 +10,18 @@
 #include "EnOcean.h"
 #include "Interfaces.h"
 
-namespace EnOcean
-{
+namespace EnOcean {
 
-class GD
-{
-public:
-	virtual ~GD();
+class Gd {
+ public:
+  virtual ~Gd();
 
-	static BaseLib::SharedObjects* bl;
-	static EnOcean* family;
-    static std::shared_ptr<Interfaces> interfaces;
-	static BaseLib::Output out;
-private:
-	GD();
+  static BaseLib::SharedObjects *bl;
+  static EnOcean *family;
+  static std::shared_ptr<Interfaces> interfaces;
+  static BaseLib::Output out;
+ private:
+  Gd();
 };
 
 }
