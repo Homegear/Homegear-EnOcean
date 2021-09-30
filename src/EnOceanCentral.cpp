@@ -618,7 +618,7 @@ bool EnOceanCentral::onPacketReceived(std::string &senderId, std::shared_ptr<Bas
 
     if (myPacket->getRorg() == 0xD1) {
       auto data = myPacket->getData();
-      if (data.at(1) == 0x03 && data.at(2) == 0x33) {
+      if (data.at(1) == 0x03 && (data.at(2) == 0x32 || data.at(2) == 0x33)) {
         if (!_updatingFirmware) { //When we are updating, we are receiving our own repeated packets.
           Gd::out.printInfo("Info: Update packet received from other central. Blocking firmware updates for 1 hour.");
           _lastForeignFirmwareUpdatePacket = BaseLib::HelperFunctions::getTime();
