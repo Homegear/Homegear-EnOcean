@@ -2194,10 +2194,12 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
     while (true) {
       bool finished = true;
       for (auto &updateData: peersInBootloader) {
-        if (updateData.abort || updateData.block == 0xA5 || updateData.block < 0x0A || updateData.block > 0x7F || updateData.currentBlockRetries >= 20 || updateData.totalRetries >= 1000 || updateData.block == block) continue;
-        if (!repeatBlock) block = updateData.block;
+        if (updateData.abort || updateData.block == 0xA5 || updateData.block < 0x0A || updateData.block > 0x7F || updateData.currentBlockRetries >= 20 || updateData.totalRetries >= 1000) continue;
         finished = false;
-        break;
+        if (!repeatBlock && block != updateData.block) {
+          block = updateData.block;
+          break;
+        }
       }
 
       if (finished) break;
