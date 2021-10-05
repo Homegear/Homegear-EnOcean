@@ -2248,7 +2248,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
           for (auto &updateData: peersInBootloader) {
             if (updateData.abort || updateData.block == 0xA5 || updateData.block < 0x0A || updateData.block > 0x7F || updateData.currentBlockRetries >= 20 || updateData.totalRetries >= 1000) continue;
             if (updateData.block == block) {
-              auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peersInBootloader.front().address, data);
+              auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, updateData.address, data);
               if (!interface->sendEnoceanPacket(packet)) {
                 doBreak = true;
                 break;
