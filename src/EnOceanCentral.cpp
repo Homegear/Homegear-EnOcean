@@ -2080,7 +2080,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
     auto version = BaseLib::Math::getUnsignedNumber(BaseLib::Io::getFileContent(versionPath), true);
     auto interface = Gd::interfaces->getDefaultInterface();
     auto baseAddress = interface->getBaseAddress();
-    auto updateAddress = baseAddress | 1;
+    auto updateAddress = (firstPeer->getRemanFeatures() && firstPeer->getRemanFeatures()->kUnencryptedUpdates ? baseAddress | 1 : baseAddress);
 
     auto dutyCycleInfo = interface->getDutyCycleInfo();
     if (dutyCycleInfo.dutyCycleUsed > 10) interface->reset();
