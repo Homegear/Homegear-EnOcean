@@ -249,12 +249,12 @@ void EnOceanCentral::worker() {
 
 void EnOceanCentral::pingWorker() {
   try {
-    size_t sleepingTime(60);
+    size_t sleepingTime(10);
     uint64_t lastPeer = 0;
 
     {
       std::lock_guard<std::mutex> peersGuard(_peersMutex);
-      if (!_peersById.empty()) sleepingTime = 180u / _peersById.size();
+      if (!_peersById.empty()) sleepingTime = 300u / _peersById.size();
       if (sleepingTime == 0) sleepingTime = 1;
     }
 
@@ -263,7 +263,7 @@ void EnOceanCentral::pingWorker() {
     while (!_stopWorkerThread && !Gd::bl->shuttingDown) {
       try {
         for (uint32_t i = 0; i < sleepingTime; i++) {
-          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
           if (_stopWorkerThread || Gd::bl->shuttingDown) return;
         }
 
