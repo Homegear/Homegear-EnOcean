@@ -2595,7 +2595,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
     }
     //}}}
 
-    if (features->kForceEncryption) {
+    if (features->kForceEncryption || (!pairingData.aesKeyInbound.empty() && !pairingData.aesKeyOutbound.empty())) {
       if ((features->kSlf & 3) != 3) {
         Gd::out.printWarning("Warning: Unsupported data encryption.");
         _pairingInfo.pairingError = true;
