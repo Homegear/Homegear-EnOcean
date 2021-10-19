@@ -290,8 +290,8 @@ uint32_t EnOceanPeer::getRemanDestinationAddress() {
 EnOceanPeer::RssiStatus EnOceanPeer::getRssiStatus() {
   auto pingRssi = getPingRssi();
   RssiStatus rssiStatus;
-  if ((pingRssi.first >= 0 || pingRssi.first < -80) && (pingRssi.second >= 0 || pingRssi.second < -80)) rssiStatus = RssiStatus::bad;
-  else rssiStatus = RssiStatus::good;
+  if ((pingRssi.first < 0 && pingRssi.first >= -80) || (pingRssi.second < 0 && pingRssi.second >= -80)) rssiStatus = RssiStatus::good;
+  else rssiStatus = RssiStatus::bad;
   return rssiStatus;
 }
 
