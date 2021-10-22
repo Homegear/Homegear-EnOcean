@@ -290,8 +290,8 @@ uint32_t EnOceanPeer::getRemanDestinationAddress() {
 EnOceanPeer::RssiStatus EnOceanPeer::getRssiStatus() {
   auto pingRssi = getPingRssi();
   RssiStatus rssiStatus;
-  if ((pingRssi.first >= 0 || pingRssi.first < -80) && (pingRssi.second >= 0 || pingRssi.second < -80)) rssiStatus = RssiStatus::bad;
-  else rssiStatus = RssiStatus::good;
+  if ((pingRssi.first < 0 && pingRssi.first >= -80) || (pingRssi.second < 0 && pingRssi.second >= -80)) rssiStatus = RssiStatus::good;
+  else rssiStatus = RssiStatus::bad;
   return rssiStatus;
 }
 
@@ -771,14 +771,16 @@ bool EnOceanPeer::load(BaseLib::Systems::ICentral *central) {
     serviceMessages.reset(new BaseLib::Systems::ServiceMessages(_bl, _peerID, _serialNumber, this));
     serviceMessages->load();
 
+    bool rfChannelFound = false;
     for (auto channelIterator: valuesCentral) {
       std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>::iterator parameterIterator = channelIterator.second.find("RF_CHANNEL");
       if (parameterIterator != channelIterator.second.end() && parameterIterator->second.rpcParameter) {
-        if (channelIterator.first == 0) _globalRfChannel = true;
         std::vector<uint8_t> parameterData = parameterIterator->second.getBinaryData();
         setRfChannel(channelIterator.first, parameterIterator->second.rpcParameter->convertFromPacket(parameterData, parameterIterator->second.mainRole(), false)->integerValue);
-      } else _globalRfChannel = true;
+        if (channelIterator.first > 0) rfChannelFound = true;
+      }
     }
+    _globalRfChannel = !rfChannelFound;
 
     std::unordered_map<uint32_t, std::unordered_map<std::string, BaseLib::Systems::RpcConfigurationParameter>>::iterator channelIterator = configCentral.find(0);
     if (channelIterator != configCentral.end()) {
@@ -830,7 +832,7 @@ void EnOceanPeer::initializeCentralConfig() {
 
     _remanFeatures = RemanFeatureParser::parse(_rpcDevice);
 
-    if (_remanFeatures && _remanFeatures->kForceEncryption) _forceEncryption = true;
+    if ((_remanFeatures && _remanFeatures->kForceEncryption) || !_aesKeyInbound.empty() || !_aesKeyOutbound.empty()) _forceEncryption = true;
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2223,6 +2225,16 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
                                                             IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
                                                             {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
     if (!response) return false;
+
+    std::vector<uint8_t> noKey;
+    noKey.resize(16, 0xFF);
+    if (outbound) {
+      if (aesKey == noKey) setAesKeyOutbound(std::vector<uint8_t>());
+      else setAesKeyOutbound(aesKey);
+    } else {
+      if (aesKey == noKey) setAesKeyInbound(std::vector<uint8_t>());
+      else setAesKeyInbound(aesKey);
+    }
 
     remoteManagementLock();
   }
