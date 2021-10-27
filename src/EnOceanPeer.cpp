@@ -2229,14 +2229,25 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
     std::vector<uint8_t> noKey;
     noKey.resize(16, 0xFF);
     if (outbound) {
-      if (aesKey == noKey) setAesKeyOutbound(std::vector<uint8_t>());
-      else setAesKeyOutbound(aesKey);
+      if (aesKey == noKey) {
+        setAesKeyOutbound(std::vector<uint8_t>());
+        _forceEncryption = false;
+      } else {
+        setAesKeyOutbound(aesKey);
+        _forceEncryption = true;
+      }
     } else {
-      if (aesKey == noKey) setAesKeyInbound(std::vector<uint8_t>());
-      else setAesKeyInbound(aesKey);
+      if (aesKey == noKey) {
+        setAesKeyInbound(std::vector<uint8_t>());
+        _forceEncryption = false;
+      } else {
+        setAesKeyInbound(aesKey);
+        _forceEncryption = true;
+      }
     }
 
     remoteManagementLock();
+    return true;
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2272,6 +2283,72 @@ bool EnOceanPeer::remanSetCode(uint32_t securityCode, bool enforce) {
   return false;
 }
 
+bool EnOceanPeer::remanSetLinkTable(bool inbound, const std::vector<uint8_t> &table) {
+  try {
+    if (!_remanFeatures || !_remanFeatures->kSetSecurityProfile) return false;
+    if (inbound && _remanFeatures->kInboundLinkTableSize == 0) return false;
+    if (!inbound && _remanFeatures->kOutboundLinkTableSize == 0) return false;
+
+    remoteManagementUnlock();
+
+    setBestInterface();
+    auto physicalInterface = getPhysicalInterface();
+
+    static constexpr uint32_t entrySize = 9;
+
+    if (table.size() > _remanFeatures->kMaxDataLength) {
+      std::vector<uint8_t> chunk{};
+      chunk.reserve(_remanFeatures->kMaxDataLength);
+      for (uint32_t i = 0; i < table.size(); i += entrySize) {
+        chunk.insert(chunk.end(), table.begin() + i, table.begin() + i + entrySize);
+        if (chunk.size() + entrySize > _remanFeatures->kMaxDataLength) {
+          auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, getRemanDestinationAddress(), inbound, chunk);
+          auto response = physicalInterface->sendAndReceivePacket(setLinkTablePacket,
+                                                                  _address,
+                                                                  2,
+                                                                  IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                                  {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
+          if (!response) {
+            return false;
+          }
+
+          chunk.clear();
+        }
+      }
+
+      if (!chunk.empty()) {
+        auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, getRemanDestinationAddress(), inbound, chunk);
+        auto response = physicalInterface->sendAndReceivePacket(setLinkTablePacket,
+                                                                _address,
+                                                                2,
+                                                                IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                                {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
+        if (!response) {
+          return false;
+        }
+      }
+    } else {
+      auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, getRemanDestinationAddress(), inbound, table);
+
+      auto response = physicalInterface->sendAndReceivePacket(setLinkTablePacket,
+                                                              _address,
+                                                              2,
+                                                              IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                              {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
+      if (!response) {
+        return false;
+      }
+    }
+
+    remoteManagementLock();
+    return true;
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return false;
+}
+
 bool EnOceanPeer::remanUpdateSecurityProfile() {
   try {
     if (!_remanFeatures || !_remanFeatures->kSetSecurityProfile) return false;
@@ -2281,7 +2358,16 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
     auto setSecurityProfile =
-        std::make_shared<SetSecurityProfile>(0, _address, _remanFeatures->kRecomVersion == 0x11, false, _rollingCodeInbound, _remanFeatures->kSlf, 0, _aesKeyInbound, _address, physicalInterface->getBaseAddress() | getRfChannel(0));
+        std::make_shared<SetSecurityProfile>(0,
+                                             getRemanDestinationAddress(),
+                                             _remanFeatures->kRecomVersion == 0x11,
+                                             false,
+                                             _rollingCodeInbound,
+                                             _remanFeatures->kSlf,
+                                             0,
+                                             _aesKeyInbound,
+                                             _address,
+                                             physicalInterface->getBaseAddress() | getRfChannel(0));
     auto response = physicalInterface->sendAndReceivePacket(setSecurityProfile,
                                                             _address,
                                                             2,
@@ -2293,7 +2379,16 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
       return false;
     } else {
       setSecurityProfile =
-          std::make_shared<SetSecurityProfile>(0, _address, _remanFeatures->kRecomVersion == 0x11, true, _rollingCodeOutbound, _remanFeatures->kSlf, 0, _aesKeyOutbound, physicalInterface->getBaseAddress() | getRfChannel(0), _address);
+          std::make_shared<SetSecurityProfile>(0,
+                                               getRemanDestinationAddress(),
+                                               _remanFeatures->kRecomVersion == 0x11,
+                                               true,
+                                               _rollingCodeOutbound,
+                                               _remanFeatures->kSlf,
+                                               0,
+                                               _aesKeyOutbound,
+                                               physicalInterface->getBaseAddress() | getRfChannel(0),
+                                               _address);
       response = physicalInterface->sendAndReceivePacket(setSecurityProfile,
                                                          _address,
                                                          2,

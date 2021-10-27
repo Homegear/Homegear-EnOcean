@@ -47,7 +47,7 @@ struct RemanFeatures {
   /**
    * Maximum number of entries in the outbound link table.
    */
-  uint32_t kSetOutboundLinkTableSize = 0;
+  uint32_t kOutboundLinkTableSize = 0;
 
   /**
    * In our opinion A53808 is the correct EEP here, but some devices require a different EEP.

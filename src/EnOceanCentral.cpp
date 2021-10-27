@@ -122,6 +122,13 @@ void EnOceanCentral::init() {
                                                        std::placeholders::_1,
                                                        std::placeholders::_2)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+    const BaseLib::PRpcClientInfo &clientInfo,
+    const BaseLib::PArray &parameters)>>("remanSetLinkTable",
+        std::bind(&EnOceanCentral::remanSetLinkTable,
+                  this,
+                  std::placeholders::_1,
+                  std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
         const BaseLib::PRpcClientInfo &clientInfo,
         const BaseLib::PArray &parameters)>>("remanSetRepeaterFunctions",
                                              std::bind(&EnOceanCentral::remanSetRepeaterFunctions,
@@ -2500,13 +2507,13 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
     //}}}
 
     //{{{ Set outbound link table
-    if (features->kSetOutboundLinkTableSize != 0) {
+    if (features->kOutboundLinkTableSize != 0) {
       static constexpr uint32_t
           entrySize = 9;
 
       std::vector<uint8_t> linkTable{};
-      linkTable.reserve(entrySize * features->kSetOutboundLinkTableSize);
-      for (uint32_t i = 0; i < features->kSetOutboundLinkTableSize; i++) {
+      linkTable.reserve(entrySize * features->kOutboundLinkTableSize);
+      for (uint32_t i = 0; i < features->kOutboundLinkTableSize; i++) {
         linkTable.push_back(i);
         linkTable.push_back(0xFFu);
         linkTable.push_back(0xFFu);
@@ -3017,6 +3024,27 @@ BaseLib::PVariable EnOceanCentral::remanPingAddress(const PRpcClientInfo &client
                                                     {{(uint16_t)EnOceanPacket::RemoteManagementResponse::pingResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::pingResponse}});
 
     return std::make_shared<BaseLib::Variable>((bool)response);
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable EnOceanCentral::remanSetLinkTable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters) {
+  try {
+    //bool inbound, const std::vector<uint8_t> &table
+
+    if (parameters->size() != 3) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
+    if (parameters->at(1)->type != BaseLib::VariableType::tBoolean) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type Boolean.");
+    if (parameters->at(2)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type String.");
+
+    auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
+    if (!peer) return BaseLib::Variable::createError(-1, "Unknown peer.");
+
+    auto linkTable = BaseLib::HelperFunctions::getUBinary(parameters->at(2)->stringValue);
+    return std::make_shared<BaseLib::Variable>(peer->remanSetLinkTable(parameters->at(1)->booleanValue, linkTable));
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

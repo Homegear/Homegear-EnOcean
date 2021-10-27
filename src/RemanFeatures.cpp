@@ -38,7 +38,7 @@ PRemanFeatures RemanFeatureParser::parse(const PHomegearDevice &rpcDevice) {
           if (featureIterator != featureStruct->structValue->end()) features->kInboundLinkTableSize = featureIterator->second->integerValue;
 
           featureIterator = featureStruct->structValue->find("outboundLinkTableSize");
-          if (featureIterator != featureStruct->structValue->end()) features->kSetOutboundLinkTableSize = featureIterator->second->integerValue;
+          if (featureIterator != featureStruct->structValue->end()) features->kOutboundLinkTableSize = featureIterator->second->integerValue;
 
           featureIterator = featureStruct->structValue->find("linkTableGatewayEep");
           if (featureIterator != featureStruct->structValue->end()) features->kLinkTableGatewayEep = BaseLib::Math::getUnsignedNumber(featureIterator->second->stringValue, true);
