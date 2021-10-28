@@ -2362,9 +2362,9 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
                                              getRemanDestinationAddress(),
                                              _remanFeatures->kRecomVersion == 0x11,
                                              false,
-                                             _rollingCodeInbound,
-                                             _remanFeatures->kSlf,
                                              0,
+                                             _remanFeatures->kSlf,
+                                             _rollingCodeInbound,
                                              _aesKeyInbound,
                                              _address,
                                              physicalInterface->getBaseAddress() | getRfChannel(0));
@@ -2383,9 +2383,9 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
                                                getRemanDestinationAddress(),
                                                _remanFeatures->kRecomVersion == 0x11,
                                                true,
-                                               _rollingCodeOutbound,
-                                               _remanFeatures->kSlf,
                                                0,
+                                               _remanFeatures->kSlf,
+                                               _rollingCodeOutbound,
                                                _aesKeyOutbound,
                                                physicalInterface->getBaseAddress() | getRfChannel(0),
                                                _address);
