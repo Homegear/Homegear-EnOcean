@@ -2073,9 +2073,14 @@ std::pair<int32_t, int32_t> EnOceanPeer::getPingRssi() {
           auto rssi = repeaterPeer->remanGetPathInfoThroughPing(_address);
           _rssiRepeater = rssi;
           rssiPair.second = rssi;
+        } else {
+          _rssiRepeater = 0;
         }
+      } else {
+        _rssiRepeater = 0;
       }
-
+    } else {
+      _rssiRepeater = 0;
     }
 
     setBestInterface();
