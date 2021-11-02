@@ -265,7 +265,7 @@ void EnOceanCentral::pingWorker() {
       if (sleepingTime == 0) sleepingTime = 1;
     }
 
-    Gd::out.printInfo("Info: Ping worker sleeping time set to " + std::to_string(sleepingTime) + "s.");
+    Gd::out.printInfo("Info: Ping worker sleeping time set to " + std::to_string(sleepingTime) + " * 100 ms.");
 
     while (!_stopWorkerThread && !Gd::bl->shuttingDown) {
       try {

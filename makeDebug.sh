@@ -3,7 +3,7 @@ if [ -n "$1" ]; then
         BUILDTHREADS=$1
 else
         BUILDTHREADS=2
-fi0028500669145794
+fi
 
 SCRIPTDIR="$( cd "$(dirname $0)" && pwd )"
 cd "$SCRIPTDIR"

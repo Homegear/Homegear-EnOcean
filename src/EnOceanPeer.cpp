@@ -126,7 +126,7 @@ void EnOceanPeer::worker() {
 
 void EnOceanPeer::pingWorker() {
   try {
-    if (_remanFeatures && ((_remanFeatures->kPing && _pingInterval > 0 && BaseLib::HelperFunctions::getTimeSeconds() >= (_lastPing + _pingInterval)) || _remanFeatures->kMeshingEndpoint)) {
+    if (_remanFeatures && (_remanFeatures->kPing && _pingInterval > 0 && BaseLib::HelperFunctions::getTimeSeconds() >= (_lastPing + _pingInterval))) {
       _lastPing = BaseLib::HelperFunctions::getTimeSeconds();
       remanPing();
     }
@@ -833,6 +833,7 @@ void EnOceanPeer::initializeCentralConfig() {
     _remanFeatures = RemanFeatureParser::parse(_rpcDevice);
 
     if ((_remanFeatures && _remanFeatures->kForceEncryption) || !_aesKeyInbound.empty() || !_aesKeyOutbound.empty()) _forceEncryption = true;
+    if (_remanFeatures && _remanFeatures->kMeshingEndpoint && _pingInterval == 0) _pingInterval = 480;
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2127,15 +2128,16 @@ bool EnOceanPeer::remanPing() {
                                                 std::vector<uint8_t>{0xC5, (uint8_t)(sequenceCounter << 6), 0, 0x7F, 0xF0, 6, 0, 0, 0, 0});
     auto response = (bool)sendAndReceivePacket(ping,
                                                2,
-                                               IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                               {{(uint16_t)EnOceanPacket::RemoteManagementResponse::pingResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::pingResponse}});
+                                               IEnOceanInterface::EnOceanRequestFilterType::senderAddress,
+                                               {});
+
     if (response) {
       _missedPings = 0;
     } else {
       _missedPings++;
     }
 
-    if (_missedPings >= 10 && _forceEncryption) {
+    if (_missedPings >= 3 && _forceEncryption) {
       Gd::out.printWarning("Warning: Peer " + std::to_string(_peerID) + " is not reachable. Trying rolling code recovery.");
 
       auto ping2 = std::make_shared<PingPacket>(0, _address);
