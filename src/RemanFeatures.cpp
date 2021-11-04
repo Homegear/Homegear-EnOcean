@@ -124,6 +124,9 @@ PRemanFeatures RemanFeatureParser::parse(const PHomegearDevice &rpcDevice) {
           featureIterator = featureStruct->structValue->find("setSecurityProfile");
           if (featureIterator != featureStruct->structValue->end()) features->kSetSecurityProfile = featureIterator->second->booleanValue;
 
+          featureIterator = featureStruct->structValue->find("setSecurityProfileHasAddresses");
+          if (featureIterator != featureStruct->structValue->end()) features->kSetSecurityProfileHasAddresses = featureIterator->second->booleanValue;
+
           featureIterator = featureStruct->structValue->find("remoteSetLearnMode");
           if (featureIterator != featureStruct->structValue->end()) features->kRemoteSetLearnMode = featureIterator->second->booleanValue;
 

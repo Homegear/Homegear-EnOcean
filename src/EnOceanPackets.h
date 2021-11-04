@@ -69,7 +69,7 @@ class SetRepeaterFunctions : public EnOceanPacket {
 
 class SetSecurityProfile : public EnOceanPacket {
  public:
-  SetSecurityProfile(uint32_t senderAddress, uint32_t destinationAddress, bool recomVersion11, bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId, uint32_t sourceId);
+  SetSecurityProfile(uint32_t senderAddress, uint32_t destinationAddress, bool recomVersion11, bool hasAddresses, bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId = 0, uint32_t sourceId = 0);
 };
 
 class Unlock : public EnOceanPacket {

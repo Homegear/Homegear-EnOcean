@@ -189,6 +189,7 @@ struct RemanFeatures {
    * 0x216
    */
   bool kSetSecurityProfile = false;
+  bool kSetSecurityProfileHasAddresses = true;
 
   /**
    * 0x220

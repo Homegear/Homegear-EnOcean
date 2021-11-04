@@ -2621,7 +2621,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         return 0;
       }
 
-      auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0, destinationAddress, features->kRecomVersion == 0x11, false, 0, features->kSlf, 0, pairingData.aesKeyInbound, deviceAddress, pairingData.remoteCommissioningGatewayAddress);
+      auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0, destinationAddress, features->kRecomVersion == 0x11, features->kSetSecurityProfileHasAddresses, false, 0, features->kSlf, 0, pairingData.aesKeyInbound, deviceAddress, pairingData.remoteCommissioningGatewayAddress);
       response = interface->sendAndReceivePacket(setSecurityProfile,
                                                  deviceAddress,
                                                  2,
@@ -2633,7 +2633,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         _pairingInfo.pairingError = true;
         return 0;
       } else {
-        setSecurityProfile = std::make_shared<SetSecurityProfile>(0, destinationAddress, features->kRecomVersion == 0x11, true, 0, features->kSlf, 0, pairingData.aesKeyOutbound, pairingData.remoteCommissioningGatewayAddress, deviceAddress);
+        setSecurityProfile = std::make_shared<SetSecurityProfile>(0, destinationAddress, features->kRecomVersion == 0x11, features->kSetSecurityProfileHasAddresses, true, 0, features->kSlf, 0, pairingData.aesKeyOutbound, pairingData.remoteCommissioningGatewayAddress, deviceAddress);
         response = interface->sendAndReceivePacket(setSecurityProfile,
                                                    deviceAddress,
                                                    2,

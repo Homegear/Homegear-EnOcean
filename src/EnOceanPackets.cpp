@@ -141,7 +141,7 @@ SetRepeaterFunctions::SetRepeaterFunctions(uint32_t senderAddress, uint32_t dest
   _data.push_back((unsigned)(function << 6u) | ((level & 3u) << 4u) | (unsigned)((filterStructure & 1u) << 3u));
 }
 
-SetSecurityProfile::SetSecurityProfile(uint32_t senderAddress, uint32_t destinationAddress, bool recomVersion11, bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId, uint32_t sourceId)
+SetSecurityProfile::SetSecurityProfile(uint32_t senderAddress, uint32_t destinationAddress, bool recomVersion11, bool hasAddresses, bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId, uint32_t sourceId)
     : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, senderAddress, destinationAddress) {
   _remoteManagementFunction = (uint16_t)RemoteManagementFunction::setSecurityProfile;
   _data.reserve(36);
@@ -157,7 +157,7 @@ SetSecurityProfile::SetSecurityProfile(uint32_t senderAddress, uint32_t destinat
   _data.push_back(rlc >> 8);
   _data.push_back(rlc);
   _data.insert(_data.end(), aesKey.begin(), aesKey.end());
-  if (!recomVersion11) {
+  if (!recomVersion11 && hasAddresses) {
     _data.push_back(destinationId >> 24);
     _data.push_back(destinationId >> 16);
     _data.push_back(destinationId >> 8);

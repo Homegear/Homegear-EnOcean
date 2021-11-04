@@ -2225,7 +2225,7 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
 
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
-    auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0, getRemanDestinationAddress(), _remanFeatures->kRecomVersion == 0x11, outbound, index, slf, rlc, aesKey, destinationId, sourceId);
+    auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0, getRemanDestinationAddress(), _remanFeatures->kRecomVersion == 0x11, _remanFeatures->kSetSecurityProfileHasAddresses, outbound, index, slf, rlc, aesKey, destinationId, sourceId);
     auto response = physicalInterface->sendAndReceivePacket(setSecurityProfile,
                                                             _address,
                                                             2,
@@ -2368,6 +2368,7 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
         std::make_shared<SetSecurityProfile>(0,
                                              getRemanDestinationAddress(),
                                              _remanFeatures->kRecomVersion == 0x11,
+                                             _remanFeatures->kSetSecurityProfileHasAddresses,
                                              false,
                                              0,
                                              _remanFeatures->kSlf,
@@ -2389,6 +2390,7 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
           std::make_shared<SetSecurityProfile>(0,
                                                getRemanDestinationAddress(),
                                                _remanFeatures->kRecomVersion == 0x11,
+                                               _remanFeatures->kSetSecurityProfileHasAddresses,
                                                true,
                                                0,
                                                _remanFeatures->kSlf,
