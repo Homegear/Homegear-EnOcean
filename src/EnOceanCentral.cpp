@@ -122,12 +122,12 @@ void EnOceanCentral::init() {
                                                        std::placeholders::_1,
                                                        std::placeholders::_2)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanSetLinkTable",
-        std::bind(&EnOceanCentral::remanSetLinkTable,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanSetLinkTable",
+                                             std::bind(&EnOceanCentral::remanSetLinkTable,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
         const BaseLib::PRpcClientInfo &clientInfo,
         const BaseLib::PArray &parameters)>>("remanSetRepeaterFunctions",
@@ -309,7 +309,18 @@ void EnOceanCentral::pingWorker() {
                 if (repeaterRssi == 0) repeaterRssi = -100;
               }
 
-              if (rssiStatus == EnOceanPeer::RssiStatus::bad || peer->enforceMeshing() || repeaterRssi < -80) {
+              if (rssiStatus == EnOceanPeer::RssiStatus::unneededRepeater && !peer->enforceMeshing()) {
+                auto oldRepeater = getPeer(peer->getRepeaterId());
+                if (oldRepeater) {
+                  bool error = false;
+                  bool unreach = oldRepeater->serviceMessages->getUnreach();
+                  for (int32_t i = 0; i < 3; i++) {
+                    if (oldRepeater->removeRepeatedAddress(peer->getAddress()) && !unreach) break;
+                    if (i == 2) error = true;
+                  }
+                  if (!error || unreach) peer->setRepeaterId(0);
+                }
+              } else if (rssiStatus == EnOceanPeer::RssiStatus::bad || peer->enforceMeshing() || repeaterRssi < -80) {
                 // {{{ Find peer that has best connection to this peer
                 Gd::out.printInfo("Info: Peer " + std::to_string(peer->getID()) + " has bad RSSI. Trying to find a repeater.");
                 auto meshingLog = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -2621,7 +2632,17 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         return 0;
       }
 
-      auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0, destinationAddress, features->kRecomVersion == 0x11, features->kSetSecurityProfileHasAddresses, false, 0, features->kSlf, 0, pairingData.aesKeyInbound, deviceAddress, pairingData.remoteCommissioningGatewayAddress);
+      auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0,
+                                                                     destinationAddress,
+                                                                     features->kRecomVersion == 0x11,
+                                                                     features->kSetSecurityProfileHasAddresses,
+                                                                     false,
+                                                                     0,
+                                                                     features->kSlf,
+                                                                     0,
+                                                                     pairingData.aesKeyInbound,
+                                                                     deviceAddress,
+                                                                     pairingData.remoteCommissioningGatewayAddress);
       response = interface->sendAndReceivePacket(setSecurityProfile,
                                                  deviceAddress,
                                                  2,
@@ -2633,7 +2654,17 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
         _pairingInfo.pairingError = true;
         return 0;
       } else {
-        setSecurityProfile = std::make_shared<SetSecurityProfile>(0, destinationAddress, features->kRecomVersion == 0x11, features->kSetSecurityProfileHasAddresses, true, 0, features->kSlf, 0, pairingData.aesKeyOutbound, pairingData.remoteCommissioningGatewayAddress, deviceAddress);
+        setSecurityProfile = std::make_shared<SetSecurityProfile>(0,
+                                                                  destinationAddress,
+                                                                  features->kRecomVersion == 0x11,
+                                                                  features->kSetSecurityProfileHasAddresses,
+                                                                  true,
+                                                                  0,
+                                                                  features->kSlf,
+                                                                  0,
+                                                                  pairingData.aesKeyOutbound,
+                                                                  pairingData.remoteCommissioningGatewayAddress,
+                                                                  deviceAddress);
         response = interface->sendAndReceivePacket(setSecurityProfile,
                                                    deviceAddress,
                                                    2,

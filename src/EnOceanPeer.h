@@ -20,7 +20,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   enum class RssiStatus {
     undefined = -1,
     good = 0,
-    bad = 1
+    bad = 1,
+    unneededRepeater = 2
   };
   //}}}
 
