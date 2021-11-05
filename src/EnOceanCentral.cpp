@@ -320,7 +320,7 @@ void EnOceanCentral::pingWorker() {
                   }
                   if (!error || unreach) peer->setRepeaterId(0);
                 }
-              } else if (rssiStatus == EnOceanPeer::RssiStatus::bad || peer->enforceMeshing() || repeaterRssi < -80) {
+              } else if (rssiStatus == EnOceanPeer::RssiStatus::bad || (peer->getRepeaterId() == 0 && peer->enforceMeshing()) || repeaterRssi < -80) {
                 // {{{ Find peer that has best connection to this peer
                 Gd::out.printInfo("Info: Peer " + std::to_string(peer->getID()) + " has bad RSSI. Trying to find a repeater.");
                 auto meshingLog = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
