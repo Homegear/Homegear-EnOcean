@@ -297,7 +297,7 @@ EnOceanPeer::RssiStatus EnOceanPeer::getRssiStatus() {
 }
 
 bool EnOceanPeer::enforceMeshing() {
-  return _remanFeatures && _remanFeatures->kEnforceMeshing && _repeaterId == 0;
+  return _remanFeatures && _remanFeatures->kEnforceMeshing;
 }
 
 bool EnOceanPeer::hasFreeMeshingTableSlot() {
