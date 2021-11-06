@@ -129,6 +129,14 @@ void EnOceanPeer::pingWorker() {
     if (_remanFeatures && (_remanFeatures->kPing && _pingInterval > 0 && BaseLib::HelperFunctions::getTimeSeconds() >= (_lastPing + _pingInterval))) {
       _lastPing = BaseLib::HelperFunctions::getTimeSeconds();
       remanPing();
+
+      //Todo: Remove block after T5 update
+      static bool encryption_disabled{false};
+      if (!encryption_disabled && _forceEncryption && (getFirmwareVersion() == 1102 || getFirmwareVersion() == 1103)) {
+        encryption_disabled = true;
+        remanSetSecurityProfile(false, 0xFF, 0, 0, BaseLib::HelperFunctions::getUBinary("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), 0, 0);
+        remanSetSecurityProfile(true, 0xFF, 0, 0, BaseLib::HelperFunctions::getUBinary("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), 0, 0);
+      }
     }
   }
   catch (const std::exception &ex) {
@@ -2226,7 +2234,18 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
 
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
-    auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0, getRemanDestinationAddress(), _remanFeatures->kRecomVersion == 0x11 || getFirmwareVersion() < 1100, _remanFeatures->kSetSecurityProfileHasAddresses, outbound, index, slf, rlc, aesKey, destinationId, sourceId);
+    //Todo: Remove firmware version check after T5 update
+    auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0,
+                                                                   getRemanDestinationAddress(),
+                                                                   _remanFeatures->kRecomVersion == 0x11 || getFirmwareVersion() < 1100,
+                                                                   _remanFeatures->kSetSecurityProfileHasAddresses,
+                                                                   outbound,
+                                                                   index,
+                                                                   slf,
+                                                                   rlc,
+                                                                   aesKey,
+                                                                   destinationId,
+                                                                   sourceId);
     auto response = physicalInterface->sendAndReceivePacket(setSecurityProfile,
                                                             _address,
                                                             2,
@@ -2239,7 +2258,7 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
     if (outbound) {
       if (aesKey == noKey) {
         setAesKeyOutbound(std::vector<uint8_t>());
-        _forceEncryption = false;
+        if (_aesKeyInbound.empty()) _forceEncryption = false;
       } else {
         setAesKeyOutbound(aesKey);
         _forceEncryption = true;
@@ -2247,7 +2266,7 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
     } else {
       if (aesKey == noKey) {
         setAesKeyInbound(std::vector<uint8_t>());
-        _forceEncryption = false;
+        if (_aesKeyOutbound.empty()) _forceEncryption = false;
       } else {
         setAesKeyInbound(aesKey);
         _forceEncryption = true;
@@ -2366,6 +2385,7 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
     auto setSecurityProfile =
+        //Todo: Remove firmware version check after T5 update
         std::make_shared<SetSecurityProfile>(0,
                                              getRemanDestinationAddress(),
                                              _remanFeatures->kRecomVersion == 0x11 || getFirmwareVersion() < 1100,
@@ -2388,6 +2408,7 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
       return false;
     } else {
       setSecurityProfile =
+          //Todo: Remove firmware version check after T5 update
           std::make_shared<SetSecurityProfile>(0,
                                                getRemanDestinationAddress(),
                                                _remanFeatures->kRecomVersion == 0x11 || getFirmwareVersion() < 1100,
