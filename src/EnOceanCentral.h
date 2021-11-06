@@ -126,6 +126,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
 
   void updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi);
   void updateFirmware(const std::unordered_set<uint64_t> &ids, bool enforce);
+  void sendFirmwareBlock(uint32_t block, const std::vector<uint8_t> &firmware_file, const std::shared_ptr<IEnOceanInterface> &interface, int32_t sender_address, int32_t destination_address);
 
   //{{{ Family RPC methods
   BaseLib::PVariable addMeshingEntry(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);

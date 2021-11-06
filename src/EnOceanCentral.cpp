@@ -2098,8 +2098,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
     auto version = BaseLib::Math::getUnsignedNumber(BaseLib::Io::getFileContent(versionPath), true);
     auto interface = Gd::interfaces->getDefaultInterface();
     auto baseAddress = interface->getBaseAddress();
-    bool unencrypted = firstPeer->getRemanFeatures() && firstPeer->getRemanFeatures()->kUnencryptedUpdates;
-    auto updateAddress = (unencrypted ? baseAddress | 1 : baseAddress);
+    auto updateAddress = baseAddress | 1;
 
     auto dutyCycleInfo = interface->getDutyCycleInfo();
     if (dutyCycleInfo.dutyCycleUsed > 10) interface->reset();
@@ -2237,62 +2236,25 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         } else break;
       }
 
+      //{{{ Send firmware block
       Gd::out.printInfo("Sending block " + std::to_string(block) + "...");
 
-      uint32_t fileStart = block * 256 - 2560;
-      uint32_t count = (block == 127 ? 35 + 1 : 0x80 + 36 + 1);
-      uint32_t filePos = fileStart;
-
-      while (count != 0) {
-        std::vector<uint8_t> data;
-        data.reserve(10);
-        data.push_back(0xD1);
-        data.push_back(0x03);
-        data.push_back(0x33);
-        data.insert(data.end(), firmwareFile.begin() + filePos, firmwareFile.begin() + filePos + 4);
-        filePos += 4;
-
-        count--;
-
-        if (count == 0x80) {
-          data.resize(10, 0);
-          count = 0;
-        } else {
-          data.insert(data.end(), firmwareFile.begin() + filePos, firmwareFile.begin() + filePos + 3);
-          filePos += 3;
-        }
-
-        if (repeatBlock) {
-          bool doBreak = false;
-          for (auto &updateData: peersInBootloader) {
-            if (updateData.abort || updateData.block == 0xA5 || updateData.block < 0x0A || updateData.block > 0x7F || updateData.currentBlockRetries >= 20 || updateData.totalRetries >= 1000) continue;
-            if (updateData.block == block) {
-              auto peer = getPeer(updateData.peerId);
-              if (!peer) continue;
-              auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, updateData.address, data);
-              if (unencrypted) {
-                if (!interface->sendEnoceanPacket(packet)) {
-                  doBreak = true;
-                  break;
-                }
-              } else {
-                //This is for testing only - updates should be unencrypted (the firmware is encrypted)
-                if (!peer->sendPacket(packet, "", 0, false, -1, "", std::vector<uint8_t>())) {
-                  doBreak = true;
-                  break;
-                }
-              }
-            }
-          }
-
-          if (doBreak) break;
-        } else {
-          auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peersInBootloader.size() == 1 ? peersInBootloader.front().address : 0xFFFFFFFF, data);
-          if (!interface->sendEnoceanPacket(packet)) {
-            break;
+      if (repeatBlock) {
+        bool doBreak = false;
+        for (auto &updateData: peersInBootloader) {
+          if (updateData.abort || updateData.block == 0xA5 || updateData.block < 0x0A || updateData.block > 0x7F || updateData.currentBlockRetries >= 20 || updateData.totalRetries >= 1000) continue;
+          if (updateData.block == block) {
+            auto peer = getPeer(updateData.peerId);
+            if (!peer) continue;
+            sendFirmwareBlock(block, firmwareFile, interface, updateAddress, updateData.address);
           }
         }
+
+        if (doBreak) break;
+      } else {
+        sendFirmwareBlock(block, firmwareFile, interface, updateAddress, peersInBootloader.size() == 1 ? peersInBootloader.front().address : 0xFFFFFFFF);
       }
+      //}}}
 
       //{{{ Request new block
       repeatBlock = false;
@@ -2333,6 +2295,37 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+}
+
+void EnOceanCentral::sendFirmwareBlock(uint32_t block, const std::vector<uint8_t> &firmware_file, const std::shared_ptr<IEnOceanInterface> &interface, int32_t sender_address, int32_t destination_address) {
+  uint32_t fileStart = block * 256 - 2560;
+  uint32_t count = (block == 127 ? 35 + 1 : 0x80 + 36 + 1);
+  uint32_t filePos = fileStart;
+
+  while (count != 0) {
+    std::vector<uint8_t> data;
+    data.reserve(10);
+    data.push_back(0xD1);
+    data.push_back(0x03);
+    data.push_back(0x33);
+    data.insert(data.end(), firmware_file.begin() + filePos, firmware_file.begin() + filePos + 4);
+    filePos += 4;
+
+    count--;
+
+    if (count == 0x80) {
+      data.resize(10, 0);
+      count = 0;
+    } else {
+      data.insert(data.end(), firmware_file.begin() + filePos, firmware_file.begin() + filePos + 3);
+      filePos += 3;
+    }
+
+    auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, sender_address, destination_address, data);
+    if (!interface->sendEnoceanPacket(packet)) {
+      break;
+    }
   }
 }
 
