@@ -131,10 +131,9 @@ void EnOceanPeer::pingWorker() {
       remanPing();
 
       //Todo: Remove block after T5 update
-      static bool encryption_disabled{false};
-      if (!encryption_disabled && _forceEncryption && (getFirmwareVersion() == 1102 || getFirmwareVersion() == 1103)) {
+      if (!encryption_disabled_ && _forceEncryption && (getFirmwareVersion() == 1102 || getFirmwareVersion() == 1103)) {
         Gd::out.printMessage("Info: Trying to disable encryption of peer " + std::to_string(_peerID) + "...");
-        encryption_disabled = true;
+        encryption_disabled_ = true;
         remanSetSecurityProfile(false, 0xFF, 0, 0, BaseLib::HelperFunctions::getUBinary("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), 0, 0);
         remanSetSecurityProfile(true, 0xFF, 0, 0, BaseLib::HelperFunctions::getUBinary("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), 0, 0);
       }
