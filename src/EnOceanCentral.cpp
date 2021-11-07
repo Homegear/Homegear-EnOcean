@@ -2246,6 +2246,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
           if (updateData.block == block) {
             auto peer = getPeer(updateData.peerId);
             if (!peer) continue;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             sendFirmwareBlock(block, firmwareFile, interface, updateAddress, updateData.address);
           }
         }
