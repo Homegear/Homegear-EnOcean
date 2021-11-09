@@ -163,6 +163,13 @@ void EnOceanCentral::init() {
                                                        this,
                                                        std::placeholders::_1,
                                                        std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("setFirmwareInstallationTime",
+                                             std::bind(&EnOceanCentral::setFirmwareInstallationTime,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
 
     Gd::interfaces->addEventHandlers((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink *)
                                          this);
@@ -181,6 +188,7 @@ void EnOceanCentral::worker() {
     uint64_t lastPeer;
     lastPeer = 0;
     int64_t nextFirmwareUpdateCheck = BaseLib::HelperFunctions::getTime() + BaseLib::HelperFunctions::getRandomNumber(10000, 60000);
+    if (_firmwareInstallationTime > 0) nextFirmwareUpdateCheck = _firmwareInstallationTime;
 
     while (!_stopWorkerThread && !Gd::bl->shuttingDown) {
       try {
@@ -522,6 +530,10 @@ void EnOceanCentral::loadVariables() {
       switch (row.second.at(2)->intValue) {
         case 1: {
           _lastForeignFirmwareUpdatePacket = row.second.at(3)->intValue;
+          break;
+        }
+        case 2: {
+          _firmwareInstallationTime = row.second.at(3)->intValue;
           break;
         }
       }
@@ -2025,13 +2037,17 @@ void EnOceanCentral::updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi)
     if (_updatingFirmware) return;
     _updatingFirmware = true;
     _lastFirmwareUpdate = BaseLib::HelperFunctions::getTime();
-    std::unordered_map<uint64_t, std::unordered_set<uint64_t>> sortedIds;
-    std::unordered_set<uint64_t> addressedIds;
+    std::map<uint64_t, std::unordered_set<uint64_t>> sortedIds;
+    std::set<uint64_t> addressedIds;
+
+    auto broadcastUpdatesSetting = Gd::family->getFamilySetting("broadcastUpdates");
+    bool broadcastUpdates = broadcastUpdatesSetting && broadcastUpdatesSetting->integerValue;
+
     //{{{ Sort ids by device type
     for (auto id: ids) {
       auto peer = getPeer(id);
       if (!peer) continue;
-      if (peer->getRepeaterId() != 0) addressedIds.emplace(id);
+      if (peer->getRepeaterId() != 0 || !broadcastUpdates) addressedIds.emplace(id);
       else sortedIds[peer->getDeviceType()].emplace(id);
     }
     //}}}
@@ -2043,7 +2059,7 @@ void EnOceanCentral::updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi)
       Gd::out.printInfo("Info: Updating firmware of peer " + std::to_string(id));
       std::unordered_set<uint64_t> addressedId;
       addressedId.emplace(id);
-      updateFirmware(addressedId, ignoreRssi);
+      if (!updateFirmware(addressedId, ignoreRssi)) break;
     }
   } catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2051,7 +2067,7 @@ void EnOceanCentral::updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi)
   _updatingFirmware = false;
 }
 
-void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, bool enforce) {
+bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, bool enforce) {
   try {
     struct UpdateData {
       bool abort = false;
@@ -2062,13 +2078,14 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       uint32_t totalRetries = 0;
     };
 
-    if (ids.empty()) return;
+    if (ids.empty()) return false;
 
     if (BaseLib::HelperFunctions::getTime() - _lastForeignFirmwareUpdatePacket < 3600000 && !enforce) {
       Gd::out.printInfo("Info: Not updating firmware, because another central is updating.");
-      return;
+      return false;
     }
 
+    std::unordered_set<uint64_t> success_peers;
     std::vector<UpdateData> peersInBootloader;
     std::vector<UpdateData> peersInBootloaderOld;
     peersInBootloader.reserve(ids.size());
@@ -2083,7 +2100,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       firstPeer = getPeer(peerId);
       if (firstPeer) break;
     }
-    if (!firstPeer) return;
+    if (!firstPeer) return false;
 
     std::string filenamePrefix = BaseLib::HelperFunctions::getHexString(15, 4) + "." + BaseLib::HelperFunctions::getHexString(firstPeer->getDeviceType(), 8);
     auto firmwarePath = _bl->settings.firmwarePath() + filenamePrefix + ".fw";
@@ -2091,7 +2108,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
 
     if (!BaseLib::Io::fileExists(firmwarePath) || !BaseLib::Io::fileExists(versionPath)) {
       Gd::out.printError("Error: No firmware file found.");
-      return;
+      return false;
     }
 
     auto firmwareFile = BaseLib::Io::getUBinaryFileContent(firmwarePath);
@@ -2105,7 +2122,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
     dutyCycleInfo = interface->getDutyCycleInfo();
     if (dutyCycleInfo.dutyCycleUsed > 10) {
       Gd::out.printError("Error: Not enough duty cycle available.");
-      return;
+      return false;
     }
 
     Gd::out.printInfo("Info: Current duty cycle used: " + std::to_string(dutyCycleInfo.dutyCycleUsed) + "%.");
@@ -2120,7 +2137,8 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         continue;
       }
 
-      uint8_t blockNumber = 0;
+      uint8_t block_number = 0;
+      uint8_t block_number_update_address = 0;
       peer->getPingRssi(); //Updates RSSI and repeater RSSI
       int32_t rssi = peer->getRepeaterId() > 0 ? peer->getRssiRepeater() : peer->getRssi();
       for (uint32_t retries = 0; retries < 3; retries++) {
@@ -2130,23 +2148,45 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
           continue;
         } else {
-          blockNumber = data.at(4);
+          block_number = data.at(4);
           break;
         }
       }
 
-      if ((rssi > -30 || rssi < -90) && rssi != 0 && !enforce) {
-        Gd::out.printMessage("Not updating peer " + std::to_string(peerId) + ", because RSSI is out of allowed range (RSSI is " + std::to_string(rssi) + ").");
+      //{{{ Get block number using update sender address
+      for (uint32_t retries = 0; retries < 3; retries++) {
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+        auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+        auto data = response ? response->getData() : std::vector<uint8_t>();
+        if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
+          continue;
+        } else {
+          block_number_update_address = data.at(4);
+          break;
+        }
+      }
+      //}}}
+
+      if (block_number == 0 || block_number_update_address == 0) {
+        Gd::out.printMessage("Not updating peer " + std::to_string(peerId) + ", because update state could not be determined.");
+        success_peers.emplace(peerId);
         continue;
       }
 
-      if (blockNumber == 0xA5) {
+      if ((rssi > -30 || rssi < -90) && rssi != 0 && !enforce && block_number == 0xA5) {
+        Gd::out.printMessage("Not updating peer " + std::to_string(peerId) + ", because RSSI is out of allowed range (RSSI is " + std::to_string(rssi) + ").");
+        success_peers.emplace(peerId);
+        continue;
+      }
+
+      if (block_number == 0xA5) {
         //{{{ Get version
         auto deviceVersion = BaseLib::Math::getUnsignedNumber(peer->queryFirmwareVersion(), true);
         if (deviceVersion == 0) continue;
         if (deviceVersion >= version) {
           peer->setFirmwareVersion(deviceVersion);
           peer->setFirmwareVersionString(BaseLib::HelperFunctions::getHexString(deviceVersion));
+          success_peers.emplace(peerId);
           Gd::out.printInfo("Info: Peer " + std::to_string(peerId) + " already has current firmware version " + BaseLib::HelperFunctions::getHexString(deviceVersion) + ".");
           continue;
         }
@@ -2156,7 +2196,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         for (uint32_t retries = 0; retries < 20; retries++) {
-          blockNumber = 0;
+          block_number = 0;
           bool continueLoop = false;
           for (uint32_t i = 2; i < 10; i++) {
             auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x32, 0x10, (uint8_t)i});
@@ -2178,16 +2218,16 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
             if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
               continue;
             } else {
-              blockNumber = data.at(4);
+              block_number = data.at(4);
               break;
             }
           }
 
-          if (blockNumber != 0 && blockNumber != 0xA5) {
+          if (block_number != 0 && block_number != 0xA5) {
             UpdateData updateData;
             updateData.peerId = peerId;
             updateData.address = peer->getAddress();
-            updateData.block = blockNumber;
+            updateData.block = block_number;
             peersInBootloader.emplace_back(updateData);
             break;
           }
@@ -2196,7 +2236,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         UpdateData updateData;
         updateData.peerId = peerId;
         updateData.address = peer->getAddress();
-        updateData.block = blockNumber;
+        updateData.block = block_number;
         peersInBootloaderOld.emplace_back(updateData);
       }
     }
@@ -2206,7 +2246,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
     peersInBootloader.insert(peersInBootloader.end(), peersInBootloaderOld.begin(), peersInBootloaderOld.end());
 
     //{{{ //Update ready peers
-    if (peersInBootloader.empty()) return;
+    if (peersInBootloader.empty()) return false;
     bool repeatBlock = false;
     uint32_t block = 0xA5;
     while (true) {
@@ -2225,7 +2265,7 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       for (uint32_t i = 0; i < 100; i++) {
         if (Gd::bl->shuttingDown) {
           Gd::out.printError("Error: Updates did not finish.");
-          return;
+          return false;
         }
         dutyCycleInfo = interface->getDutyCycleInfo();
         if (dutyCycleInfo.dutyCycleUsed > 90) interface->reset();
@@ -2264,21 +2304,24 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         auto peer = getPeer(updateData.peerId);
         if (!peer) continue;
         //Get first block number
-        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
-        auto response = peer->sendAndReceivePacket(packet, 20, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
-        auto data = response ? response->getData() : std::vector<uint8_t>();
-        if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
-          updateData.abort = true;
-        } else {
-          auto newBlock = data.at(4);
-          if (newBlock == block) {
-            updateData.currentBlockRetries++;
-            repeatBlock = true;
+        for (uint32_t retries = 0; retries < 3; retries++) {
+          auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+          auto response = peer->sendAndReceivePacket(packet, 10, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+          auto data = response ? response->getData() : std::vector<uint8_t>();
+          if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
+            if (retries == 2) updateData.abort = true;
           } else {
-            updateData.block = newBlock;
-            updateData.currentBlockRetries = 0;
+            auto newBlock = data.at(4);
+            if (newBlock == block) {
+              updateData.currentBlockRetries++;
+              repeatBlock = true;
+            } else {
+              updateData.block = newBlock;
+              updateData.currentBlockRetries = 0;
+            }
+            updateData.totalRetries++;
+            break;
           }
-          updateData.totalRetries++;
         }
       }
       //}}}
@@ -2287,16 +2330,20 @@ void EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
 
     for (auto &updateData: peersInBootloader) {
       if (updateData.block == 0xA5) {
+        success_peers.emplace(updateData.peerId);
         auto peer = getPeer(updateData.peerId);
         if (!peer) continue;
         peer->setFirmwareVersionString(BaseLib::HelperFunctions::getHexString(version));
         peer->setFirmwareVersion((int32_t)version);
       }
     }
+
+    return ids.size() == success_peers.size();
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
+  return false;
 }
 
 void EnOceanCentral::sendFirmwareBlock(uint32_t block, const std::vector<uint8_t> &firmware_file, const std::shared_ptr<IEnOceanInterface> &interface, int32_t sender_address, int32_t destination_address) {
@@ -3216,6 +3263,22 @@ BaseLib::PVariable EnOceanCentral::removeMeshingEntry(const PRpcClientInfo &clie
     }
 
     return std::make_shared<BaseLib::Variable>(result);
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable EnOceanCentral::setFirmwareInstallationTime(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
+
+    saveVariable(2, _firmwareInstallationTime);
+    _firmwareInstallationTime = parameters->at(1)->integerValue64 * 1000;
+
+    return std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTimeString(_firmwareInstallationTime));
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
