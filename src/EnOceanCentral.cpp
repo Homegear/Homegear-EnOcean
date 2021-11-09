@@ -3275,7 +3275,7 @@ BaseLib::PVariable EnOceanCentral::setFirmwareInstallationTime(const BaseLib::PR
     if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
 
     saveVariable(2, _firmwareInstallationTime);
-    _firmwareInstallationTime = parameters->at(1)->integerValue64 * 1000;
+    _firmwareInstallationTime = parameters->at(0)->integerValue64 * 1000;
 
     return std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTimeString(_firmwareInstallationTime));
   }
