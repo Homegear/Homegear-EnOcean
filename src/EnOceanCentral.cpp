@@ -207,6 +207,7 @@ void EnOceanCentral::worker() {
 
           if (!Gd::bl->slaveMode && BaseLib::Ha::getInstanceType() != BaseLib::HaInstanceType::kSlave) {
             // {{{ Check for and install firmware updates
+            if (_firmwareInstallationTime > 0) nextFirmwareUpdateCheck = _firmwareInstallationTime; //_firmwareInstallationTime might have changed
             if (BaseLib::HelperFunctions::getTime() >= nextFirmwareUpdateCheck) {
               Gd::out.printInfo("Info: Checking for firmware updates.");
               auto peers = getPeers();
@@ -220,6 +221,7 @@ void EnOceanCentral::worker() {
               }
               if (!peersToUpdate.empty()) updateFirmwares(peersToUpdate, false);
               nextFirmwareUpdateCheck = BaseLib::HelperFunctions::getTime() + BaseLib::HelperFunctions::getRandomNumber(1200000, 2400000);
+              if (_firmwareInstallationTime > 0) nextFirmwareUpdateCheck = _firmwareInstallationTime;
             }
             // }}}
           }
@@ -2155,7 +2157,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       //{{{ Get block number using update sender address
       for (uint32_t retries = 0; retries < 3; retries++) {
         auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
-        auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+        auto response = interface->sendAndReceivePacket(packet, peer->getAddress(), 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
           continue;
