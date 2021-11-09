@@ -2036,7 +2036,6 @@ void EnOceanCentral::updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi)
   try {
     if (_updatingFirmware) return;
     _updatingFirmware = true;
-    _lastFirmwareUpdate = BaseLib::HelperFunctions::getTime();
     std::map<uint64_t, std::unordered_set<uint64_t>> sortedIds;
     std::set<uint64_t> addressedIds;
 
