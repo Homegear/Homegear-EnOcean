@@ -209,6 +209,8 @@ void EnOceanCentral::worker() {
             // {{{ Check for and install firmware updates
             if (_firmwareInstallationTime > 0) nextFirmwareUpdateCheck = _firmwareInstallationTime; //_firmwareInstallationTime might have changed
             if (BaseLib::HelperFunctions::getTime() >= nextFirmwareUpdateCheck) {
+              _firmwareInstallationTime = 0;
+              saveVariable(2, _firmwareInstallationTime);
               Gd::out.printInfo("Info: Checking for firmware updates.");
               auto peers = getPeers();
               std::vector<uint64_t> peersToUpdate;
@@ -221,7 +223,6 @@ void EnOceanCentral::worker() {
               }
               if (!peersToUpdate.empty()) updateFirmwares(peersToUpdate, false);
               nextFirmwareUpdateCheck = BaseLib::HelperFunctions::getTime() + BaseLib::HelperFunctions::getRandomNumber(1200000, 2400000);
-              if (_firmwareInstallationTime > 0) nextFirmwareUpdateCheck = _firmwareInstallationTime;
             }
             // }}}
           }
