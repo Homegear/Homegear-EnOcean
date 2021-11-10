@@ -2171,7 +2171,16 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
-          continue;
+          //Retry unencrypted
+          packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+          response = interface->sendAndReceivePacket(packet, peer->getAddress(), 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+          data = response ? response->getData() : std::vector<uint8_t>();
+          if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
+            continue;
+          } else {
+            block_number = data.at(4);
+            break;
+          }
         } else {
           block_number = data.at(4);
           break;
