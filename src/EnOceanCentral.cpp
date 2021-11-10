@@ -2156,7 +2156,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       }
 
       //{{{ Get block number using update sender address
-      for (uint32_t retries = 0; retries < 3; retries++) {
+      /*for (uint32_t retries = 0; retries < 3; retries++) {
         auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = interface->sendAndReceivePacket(packet, peer->getAddress(), 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
         auto data = response ? response->getData() : std::vector<uint8_t>();
@@ -2166,7 +2166,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
           block_number_update_address = data.at(4);
           break;
         }
-      }
+      }*/
       //}}}
 
       if (block_number == 0 || block_number_update_address == 0) {
@@ -2248,7 +2248,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
     peersInBootloader.insert(peersInBootloader.end(), peersInBootloaderOld.begin(), peersInBootloaderOld.end());
 
     //{{{ //Update ready peers
-    if (peersInBootloader.empty()) return false;
+    if (peersInBootloader.empty()) return true;
     bool repeatBlock = false;
     uint32_t block = 0xA5;
     while (true) {
