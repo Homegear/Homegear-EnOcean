@@ -2178,6 +2178,20 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         }
       }
 
+      if (block_number == 0xA5) {
+        //{{{ Get version
+        auto deviceVersion = BaseLib::Math::getUnsignedNumber(peer->queryFirmwareVersion(), true);
+        if (deviceVersion == 0) continue;
+        if (deviceVersion >= version) {
+          peer->setFirmwareVersion(deviceVersion);
+          peer->setFirmwareVersionString(BaseLib::HelperFunctions::getHexString(deviceVersion));
+          success_peers.emplace(peerId);
+          Gd::out.printInfo("Info: Peer " + std::to_string(peerId) + " already has current firmware version " + BaseLib::HelperFunctions::getHexString(deviceVersion) + ".");
+          continue;
+        }
+        //}}}
+      }
+
       //{{{ Get block number using update sender address
       for (uint32_t retries = 0; retries < 3; retries++) {
         auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
@@ -2206,18 +2220,6 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       }
 
       if (block_number == 0xA5) {
-        //{{{ Get version
-        auto deviceVersion = BaseLib::Math::getUnsignedNumber(peer->queryFirmwareVersion(), true);
-        if (deviceVersion == 0) continue;
-        if (deviceVersion >= version) {
-          peer->setFirmwareVersion(deviceVersion);
-          peer->setFirmwareVersionString(BaseLib::HelperFunctions::getHexString(deviceVersion));
-          success_peers.emplace(peerId);
-          Gd::out.printInfo("Info: Peer " + std::to_string(peerId) + " already has current firmware version " + BaseLib::HelperFunctions::getHexString(deviceVersion) + ".");
-          continue;
-        }
-        //}}}
-
         //Send activation telegrams
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
