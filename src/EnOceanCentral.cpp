@@ -2079,12 +2079,30 @@ void EnOceanCentral::updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi)
     for (auto &type: sortedIds) {
       Gd::out.printInfo("Info: Updating firmware of devices with type 0x" + BaseLib::HelperFunctions::getHexString(type.first));
       updateFirmware(type.second, ignoreRssi);
+
+      for (auto &peerId : type.second) {
+        //Fallback because sometimes firmware version is not set in updateFirmware for some reason
+        auto peer = getPeer(peerId);
+        if (!peer) continue;
+        auto deviceVersion = BaseLib::Math::getUnsignedNumber(peer->queryFirmwareVersion(), true);
+        if (deviceVersion == 0) continue;
+        peer->setFirmwareVersion(deviceVersion);
+        peer->setFirmwareVersionString(BaseLib::HelperFunctions::getHexString(deviceVersion));
+      }
     }
     for (auto &id: addressedIds) {
       Gd::out.printInfo("Info: Updating firmware of peer " + std::to_string(id));
       std::unordered_set<uint64_t> addressedId;
       addressedId.emplace(id);
       if (!updateFirmware(addressedId, ignoreRssi)) break;
+
+      //Fallback because sometimes firmware version is not set in updateFirmware for some reason
+      auto peer = getPeer(id);
+      if (!peer) continue;
+      auto deviceVersion = BaseLib::Math::getUnsignedNumber(peer->queryFirmwareVersion(), true);
+      if (deviceVersion == 0) continue;
+      peer->setFirmwareVersion(deviceVersion);
+      peer->setFirmwareVersionString(BaseLib::HelperFunctions::getHexString(deviceVersion));
     }
   } catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2340,7 +2358,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         if (updateData.abort || updateData.block == 0xA5 || updateData.block < 0x0A || updateData.block > 0x7F || updateData.currentBlockRetries >= 20 || updateData.totalRetries >= 1000) continue;
         auto peer = getPeer(updateData.peerId);
         if (!peer) continue;
-        //Get first block number
+        //Get block number
         for (uint32_t retries = 0; retries < 3; retries++) {
           auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
           auto response = peer->sendAndReceivePacket(packet, 10, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
