@@ -2153,7 +2153,6 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       for (uint32_t retries = 0; retries < 3; retries++) {
         auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
-        peer->decryptPacket(response);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
           continue;
@@ -2167,6 +2166,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       for (uint32_t retries = 0; retries < 3; retries++) {
         auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = interface->sendAndReceivePacket(packet, peer->getAddress(), 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+        peer->decryptPacket(response);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
           continue;
@@ -3058,7 +3058,7 @@ BaseLib::PVariable EnOceanCentral::remanGetLinkTable(const BaseLib::PRpcClientIn
     auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
     if (!peer) return BaseLib::Variable::createError(-1, "Unknown peer.");
 
-    return std::make_shared<BaseLib::Variable>(peer->remanGetLinkTable(parameters->at(1)->booleanValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue));
+    return std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getHexString(peer->remanGetLinkTable(parameters->at(1)->booleanValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue)));
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
