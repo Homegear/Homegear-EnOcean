@@ -74,6 +74,13 @@ void EnOceanCentral::init() {
                                                        std::placeholders::_2)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
         const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("checkUpdateAddress",
+                                             std::bind(&EnOceanCentral::checkUpdateAddress,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
         const BaseLib::PArray &parameters)>>("getMeshingInfo",
                                              std::bind(&EnOceanCentral::getMeshingInfo,
                                                        this,
@@ -196,7 +203,10 @@ void EnOceanCentral::worker() {
     lastPeer = 0;
     int64_t nextFirmwareUpdateCheck = BaseLib::HelperFunctions::getTime() + BaseLib::HelperFunctions::getRandomNumber(10000, 60000);
     if (_firmwareInstallationTime > 0) nextFirmwareUpdateCheck = _firmwareInstallationTime;
-    if (BaseLib::HelperFunctions::getTime() - _firmwareInstallationTime > 16200000) nextFirmwareUpdateCheck = 0; //Do not continue after 4,5 h
+    if (_firmwareInstallationTime > 0 && BaseLib::HelperFunctions::getTime() - _firmwareInstallationTime > 16200000) {
+      Gd::out.printMessage("Info: Not starting updates, because manually set firmware installation time is too far in the past (" + std::to_string(_firmwareInstallationTime) + ").");
+      nextFirmwareUpdateCheck = 0; //Do not continue after 4,5 h
+    }
 
     while (!_stopWorkerThread && !Gd::bl->shuttingDown) {
       try {
@@ -213,9 +223,9 @@ void EnOceanCentral::worker() {
             }
           }
 
+          if (_firmwareInstallationTime > 0 && BaseLib::HelperFunctions::getTime() - _firmwareInstallationTime <= 16200000) nextFirmwareUpdateCheck = _firmwareInstallationTime; //_firmwareInstallationTime might have changed
           if (!Gd::bl->slaveMode && BaseLib::Ha::getInstanceType() != BaseLib::HaInstanceType::kSlave && nextFirmwareUpdateCheck > 0) {
             // {{{ Check for and install firmware updates
-            if (_firmwareInstallationTime > 0) nextFirmwareUpdateCheck = _firmwareInstallationTime; //_firmwareInstallationTime might have changed
             if (BaseLib::HelperFunctions::getTime() >= nextFirmwareUpdateCheck) {
               _firmwareInstallationTime = 0;
               saveVariable(2, _firmwareInstallationTime);
@@ -2970,6 +2980,43 @@ BaseLib::PVariable EnOceanCentral::addMeshingEntry(const PRpcClientInfo &clientI
   return Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable EnOceanCentral::checkUpdateAddress(const PRpcClientInfo &clientInfo, const PArray &parameters) {
+  try {
+    if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
+
+    auto peerId = (uint64_t)parameters->at(0)->integerValue64;
+    auto peer = getPeer(peerId);
+    if (!peer) return Variable::createError(-1, "Unknown peer.");
+
+    auto interface = Gd::interfaces->getDefaultInterface();
+    auto baseAddress = interface->getBaseAddress();
+    auto updateAddress = baseAddress | 1;
+
+    //{{{ Get block number using update sender address
+    uint8_t block_number = 0;
+    for (uint32_t retries = 0; retries < 3; retries++) {
+      auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+      auto response = interface->sendAndReceivePacket(packet, peer->getAddress(), 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+      if (response) peer->decryptPacket(response);
+      auto data = response ? response->getData() : std::vector<uint8_t>();
+      if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
+        continue;
+      } else {
+        block_number = data.at(4);
+        break;
+      }
+    }
+    //}}}
+
+    return std::make_shared<BaseLib::Variable>(block_number);
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable EnOceanCentral::getMeshingInfo(const PRpcClientInfo &clientInfo, const PArray &parameters) {
   try {
     if (!parameters->empty()) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
@@ -3307,6 +3354,8 @@ BaseLib::PVariable EnOceanCentral::setFirmwareInstallationTime(const BaseLib::PR
 
     saveVariable(2, _firmwareInstallationTime);
     _firmwareInstallationTime = parameters->at(0)->integerValue64 * 1000;
+    
+    Gd::out.printMessage("Info: Firmware installation time set to " + std::to_string(_firmwareInstallationTime) + ". Current time is: " + std::to_string(BaseLib::HelperFunctions::getTime()));
 
     return std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTimeString(_firmwareInstallationTime));
   }
