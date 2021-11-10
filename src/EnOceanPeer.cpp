@@ -2778,6 +2778,34 @@ std::vector<PEnOceanPacket> EnOceanPeer::encryptPacket(PEnOceanPacket &packet) {
   return std::vector<PEnOceanPacket>();
 }
 
+int32_t EnOceanPeer::checkUpdateAddress() {
+  try {
+    auto interface = getPhysicalInterface();
+    auto baseAddress = interface->getBaseAddress();
+    auto updateAddress = baseAddress | 1;
+
+    uint8_t block_number = 0;
+    for (uint32_t retries = 0; retries < 3; retries++) {
+      auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+      auto response = interface->sendAndReceivePacket(packet, _address, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+      if (response) decryptPacket(response);
+      auto data = response ? response->getData() : std::vector<uint8_t>();
+      if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
+        continue;
+      } else {
+        block_number = data.at(4);
+        break;
+      }
+    }
+
+    return block_number;
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return 0;
+}
+
 std::string EnOceanPeer::queryFirmwareVersion() {
   try {
     if (_remanFeatures && _remanFeatures->kFirmwareUpdates) {

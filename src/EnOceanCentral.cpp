@@ -1326,7 +1326,12 @@ std::string EnOceanCentral::handleCliCommand(std::string command) {
 
           if (peer->getFirmwareVersion() == 0) stringStream << std::setfill(' ') << std::setw(firmwareWidth) << " ";
           else if (peer->firmwareUpdateAvailable()) {
-            stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + peer->getFirmwareVersionString());
+            auto block = enoceanPeer->checkUpdateAddress();
+
+            if (block == 0) stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("* (e)" + peer->getFirmwareVersionString());
+            else if (block != 0xA5) stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("* (" + BaseLib::HelperFunctions::getHexString(block) + ")" + peer->getFirmwareVersionString());
+            else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << ("*" + peer->getFirmwareVersionString());
+
             firmwareUpdates = true;
           } else stringStream << std::setfill(' ') << std::setw(firmwareWidth) << peer->getFirmwareVersionString();
           stringStream << std::endl;
@@ -2989,27 +2994,7 @@ BaseLib::PVariable EnOceanCentral::checkUpdateAddress(const PRpcClientInfo &clie
     auto peer = getPeer(peerId);
     if (!peer) return Variable::createError(-1, "Unknown peer.");
 
-    auto interface = Gd::interfaces->getDefaultInterface();
-    auto baseAddress = interface->getBaseAddress();
-    auto updateAddress = baseAddress | 1;
-
-    //{{{ Get block number using update sender address
-    uint8_t block_number = 0;
-    for (uint32_t retries = 0; retries < 3; retries++) {
-      auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
-      auto response = interface->sendAndReceivePacket(packet, peer->getAddress(), 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
-      if (response) peer->decryptPacket(response);
-      auto data = response ? response->getData() : std::vector<uint8_t>();
-      if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
-        continue;
-      } else {
-        block_number = data.at(4);
-        break;
-      }
-    }
-    //}}}
-
-    return std::make_shared<BaseLib::Variable>(block_number);
+    return std::make_shared<BaseLib::Variable>(peer->checkUpdateAddress());
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -3354,7 +3339,7 @@ BaseLib::PVariable EnOceanCentral::setFirmwareInstallationTime(const BaseLib::PR
 
     saveVariable(2, _firmwareInstallationTime);
     _firmwareInstallationTime = parameters->at(0)->integerValue64 * 1000;
-    
+
     Gd::out.printMessage("Info: Firmware installation time set to " + std::to_string(_firmwareInstallationTime) + ". Current time is: " + std::to_string(BaseLib::HelperFunctions::getTime()));
 
     return std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTimeString(_firmwareInstallationTime));

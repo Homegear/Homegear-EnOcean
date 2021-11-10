@@ -155,6 +155,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool decryptPacket(PEnOceanPacket &packet);
   std::vector<PEnOceanPacket> encryptPacket(PEnOceanPacket &packet);
 
+  int32_t checkUpdateAddress();
   std::string queryFirmwareVersion();
   bool queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
   void queueGetDeviceConfiguration();
