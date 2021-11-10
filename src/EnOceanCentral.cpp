@@ -2167,7 +2167,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       for (uint32_t retries = 0; retries < 3; retries++) {
         auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = interface->sendAndReceivePacket(packet, peer->getAddress(), 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
-        peer->decryptPacket(response);
+        if (response) peer->decryptPacket(response);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
           continue;
@@ -2179,7 +2179,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       //}}}
 
       if (block_number == 0 || block_number_update_address == 0) {
-        Gd::out.printMessage("Not updating peer " + std::to_string(peerId) + ", because update state could not be determined.");
+        Gd::out.printMessage("Not updating peer " + std::to_string(peerId) + ", because update state could not be determined or peer is not responding to packets from update address.");
         success_peers.emplace(peerId);
         continue;
       }
