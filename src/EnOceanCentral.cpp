@@ -196,6 +196,7 @@ void EnOceanCentral::worker() {
     lastPeer = 0;
     int64_t nextFirmwareUpdateCheck = BaseLib::HelperFunctions::getTime() + BaseLib::HelperFunctions::getRandomNumber(10000, 60000);
     if (_firmwareInstallationTime > 0) nextFirmwareUpdateCheck = _firmwareInstallationTime;
+    if (BaseLib::HelperFunctions::getTime() - _firmwareInstallationTime > 16200000) nextFirmwareUpdateCheck = 0; //Do not continue after 4,5 h
 
     while (!_stopWorkerThread && !Gd::bl->shuttingDown) {
       try {
@@ -212,7 +213,7 @@ void EnOceanCentral::worker() {
             }
           }
 
-          if (!Gd::bl->slaveMode && BaseLib::Ha::getInstanceType() != BaseLib::HaInstanceType::kSlave) {
+          if (!Gd::bl->slaveMode && BaseLib::Ha::getInstanceType() != BaseLib::HaInstanceType::kSlave && nextFirmwareUpdateCheck > 0) {
             // {{{ Check for and install firmware updates
             if (_firmwareInstallationTime > 0) nextFirmwareUpdateCheck = _firmwareInstallationTime; //_firmwareInstallationTime might have changed
             if (BaseLib::HelperFunctions::getTime() >= nextFirmwareUpdateCheck) {
