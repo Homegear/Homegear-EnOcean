@@ -28,6 +28,17 @@ GetDeviceConfiguration::GetDeviceConfiguration(uint32_t senderAddress, uint32_t 
   _data.push_back(length);
 }
 
+GetLinkTable::GetLinkTable(uint32_t sender_address, uint32_t destination_address, bool inbound, uint8_t start_index, uint8_t end_index) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, sender_address, destination_address) {
+  _remoteManagementFunction = (uint16_t)RemoteManagementFunction::getLinkTable;
+  _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::getLinkTable >> 8u));
+  _data.push_back((uint8_t)RemoteManagementFunction::getLinkTable);
+  _data.push_back(0x07); //Manufacturer MSB
+  _data.push_back(0xFF); //Manufacturer LSB
+  _data.push_back(inbound ? 0 : 0x80);
+  _data.push_back(start_index);
+  _data.push_back(end_index);
+}
+
 GetPathInfoThroughPing::GetPathInfoThroughPing(uint32_t senderAddress, uint32_t destinationAddress, uint32_t destinationPingDeviceId) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, senderAddress, destinationAddress) {
   _remoteManagementFunction = (uint16_t)RemoteManagementFunction::getPathInfoThroughPing;
   _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::getPathInfoThroughPing >> 8u));

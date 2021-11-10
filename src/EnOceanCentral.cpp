@@ -95,6 +95,13 @@ void EnOceanCentral::init() {
                                                        std::placeholders::_2)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
         const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanGetLinkTable",
+                                             std::bind(&EnOceanCentral::remanGetLinkTable,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
         const BaseLib::PArray &parameters)>>("remanGetPathInfoThroughPing",
                                              std::bind(&EnOceanCentral::remanGetPathInfoThroughPing,
                                                        this,
@@ -2146,6 +2153,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       for (uint32_t retries = 0; retries < 3; retries++) {
         auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+        peer->decryptPacket(response);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
           continue;
@@ -3032,6 +3040,25 @@ BaseLib::PVariable EnOceanCentral::resetMeshingTables(const PRpcClientInfo &clie
     }
 
     return std::make_shared<BaseLib::Variable>();
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable EnOceanCentral::remanGetLinkTable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 4) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
+    if (parameters->at(1)->type != BaseLib::VariableType::tBoolean) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type Boolean.");
+    if (parameters->at(2)->type != BaseLib::VariableType::tInteger && parameters->at(2)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 3 is not of type Integer.");
+    if (parameters->at(3)->type != BaseLib::VariableType::tInteger && parameters->at(3)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 4 is not of type Integer.");
+
+    auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
+    if (!peer) return BaseLib::Variable::createError(-1, "Unknown peer.");
+
+    return std::make_shared<BaseLib::Variable>(peer->remanGetLinkTable(parameters->at(1)->booleanValue, parameters->at(2)->integerValue, parameters->at(3)->integerValue));
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

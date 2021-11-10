@@ -2121,6 +2121,32 @@ std::pair<int32_t, int32_t> EnOceanPeer::getPingRssi() {
   return {};
 }
 
+std::vector<uint8_t> EnOceanPeer::remanGetLinkTable(bool inbound, uint8_t start_index, uint8_t end_index) {
+  try {
+    if (!_remanFeatures || !_remanFeatures->kGetLinkTable) return {};
+
+    remoteManagementUnlock();
+
+    setBestInterface();
+    auto physicalInterface = getPhysicalInterface();
+    auto getLinkTable = std::make_shared<GetLinkTable>(0, getRemanDestinationAddress(), inbound, start_index, end_index);
+    auto response = physicalInterface->sendAndReceivePacket(getLinkTable,
+                                                            _address,
+                                                            2,
+                                                            IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::getLinkTableResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::getLinkTableResponse}});
+    if (!response) return {};
+
+    remoteManagementLock();
+
+    return response->getData();
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return {};
+}
+
 bool EnOceanPeer::remanPing() {
   try {
     if (!_remanFeatures || !_remanFeatures->kPing) return false;

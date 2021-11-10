@@ -17,6 +17,11 @@ class GetDeviceConfiguration : public EnOceanPacket {
   GetDeviceConfiguration(uint32_t senderAddress, uint32_t destinationAddress, uint16_t startIndex, uint16_t endIndex, uint8_t length);
 };
 
+class GetLinkTable : public EnOceanPacket {
+ public:
+  GetLinkTable(uint32_t sender_address, uint32_t destination_address, bool inbound, uint8_t start_index, uint8_t end_index);
+};
+
 class GetPathInfoThroughPing : public EnOceanPacket {
  public:
   GetPathInfoThroughPing(uint32_t senderAddress, uint32_t destinationAddress, uint32_t destinationPingDeviceId);

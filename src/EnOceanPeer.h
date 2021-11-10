@@ -152,6 +152,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
                                       IEnOceanInterface::EnOceanRequestFilterType filterType = IEnOceanInterface::EnOceanRequestFilterType::senderAddress,
                                       const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>(), uint32_t timeout = 1000);
   bool sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait, int32_t channel, const std::string &parameterId, const std::vector<uint8_t> &parameterData);
+  bool decryptPacket(PEnOceanPacket &packet);
+  std::vector<PEnOceanPacket> encryptPacket(PEnOceanPacket &packet);
 
   std::string queryFirmwareVersion();
   bool queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
@@ -163,6 +165,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   std::pair<int32_t, int32_t> getPingRssi();
   int32_t getRssiRepeater();
   int32_t getRssi();
+  std::vector<uint8_t> remanGetLinkTable(bool inbound, uint8_t start_index, uint8_t end_index);
   bool remanPing();
   bool remanSetLinkTable(bool inbound, const std::vector<uint8_t> &table);
   bool remanSetRepeaterFilter(uint8_t filterControl, uint8_t filterType, uint32_t filterValue);
@@ -304,9 +307,6 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameValues> &frameValue);
 
   PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type) override;
-
-  bool decryptPacket(PEnOceanPacket &packet);
-  std::vector<PEnOceanPacket> encryptPacket(PEnOceanPacket &packet);
 
   void updateBlindSpeed();
 
