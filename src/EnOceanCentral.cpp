@@ -2158,7 +2158,9 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
     auto version = BaseLib::Math::getUnsignedNumber(BaseLib::Io::getFileContent(versionPath), true);
     auto interface = Gd::interfaces->getDefaultInterface();
     auto baseAddress = interface->getBaseAddress();
-    auto updateAddress = baseAddress | 1;
+
+    auto updateAddressSettings = Gd::family->getFamilySetting("updateAddress");
+    uint32_t updateAddress = updateAddressSettings ? (uint32_t)updateAddressSettings->integerValue : (baseAddress | 1u);
 
     auto dutyCycleInfo = interface->getDutyCycleInfo();
     if (dutyCycleInfo.dutyCycleUsed > 10) interface->reset();

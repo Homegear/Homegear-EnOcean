@@ -2782,7 +2782,9 @@ int32_t EnOceanPeer::checkUpdateAddress() {
   try {
     auto interface = getPhysicalInterface();
     auto baseAddress = interface->getBaseAddress();
-    auto updateAddress = baseAddress | 1;
+
+    auto updateAddressSettings = Gd::family->getFamilySetting("updateAddress");
+    uint32_t updateAddress = updateAddressSettings ? (uint32_t)updateAddressSettings->integerValue : (baseAddress | 1u);
 
     uint8_t block_number = 0;
     for (uint32_t retries = 0; retries < 3; retries++) {
