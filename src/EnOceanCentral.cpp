@@ -137,6 +137,13 @@ void EnOceanCentral::init() {
                                                        std::placeholders::_2)));
     _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
         const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanSecurityEnabled",
+                                             std::bind(&EnOceanCentral::remanSecurityEnabled,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
         const BaseLib::PArray &parameters)>>("remanSetLinkTable",
                                              std::bind(&EnOceanCentral::remanSetLinkTable,
                                                        this,
@@ -3189,6 +3196,22 @@ BaseLib::PVariable EnOceanCentral::remanPingAddress(const PRpcClientInfo &client
                                                     {{(uint16_t)EnOceanPacket::RemoteManagementResponse::pingResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::pingResponse}});
 
     return std::make_shared<BaseLib::Variable>((bool)response);
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable EnOceanCentral::remanSecurityEnabled(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters) {
+  try {
+    if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
+
+    auto peer = getPeer((uint64_t)parameters->at(0)->integerValue64);
+    if (!peer) return BaseLib::Variable::createError(-1, "Unknown peer.");
+
+    return std::make_shared<BaseLib::Variable>(peer->remanSecurityEnabled());
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

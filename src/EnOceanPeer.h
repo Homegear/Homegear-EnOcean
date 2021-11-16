@@ -168,6 +168,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   int32_t getRssi();
   std::vector<uint8_t> remanGetLinkTable(bool inbound, uint8_t start_index, uint8_t end_index);
   bool remanPing();
+  bool remanSecurityEnabled();
   bool remanSetLinkTable(bool inbound, const std::vector<uint8_t> &table);
   bool remanSetRepeaterFilter(uint8_t filterControl, uint8_t filterType, uint32_t filterValue);
   bool remanSetRepeaterFunctions(uint8_t function, uint8_t level, uint8_t structure);

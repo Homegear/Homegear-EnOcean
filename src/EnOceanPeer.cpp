@@ -2200,6 +2200,10 @@ bool EnOceanPeer::remanPing() {
   return false;
 }
 
+bool EnOceanPeer::remanSecurityEnabled() {
+  return _forceEncryption;
+}
+
 bool EnOceanPeer::remanSetRepeaterFilter(uint8_t filterControl, uint8_t filterType, uint32_t filterValue) {
   try {
     if (!_remanFeatures || !_remanFeatures->kSetRepeaterFilter) return false;
@@ -2391,6 +2395,10 @@ bool EnOceanPeer::remanSetLinkTable(bool inbound, const std::vector<uint8_t> &ta
       if (!response) {
         return false;
       }
+    }
+
+    if (!remoteManagementApplyChanges(true, true)) {
+      return false;
     }
 
     remoteManagementLock();
@@ -2610,11 +2618,11 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
           Gd::out.printError("Error: Could not set repeater level on device.");
         }
 
-        remoteManagementLock();
-
         if (!remoteManagementApplyChanges(true, true)) {
           return Variable::createError(-8, "Could not apply changes.");
         }
+
+        remoteManagementLock();
       }
       //}}}
 
