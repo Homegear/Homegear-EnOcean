@@ -3391,12 +3391,12 @@ BaseLib::PVariable EnOceanCentral::setFirmwareInstallationTime(const BaseLib::PR
     if (parameters->size() != 1) return BaseLib::Variable::createError(-1, "Wrong parameter count.");
     if (parameters->at(0)->type != BaseLib::VariableType::tInteger && parameters->at(0)->type != BaseLib::VariableType::tInteger64) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type Integer.");
 
-    saveVariable(2, _firmwareInstallationTime);
     _firmwareInstallationTime = parameters->at(0)->integerValue64 * 1000;
+    saveVariable(2, _firmwareInstallationTime);
 
     Gd::out.printMessage("Info: Firmware installation time set to " + std::to_string(_firmwareInstallationTime) + ". Current time is: " + std::to_string(BaseLib::HelperFunctions::getTime()));
 
-    return std::make_shared<BaseLib::Variable>(BaseLib::HelperFunctions::getTimeString(_firmwareInstallationTime));
+    return std::make_shared<BaseLib::Variable>(_firmwareInstallationTime == 0 ? "Unset" : BaseLib::HelperFunctions::getTimeString(_firmwareInstallationTime));
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
