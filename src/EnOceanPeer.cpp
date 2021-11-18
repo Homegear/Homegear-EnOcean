@@ -2707,7 +2707,10 @@ bool EnOceanPeer::decryptPacket(PEnOceanPacket &packet) {
 
 std::vector<PEnOceanPacket> EnOceanPeer::encryptPacket(PEnOceanPacket &packet) {
   try {
-    if (!_forceEncryption) return std::vector<PEnOceanPacket>{packet};
+    uint8_t sequenceCounter = _erp1SequenceCounter;
+    setErp1SequenceCounter(sequenceCounter + 1);
+
+    if (!_forceEncryption) return EnOceanPacket::getChunks(packet, sequenceCounter);
 
     // Create object here (and not earlier) to avoid unnecessary allocation of secure memory
     if (!_security) _security.reset(new Security(Gd::bl));
@@ -2719,71 +2722,17 @@ std::vector<PEnOceanPacket> EnOceanPeer::encryptPacket(PEnOceanPacket &packet) {
     auto data = packet->getData();
     if (!_security->encryptExplicitRlc(_aesKeyInbound, data, data.size() - 5, rollingCode, _rollingCodeSize, _cmacSize)) {
       Gd::out.printError("Error: Encryption of packet failed.");
-      return std::vector<PEnOceanPacket>();
+      return {};
     }
 
-    std::vector<PEnOceanPacket> packets;
-
-    if (((unsigned)packet->destinationAddress() != 0xFFFFFFFFu && data.size() <= 10) || ((unsigned)packet->destinationAddress() == 0xFFFFFFFFu && data.size() <= 14)) {
-      auto type = packet->getType();
-      auto senderAddress = packet->senderAddress();
-      auto destinationAddress = packet->destinationAddress();
-      auto encryptedPacket = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
-      encryptedPacket->setData(data);
-      packets.push_back(encryptedPacket);
-    } else {
-      //Split packet
-
-      uint8_t sequenceCounter = _erp1SequenceCounter;
-      setErp1SequenceCounter(sequenceCounter + 1);
-
-      packets.reserve((data.size() / 8) + 2);
-
-      auto type = packet->getType();
-      auto senderAddress = packet->senderAddress();
-      auto destinationAddress = packet->destinationAddress();
-
-      std::vector<uint8_t> chunk;
-      chunk.reserve(10);
-      chunk.push_back(0x40);
-      chunk.push_back((sequenceCounter << 6));
-      chunk.push_back((data.size() - 1) >> 8);
-      chunk.push_back(data.size() - 1);
-      chunk.insert(chunk.end(), data.begin(), data.begin() + 6);
-      auto encryptedPacket = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
-      encryptedPacket->setData(chunk);
-      packets.push_back(encryptedPacket);
-      chunk.clear();
-
-      uint8_t index = 2;
-      chunk.push_back(0x40);
-      chunk.push_back((sequenceCounter << 6) | 1);
-      for (uint32_t i = 6; i < data.size(); i++) {
-        chunk.push_back(data.at(i));
-        if (chunk.size() == 10) {
-          auto encryptedPacket2 = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
-          encryptedPacket2->setData(chunk);
-          packets.push_back(encryptedPacket2);
-          chunk.clear();
-          chunk.push_back(0x40);
-          chunk.push_back((sequenceCounter << 6) | index);
-          index++;
-        }
-      }
-
-      if (chunk.size() > 2) {
-        auto encryptedPacket2 = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
-        encryptedPacket2->setData(chunk);
-        packets.push_back(encryptedPacket2);
-      }
-    }
+    std::vector<PEnOceanPacket> packets = EnOceanPacket::getChunks(packet, sequenceCounter);
 
     return packets;
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return std::vector<PEnOceanPacket>();
+  return {};
 }
 
 int32_t EnOceanPeer::checkUpdateAddress() {

@@ -104,7 +104,7 @@ std::vector<uint8_t> EnOceanPacket::getBinary() {
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return std::vector<uint8_t>();
+  return {};
 }
 
 std::vector<uint8_t> EnOceanPacket::getPosition(uint32_t position, uint32_t size) {
@@ -114,7 +114,7 @@ std::vector<uint8_t> EnOceanPacket::getPosition(uint32_t position, uint32_t size
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return std::vector<uint8_t>();
+  return {};
 }
 
 void EnOceanPacket::setPosition(uint32_t position, uint32_t size, const std::vector<uint8_t> &source) {
@@ -124,6 +124,70 @@ void EnOceanPacket::setPosition(uint32_t position, uint32_t size, const std::vec
   catch (const std::exception &ex) {
     Gd::bl->out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
+}
+
+std::vector<std::shared_ptr<EnOceanPacket>> EnOceanPacket::getChunks(std::shared_ptr<EnOceanPacket> &packet, uint8_t sequence_counter) {
+  try {
+    std::vector<PEnOceanPacket> packets;
+
+    auto data = packet->getData();
+
+    if (((unsigned)packet->destinationAddress() != 0xFFFFFFFFu && data.size() <= 10) || ((unsigned)packet->destinationAddress() == 0xFFFFFFFFu && data.size() <= 14)) {
+      auto type = packet->getType();
+      auto senderAddress = packet->senderAddress();
+      auto destinationAddress = packet->destinationAddress();
+      auto result_packet = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
+      result_packet->setData(data);
+      packets.push_back(result_packet);
+    } else {
+      //Split packet
+      packets.reserve((data.size() / 8) + 2);
+
+      auto type = packet->getType();
+      auto senderAddress = packet->senderAddress();
+      auto destinationAddress = packet->destinationAddress();
+
+      std::vector<uint8_t> chunk;
+      chunk.reserve(10);
+      chunk.push_back(0x40);
+      chunk.push_back((sequence_counter << 6));
+      chunk.push_back((data.size() - 1) >> 8);
+      chunk.push_back(data.size() - 1);
+      chunk.insert(chunk.end(), data.begin(), data.begin() + 6);
+      auto result_packet = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
+      result_packet->setData(chunk);
+      packets.push_back(result_packet);
+      chunk.clear();
+
+      uint8_t index = 2;
+      chunk.push_back(0x40);
+      chunk.push_back((sequence_counter << 6) | 1);
+      for (uint32_t i = 6; i < data.size(); i++) {
+        chunk.push_back(data.at(i));
+        if (chunk.size() == 10) {
+          auto encryptedPacket2 = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
+          encryptedPacket2->setData(chunk);
+          packets.push_back(encryptedPacket2);
+          chunk.clear();
+          chunk.push_back(0x40);
+          chunk.push_back((sequence_counter << 6) | index);
+          index++;
+        }
+      }
+
+      if (chunk.size() > 2) {
+        auto encryptedPacket2 = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
+        encryptedPacket2->setData(chunk);
+        packets.push_back(encryptedPacket2);
+      }
+    }
+
+    return packets;
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return {};
 }
 
 }
