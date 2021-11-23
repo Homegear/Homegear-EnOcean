@@ -40,7 +40,6 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t> &re
 
     _serialRequests[packetType] = request;
     requestsGuard.unlock();
-    std::unique_lock<std::mutex> lock(request->mutex);
 
     try {
       rawSend(requestPacket);
@@ -53,6 +52,7 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t> &re
       return;
     }
 
+    std::unique_lock<std::mutex> lock(request->mutex);
     if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(1000), [&] { return request->mutexReady; })) {
       _out.printError("Error: No serial ACK received to packet: " + BaseLib::HelperFunctions::getHexString(requestPacket));
     }
