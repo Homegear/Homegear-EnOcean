@@ -2285,8 +2285,7 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
 
     std::vector<uint8_t> noKey;
     noKey.resize(16, 0xFF);
-    if (outbound) {56
-    0
+    if (outbound) {
       if (aesKey == noKey) {
         setAesKeyOutbound(std::vector<uint8_t>());
         if (_aesKeyInbound.empty()) _forceEncryption = false;
