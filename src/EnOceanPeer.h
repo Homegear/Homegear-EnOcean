@@ -51,10 +51,12 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void setAesKeyInbound(const std::vector<uint8_t> &value) {
     _aesKeyInbound = value;
     saveVariable(28, _aesKeyInbound);
+    if (!_aesKeyOutbound.empty()) _forceEncryption = true;
   }
   void setAesKeyOutbound(const std::vector<uint8_t> &value) {
     _aesKeyOutbound = value;
     saveVariable(21, _aesKeyOutbound);
+    if (!_aesKeyInbound.empty()) _forceEncryption = true;
   }
   void setSecurityCode(uint32_t value) {
     _securityCode = value;
@@ -147,7 +149,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
                                       const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>(), uint32_t timeout = 1000);
   bool sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait, int32_t channel, const std::string &parameterId, const std::vector<uint8_t> &parameterData);
   bool decryptPacket(PEnOceanPacket &packet);
-  PEnOceanPacket encryptPacket(PEnOceanPacket &packet);
+  std::vector<PEnOceanPacket> encryptPacket(PEnOceanPacket &packet);
 
   int32_t checkUpdateAddress();
   std::string queryFirmwareVersion();

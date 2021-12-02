@@ -2814,13 +2814,11 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
       if (pairingData.remoteCommissioningSecurityCode != 0) {
         peer->setSecurityCode(pairingData.remoteCommissioningSecurityCode);
       }
-      if (!pairingData.aesKeyInbound.empty()) {
+      if (!pairingData.aesKeyInbound.empty() && !pairingData.aesKeyOutbound.empty()) {
         peer->setAesKeyInbound(pairingData.aesKeyInbound);
-      }
-      if (!pairingData.aesKeyOutbound.empty()) {
         peer->setAesKeyOutbound(pairingData.aesKeyOutbound);
       }
-      if (features->kForceEncryption) {
+      if (features->kForceEncryption || (!pairingData.aesKeyInbound.empty() && !pairingData.aesKeyOutbound.empty())) {
         peer->setEncryptionType(features->kSlf & 7);
         peer->setCmacSize((features->kSlf & 0x18) == 0x10 ? 4 : 3);
         if ((features->kSlf & 0xE0) == 0x40 || (features->kSlf & 0xE0) == 0x60) peer->setRollingCodeSize(2);

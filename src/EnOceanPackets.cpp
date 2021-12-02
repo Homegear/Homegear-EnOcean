@@ -4,18 +4,14 @@
 
 namespace EnOcean {
 
-ApplyChanges::ApplyChanges(uint32_t senderAddress, uint32_t destinationAddress, bool applyLinkTableChanges, bool applyConfigurationChanges) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, senderAddress, destinationAddress) {
+ApplyChanges::ApplyChanges(uint32_t senderAddress, uint32_t destinationAddress, bool applyLinkTableChanges, bool applyConfigurationChanges) : EnOceanPacket(Type::RADIO_ERP1, 0xC5, senderAddress, destinationAddress) {
   _remoteManagementFunction = (uint16_t)RemoteManagementFunction::applyChanges;
-  /*_data.push_back(0x7F); //Manufacturer MSB
+  _data.push_back(0x7F); //Manufacturer MSB
   _data.push_back(0xF0 | ((uint16_t)RemoteManagementFunction::applyChanges >> 8u)); //Manufacturer LSB
-  _data.push_back((uint8_t)RemoteManagementFunction::applyChanges);*/
-  _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::applyChanges >> 8u));
   _data.push_back((uint8_t)RemoteManagementFunction::applyChanges);
-  _data.push_back(0x07); //Manufacturer MSB
-  _data.push_back(0xFF); //Manufacturer LSB
   _data.push_back(0);
-  if (applyLinkTableChanges) _data.at(4) |= 0x80;
-  if (applyConfigurationChanges) _data.at(4) |= 0x40;
+  if (applyLinkTableChanges) _data.at(3) |= 0x80;
+  if (applyConfigurationChanges) _data.at(3) |= 0x40;
 }
 
 GetDeviceConfiguration::GetDeviceConfiguration(uint32_t senderAddress, uint32_t destinationAddress, uint16_t startIndex, uint16_t endIndex, uint8_t length) : EnOceanPacket(Type::RADIO_ERP1, 0xC5, senderAddress, destinationAddress) {
@@ -51,55 +47,39 @@ GetPathInfoThroughPing::GetPathInfoThroughPing(uint32_t senderAddress, uint32_t 
   _data.push_back(destinationPingDeviceId);
 }
 
-Lock::Lock(uint32_t senderAddress, uint32_t destinationAddress, uint32_t securityCode) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, senderAddress, destinationAddress) {
+Lock::Lock(uint32_t senderAddress, uint32_t destinationAddress, uint32_t securityCode) : EnOceanPacket(Type::RADIO_ERP1, 0xC5, senderAddress, destinationAddress) {
   _remoteManagementFunction = (uint16_t)RemoteManagementFunction::lock;
-  /*_data.push_back(0x7F); //Manufacturer MSB
+  _data.push_back(0x7F); //Manufacturer MSB
   _data.push_back(0xF0 | ((uint16_t)RemoteManagementFunction::lock >> 8u)); //Manufacturer LSB
-  _data.push_back((uint8_t)RemoteManagementFunction::lock);*/
-  _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::lock >> 8u));
   _data.push_back((uint8_t)RemoteManagementFunction::lock);
-  _data.push_back(0x07); //Manufacturer MSB
-  _data.push_back(0xFF); //Manufacturer LSB
   _data.push_back(securityCode >> 24u);
   _data.push_back(securityCode >> 16u);
   _data.push_back(securityCode >> 8u);
   _data.push_back(securityCode);
 }
 
-PingPacket::PingPacket(uint32_t sender_address, uint32_t destination_address) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, sender_address, destination_address) {
+PingPacket::PingPacket(uint32_t sender_address, uint32_t destination_address) : EnOceanPacket(Type::RADIO_ERP1, 0xC5, sender_address, destination_address) {
   _remoteManagementFunction = (uint16_t)RemoteManagementFunction::ping;
-  /*_data.push_back(0x7F); //Manufacturer MSB
+  _data.push_back(0x7F); //Manufacturer MSB
   _data.push_back(0xF0 | ((uint16_t)RemoteManagementFunction::ping >> 8u)); //Manufacturer LSB
-  _data.push_back((uint8_t)RemoteManagementFunction::ping);*/
-  _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::ping >> 8u));
   _data.push_back((uint8_t)RemoteManagementFunction::ping);
-  _data.push_back(0x07); //Manufacturer MSB
-  _data.push_back(0xFF); //Manufacturer LSB
 }
 
-QueryIdPacket::QueryIdPacket(uint32_t senderAddress, uint32_t destinationAddress) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, senderAddress, destinationAddress) {
+QueryIdPacket::QueryIdPacket(uint32_t senderAddress, uint32_t destinationAddress) : EnOceanPacket(Type::RADIO_ERP1, 0xC5, senderAddress, destinationAddress) {
   _remoteManagementFunction = (uint16_t)RemoteManagementFunction::queryId;
-  _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::queryId >> 8u));
-  _data.push_back((uint8_t)RemoteManagementFunction::queryId);
-  _data.push_back(0x07); //Manufacturer MSB
-  _data.push_back(0xFF); //Manufacturer LSB
-  /*_data.push_back(0x7F); //Manufacturer MSB
+  _data.push_back(0x7F); //Manufacturer MSB
   _data.push_back(0xF0 | ((uint16_t)RemoteManagementFunction::queryId >> 8u)); //Manufacturer LSB
-  _data.push_back((uint8_t)RemoteManagementFunction::queryId);*/
+  _data.push_back((uint8_t)RemoteManagementFunction::queryId);
   _data.push_back(0);
   _data.push_back(0);
   _data.push_back(0);
 }
 
-QueryStatusPacket::QueryStatusPacket(uint32_t senderAddress, uint32_t destinationAddress) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, senderAddress, destinationAddress) {
+QueryStatusPacket::QueryStatusPacket(uint32_t senderAddress, uint32_t destinationAddress) : EnOceanPacket(Type::RADIO_ERP1, 0xC5, senderAddress, destinationAddress) {
   _remoteManagementFunction = (uint16_t)RemoteManagementFunction::queryStatus;
-  /*_data.push_back(0x7F); //Manufacturer MSB
+  _data.push_back(0x7F); //Manufacturer MSB
   _data.push_back(0xF0 | ((uint16_t)RemoteManagementFunction::queryStatus >> 8u)); //Manufacturer LSB
-  _data.push_back((uint8_t)RemoteManagementFunction::queryStatus);*/
-  _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::queryStatus >> 8u));
   _data.push_back((uint8_t)RemoteManagementFunction::queryStatus);
-  _data.push_back(0x07); //Manufacturer MSB
-  _data.push_back(0xFF); //Manufacturer LSB
 }
 
 SetCode::SetCode(uint32_t senderAddress, uint32_t destinationAddress, uint32_t securityCode) : EnOceanPacket(Type::RADIO_ERP1, 0xC5, senderAddress, destinationAddress) {
@@ -130,15 +110,11 @@ SetDeviceConfiguration::SetDeviceConfiguration(uint32_t senderAddress, uint32_t 
   }
 }
 
-SetLinkTable::SetLinkTable(uint32_t senderAddress, uint32_t destinationAddress, bool inbound, const std::vector<uint8_t> &table) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, senderAddress, destinationAddress) {
+SetLinkTable::SetLinkTable(uint32_t senderAddress, uint32_t destinationAddress, bool inbound, const std::vector<uint8_t> &table) : EnOceanPacket(Type::RADIO_ERP1, 0xC5, senderAddress, destinationAddress) {
   _remoteManagementFunction = (uint16_t)RemoteManagementFunction::setLinkTable;
-  /*_data.push_back(0x7F); //Manufacturer MSB
+  _data.push_back(0x7F); //Manufacturer MSB
   _data.push_back(0xF0 | ((uint16_t)RemoteManagementFunction::setLinkTable >> 8u)); //Manufacturer LSB
-  _data.push_back((uint8_t)RemoteManagementFunction::setLinkTable);*/
-  _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::setLinkTable >> 8u));
   _data.push_back((uint8_t)RemoteManagementFunction::setLinkTable);
-  _data.push_back(0x07); //Manufacturer MSB
-  _data.push_back(0xFF); //Manufacturer LSB
   _data.push_back(inbound ? 0 : 0x80);
   _data.insert(_data.end(), table.begin(), table.end());
 }
@@ -164,16 +140,12 @@ SetRepeaterFunctions::SetRepeaterFunctions(uint32_t senderAddress, uint32_t dest
 }
 
 SetSecurityProfile::SetSecurityProfile(uint32_t senderAddress, uint32_t destinationAddress, bool recomVersion11, bool hasAddresses, bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId, uint32_t sourceId)
-    : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, senderAddress, destinationAddress) {
+    : EnOceanPacket(Type::RADIO_ERP1, 0xC5, senderAddress, destinationAddress) {
   _remoteManagementFunction = (uint16_t)RemoteManagementFunction::setSecurityProfile;
   _data.reserve(36);
-  _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::setSecurityProfile >> 8u));
-  _data.push_back((uint8_t)RemoteManagementFunction::setSecurityProfile);
-  _data.push_back(0x07); //Manufacturer MSB
-  _data.push_back(0xFF); //Manufacturer LSB
-  /*_data.push_back(0x7F); //Manufacturer MSB
+  _data.push_back(0x7F); //Manufacturer MSB
   _data.push_back(0xF0 | ((uint16_t)RemoteManagementFunction::setSecurityProfile >> 8u)); //Manufacturer LSB
-  _data.push_back((uint8_t)RemoteManagementFunction::setSecurityProfile);*/
+  _data.push_back((uint8_t)RemoteManagementFunction::setSecurityProfile);
   _data.push_back(outbound ? 0x80 : 0);
   _data.push_back(index);
   _data.push_back(slf);
@@ -194,15 +166,11 @@ SetSecurityProfile::SetSecurityProfile(uint32_t senderAddress, uint32_t destinat
   }
 }
 
-Unlock::Unlock(uint32_t senderAddress, uint32_t destinationAddress, uint32_t securityCode) : EnOceanPacket(Type::REMOTE_MAN_COMMAND, 0xC5, senderAddress, destinationAddress) {
+Unlock::Unlock(uint32_t senderAddress, uint32_t destinationAddress, uint32_t securityCode) : EnOceanPacket(Type::RADIO_ERP1, 0xC5, senderAddress, destinationAddress) {
   _remoteManagementFunction = (uint16_t)RemoteManagementFunction::unlock;
-  /*_data.push_back(0x7F); //Manufacturer MSB
+  _data.push_back(0x7F); //Manufacturer MSB
   _data.push_back(0xF0 | ((uint16_t)RemoteManagementFunction::unlock >> 8u)); //Manufacturer LSB
-  _data.push_back((uint8_t)RemoteManagementFunction::unlock);*/
-  _data.push_back((unsigned)((uint16_t)RemoteManagementFunction::unlock >> 8u));
   _data.push_back((uint8_t)RemoteManagementFunction::unlock);
-  _data.push_back(0x07); //Manufacturer MSB
-  _data.push_back(0xFF); //Manufacturer LSB
   _data.push_back(securityCode >> 24u);
   _data.push_back(securityCode >> 16u);
   _data.push_back(securityCode >> 8u);

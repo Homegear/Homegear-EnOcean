@@ -233,16 +233,18 @@ bool HomegearGateway::sendEnoceanPacket(const std::vector<PEnOceanPacket> &packe
       }
     }
 
+    uint32_t i = 0;
     for (auto &packet: packets) {
+      i++;
       if (!packet) return false;
 
       std::vector<uint8_t> data = std::move(packet->getBinary());
       addCrc8(data);
 
       if (packet->getRorg() == 0xC5) {
-        Gd::out.printInfo("Info: Sending packet (REMAN function 0x" + BaseLib::HelperFunctions::getHexString(packet->getRemoteManagementFunction(), 3) + ") " + BaseLib::HelperFunctions::getHexString(data));
+        Gd::out.printInfo("Info: Sending packet " + std::to_string(i) + " of " + std::to_string(packets.size()) + " (REMAN function 0x" + BaseLib::HelperFunctions::getHexString(packet->getRemoteManagementFunction(), 3) + ") " + BaseLib::HelperFunctions::getHexString(data));
       } else {
-        Gd::out.printInfo("Info: Sending packet " + BaseLib::HelperFunctions::getHexString(data));
+        Gd::out.printInfo("Info: Sending packet " + std::to_string(i) + " of " + std::to_string(packets.size()) + ": " + BaseLib::HelperFunctions::getHexString(data));
       }
 
       std::vector<uint8_t> response;

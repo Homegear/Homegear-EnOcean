@@ -97,7 +97,6 @@ bool IEnOceanInterface::checkForEnOceanRequest(PEnOceanPacket &packet) {
     if (requestIterator != _enoceanRequests.end()) {
       for (auto &element : requestIterator->second) {
         auto request = element.second;
-
         if (request->filterType == EnOceanRequestFilterType::remoteManagementFunction) {
           bool found = false;
           for (auto &filterData : request->filterData) {
