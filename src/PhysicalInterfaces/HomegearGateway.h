@@ -22,7 +22,7 @@ class HomegearGateway : public IEnOceanInterface {
 
   bool isOpen() override { return !_stopped; }
 
-  bool sendEnoceanPacket(const PEnOceanPacket &packet) override;
+  bool sendEnoceanPacket(const std::vector<PEnOceanPacket> &packets) override;
  protected:
   std::unique_ptr<BaseLib::TcpSocket> _tcpSocket;
   std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;

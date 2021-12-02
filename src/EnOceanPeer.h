@@ -76,12 +76,6 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
     _rollingCodeSize = value;
     saveVariable(25, value);
   }
-  void setErp1SequenceCounter(uint8_t value) {
-    _erp1SequenceCounter = value;
-    if (_erp1SequenceCounter > 3) _erp1SequenceCounter = 1;
-    else if (_erp1SequenceCounter == 0) _erp1SequenceCounter = 1;
-    saveVariable(31, (int32_t)value);
-  }
   uint64_t getRepeaterId() { return _repeaterId; }
   void setRepeaterId(uint64_t value) {
     _repeaterId = value;
@@ -153,7 +147,7 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
                                       const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>(), uint32_t timeout = 1000);
   bool sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait, int32_t channel, const std::string &parameterId, const std::vector<uint8_t> &parameterData);
   bool decryptPacket(PEnOceanPacket &packet);
-  std::vector<PEnOceanPacket> encryptPacket(PEnOceanPacket &packet);
+  PEnOceanPacket encryptPacket(PEnOceanPacket &packet);
 
   int32_t checkUpdateAddress();
   std::string queryFirmwareVersion();
@@ -234,7 +228,6 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool _explicitRollingCode = false;
   int32_t _rollingCodeSize = -1;
   uint32_t _gatewayAddress = 0;
-  uint8_t _erp1SequenceCounter = 1;
   std::atomic<uint64_t> _repeaterId = 0;
   std::mutex _repeatedAddressesMutex;
   std::unordered_set<int32_t> _repeatedAddresses;

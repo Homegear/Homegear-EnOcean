@@ -220,32 +220,41 @@ void HomegearGateway::listen() {
   }
 }
 
-bool HomegearGateway::sendEnoceanPacket(const PEnOceanPacket &packet) {
+bool HomegearGateway::sendEnoceanPacket(const std::vector<PEnOceanPacket> &packets) {
   try {
-    if (!_tcpSocket) return false;
+    if (!_tcpSocket || packets.empty() || !packets.at(0)) return false;
 
     if (_stopped || !_tcpSocket->connected()) {
       _out.printInfo("Info: Waiting two seconds, because wre are not connected.");
       std::this_thread::sleep_for(std::chrono::milliseconds(2000));
       if (_stopped || !_tcpSocket->connected()) {
-        _out.printWarning("Warning: !!!Not!!! sending packet " + BaseLib::HelperFunctions::getHexString(packet->getBinary()) + ", because init is not complete.");
+        _out.printWarning("Warning: !!!Not!!! sending packet " + BaseLib::HelperFunctions::getHexString(packets.at(0)->getBinary()) + ", because init is not complete.");
         return false;
       }
     }
 
-    IEnOceanInterface::sendEnoceanPacket(packet);
+    for (auto &packet: packets) {
+      if (!packet) return false;
 
-    std::vector<uint8_t> data = std::move(packet->getBinary());
-    addCrc8(data);
-    std::vector<uint8_t> response;
-    getResponse(0x02, data, response);
-    if (response.size() != 8 || (response.size() >= 7 && response[6] != 0)) {
-      if (response.size() >= 7 && response[6] != 0) {
-        std::map<uint8_t, std::string>::iterator statusIterator = _responseStatusCodes.find(response[6]);
-        if (statusIterator != _responseStatusCodes.end()) _out.printError("Error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\": " + statusIterator->second);
-        else _out.printError("Unknown error (" + std::to_string(response[6]) + ") sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
-      } else _out.printError("Unknown error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
-      return false;
+      std::vector<uint8_t> data = std::move(packet->getBinary());
+      addCrc8(data);
+
+      if (packet->getRorg() == 0xC5) {
+        Gd::out.printInfo("Info: Sending packet (REMAN function 0x" + BaseLib::HelperFunctions::getHexString(packet->getRemoteManagementFunction(), 3) + ") " + BaseLib::HelperFunctions::getHexString(data));
+      } else {
+        Gd::out.printInfo("Info: Sending packet " + BaseLib::HelperFunctions::getHexString(data));
+      }
+
+      std::vector<uint8_t> response;
+      getResponse(0x02, data, response);
+      if (response.size() != 8 || (response.size() >= 7 && response[6] != 0)) {
+        if (response.size() >= 7 && response[6] != 0) {
+          std::map<uint8_t, std::string>::iterator statusIterator = _responseStatusCodes.find(response[6]);
+          if (statusIterator != _responseStatusCodes.end()) _out.printError("Error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\": " + statusIterator->second);
+          else _out.printError("Unknown error (" + std::to_string(response[6]) + ") sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
+        } else _out.printError("Unknown error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
+        return false;
+      }
     }
     _lastPacketSent = BaseLib::HelperFunctions::getTime();
     return true;

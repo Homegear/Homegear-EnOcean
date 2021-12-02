@@ -50,7 +50,7 @@ EnOceanPacket::EnOceanPacket(Type type, uint8_t rorg, int32_t senderAddress, int
   else setData(data);
   if (_type == Type::RADIO_ERP1 || _type == Type::RADIO_ERP2) {
     _appendAddressAndStatus = true;
-    if (data.empty()) _data.push_back(rorg);
+    if (data.empty() && rorg != 0xC5) _data.push_back(rorg);
   }
   if (type == Type::RADIO_ERP1) {
     _optionalData =
@@ -75,28 +75,28 @@ void EnOceanPacket::setData(const std::vector<uint8_t> &value, uint32_t offset) 
   _packet.clear();
   _data.clear();
   _data.insert(_data.end(), value.begin() + offset, value.end());
-  if (!_data.empty()) _rorg = (uint8_t)_data.at(0);
+  if (!_data.empty() && _rorg == 0) _rorg = (uint8_t)_data.at(0);
 }
 
 std::vector<uint8_t> EnOceanPacket::getBinary() {
   try {
     if (!_packet.empty()) return _packet;
-    if (_data.empty() && _optionalData.empty()) return std::vector<uint8_t>();
-    if (_appendAddressAndStatus) {
-      _data.push_back((uint8_t)(_senderAddress >> 24u));
-      _data.push_back((uint8_t)((_senderAddress >> 16u) & 0xFFu));
-      _data.push_back((uint8_t)((_senderAddress >> 8u) & 0xFFu));
-      _data.push_back((uint8_t)(_senderAddress & 0xFFu));
-      _data.push_back(_rorg == 0xF6 ? 0x30 : 0);
-    }
-    _packet.reserve(7 + _data.size() + _optionalData.size());
+    if (_data.empty() && _optionalData.empty()) return {};
+    _packet.reserve(7 + _data.size() + (_appendAddressAndStatus ? 5 : 0) + _optionalData.size());
     _packet.push_back(0x55);
-    _packet.push_back((uint8_t)(_data.size() >> 8u));
-    _packet.push_back((uint8_t)(_data.size() & 0xFFu));
+    _packet.push_back((uint8_t)((_data.size() + (_appendAddressAndStatus ? 5 : 0)) >> 8u));
+    _packet.push_back((uint8_t)((_data.size() + (_appendAddressAndStatus ? 5 : 0)) & 0xFFu));
     _packet.push_back((uint8_t)_optionalData.size());
     _packet.push_back((uint8_t)_type);
     _packet.push_back(0);
     _packet.insert(_packet.end(), _data.begin(), _data.end());
+    if (_appendAddressAndStatus) {
+      _packet.push_back((uint8_t)(_senderAddress >> 24u));
+      _packet.push_back((uint8_t)((_senderAddress >> 16u) & 0xFFu));
+      _packet.push_back((uint8_t)((_senderAddress >> 8u) & 0xFFu));
+      _packet.push_back((uint8_t)(_senderAddress & 0xFFu));
+      _packet.push_back(_rorg == 0xF6 ? 0x30 : 0);
+    }
     _packet.insert(_packet.end(), _optionalData.begin(), _optionalData.end());
     _packet.push_back(0);
     return _packet;
@@ -126,59 +126,68 @@ void EnOceanPacket::setPosition(uint32_t position, uint32_t size, const std::vec
   }
 }
 
-std::vector<std::shared_ptr<EnOceanPacket>> EnOceanPacket::getChunks(std::shared_ptr<EnOceanPacket> &packet, uint8_t sequence_counter) {
+std::vector<std::shared_ptr<EnOceanPacket>> EnOceanPacket::getChunks(uint8_t sequence_counter) {
   try {
     std::vector<PEnOceanPacket> packets;
 
-    auto data = packet->getData();
-
-    if (((unsigned)packet->destinationAddress() != 0xFFFFFFFFu && data.size() <= 10) || ((unsigned)packet->destinationAddress() == 0xFFFFFFFFu && data.size() <= 14)) {
-      auto type = packet->getType();
-      auto senderAddress = packet->senderAddress();
-      auto destinationAddress = packet->destinationAddress();
-      auto result_packet = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
-      result_packet->setData(data);
+    if ((((unsigned)_destinationAddress != 0xFFFFFFFFu && _data.size() <= 5) || ((unsigned)_destinationAddress == 0xFFFFFFFFu && _data.size() <= 9) || _type == Type::REMOTE_MAN_COMMAND) && (_rorg != 0xC5 || _type == Type::REMOTE_MAN_COMMAND)) {
+      auto result_packet = std::make_shared<EnOceanPacket>();
+      *result_packet = *this;
+      result_packet->setData(_data);
       packets.push_back(result_packet);
     } else {
       //Split packet
-      packets.reserve((data.size() / 8) + 2);
-
-      auto type = packet->getType();
-      auto senderAddress = packet->senderAddress();
-      auto destinationAddress = packet->destinationAddress();
+      packets.reserve((_data.size() / 8) + 2);
 
       std::vector<uint8_t> chunk;
       chunk.reserve(10);
-      chunk.push_back(0x40);
-      chunk.push_back((sequence_counter << 6));
-      chunk.push_back((data.size() - 1) >> 8);
-      chunk.push_back(data.size() - 1);
-      chunk.insert(chunk.end(), data.begin(), data.begin() + 6);
-      auto result_packet = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
+      if (_rorg == 0xC5) {
+        chunk.push_back(0xC5);
+        chunk.push_back((sequence_counter << 6));
+        chunk.push_back((_data.size() - 3) >> 1);
+        chunk.push_back(((_data.size() - 3) << 7) | _data.at(0));
+        if (_data.size() >= 7) chunk.insert(chunk.end(), _data.begin() + 1, _data.begin() + 7);
+        else {
+          chunk.insert(chunk.end(), _data.begin() + 1, _data.end());
+          chunk.resize(10, 0);
+        }
+      } else {
+        chunk.push_back(0x40);
+        chunk.push_back((sequence_counter << 6));
+        chunk.push_back((_data.size() - 1) >> 8);
+        chunk.push_back(_data.size() - 1);
+        chunk.insert(chunk.end(), _data.begin(), _data.begin() + 6);
+      }
+      auto result_packet = std::make_shared<EnOceanPacket>();
+      *result_packet = *this;
       result_packet->setData(chunk);
       packets.push_back(result_packet);
       chunk.clear();
 
       uint8_t index = 2;
-      chunk.push_back(0x40);
+      chunk.push_back(_rorg == 0xC5 ? 0xC5 : 0x40);
       chunk.push_back((sequence_counter << 6) | 1);
-      for (uint32_t i = 6; i < data.size(); i++) {
-        chunk.push_back(data.at(i));
+      for (uint32_t i = _rorg == 0xC5 ? 7 : 6; i < _data.size(); i++) {
+        chunk.push_back(_data.at(i));
         if (chunk.size() == 10) {
-          auto encryptedPacket2 = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
-          encryptedPacket2->setData(chunk);
-          packets.push_back(encryptedPacket2);
+          auto result_packet2 = std::make_shared<EnOceanPacket>();
+          *result_packet2 = *this;
+          result_packet2->setData(chunk);
+          packets.push_back(result_packet2);
           chunk.clear();
-          chunk.push_back(0x40);
+          chunk.push_back(_rorg == 0xC5 ? 0xC5 : 0x40);
           chunk.push_back((sequence_counter << 6) | index);
           index++;
         }
       }
 
       if (chunk.size() > 2) {
-        auto encryptedPacket2 = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
-        encryptedPacket2->setData(chunk);
-        packets.push_back(encryptedPacket2);
+        if (_rorg == 0xC5) chunk.resize(10, 0);
+
+        auto result_packet2 = std::make_shared<EnOceanPacket>();
+        *result_packet2 = *this;
+        result_packet2->setData(chunk);
+        packets.push_back(result_packet2);
       }
     }
 

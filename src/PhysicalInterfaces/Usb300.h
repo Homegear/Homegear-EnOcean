@@ -23,7 +23,7 @@ class Usb300 : public IEnOceanInterface {
 
   bool isOpen() override { return _serial && _serial->isOpen() && !_stopped; }
 
-  bool sendEnoceanPacket(const PEnOceanPacket &packet) override;
+  bool sendEnoceanPacket(const std::vector<PEnOceanPacket> &packets) override;
  protected:
   std::unique_ptr<BaseLib::SerialReaderWriter> _serial;
   std::atomic_bool _initComplete;

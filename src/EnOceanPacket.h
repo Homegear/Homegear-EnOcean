@@ -119,6 +119,7 @@ class EnOceanPacket : public BaseLib::Systems::Packet {
   int32_t destinationAddress() { return _destinationAddress; }
   Type getType() { return _type; }
   uint8_t getRorg() { return _rorg; }
+  void setRorg(uint8_t value) { _rorg = value; }
   int32_t getRssi() { return _rssi; }
   uint8_t getStatus() { return _status; }
   RepeatingStatus getRepeatingStatus() { return _repeatingStatus; }
@@ -133,7 +134,7 @@ class EnOceanPacket : public BaseLib::Systems::Packet {
   std::vector<uint8_t> getPosition(uint32_t position, uint32_t size);
   void setPosition(uint32_t position, uint32_t size, const std::vector<uint8_t> &source);
 
-  static std::vector<std::shared_ptr<EnOceanPacket>> getChunks(std::shared_ptr<EnOceanPacket> &packet, uint8_t sequence_counter);
+  std::vector<std::shared_ptr<EnOceanPacket>> getChunks(uint8_t sequence_counter);
  protected:
   bool _appendAddressAndStatus = false;
   std::vector<uint8_t> _packet;
