@@ -51,10 +51,12 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void setAesKeyInbound(const std::vector<uint8_t> &value) {
     _aesKeyInbound = value;
     saveVariable(28, _aesKeyInbound);
+    if (!_aesKeyOutbound.empty()) _forceEncryption = true;
   }
   void setAesKeyOutbound(const std::vector<uint8_t> &value) {
     _aesKeyOutbound = value;
     saveVariable(21, _aesKeyOutbound);
+    if (!_aesKeyInbound.empty()) _forceEncryption = true;
   }
   void setSecurityCode(uint32_t value) {
     _securityCode = value;
@@ -75,12 +77,6 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void setRollingCodeSize(int32_t value) {
     _rollingCodeSize = value;
     saveVariable(25, value);
-  }
-  void setErp1SequenceCounter(uint8_t value) {
-    _erp1SequenceCounter = value;
-    if (_erp1SequenceCounter > 3) _erp1SequenceCounter = 1;
-    else if (_erp1SequenceCounter == 0) _erp1SequenceCounter = 1;
-    saveVariable(31, (int32_t)value);
   }
   uint64_t getRepeaterId() { return _repeaterId; }
   void setRepeaterId(uint64_t value) {
@@ -234,7 +230,6 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool _explicitRollingCode = false;
   int32_t _rollingCodeSize = -1;
   uint32_t _gatewayAddress = 0;
-  uint8_t _erp1SequenceCounter = 1;
   std::atomic<uint64_t> _repeaterId = 0;
   std::mutex _repeatedAddressesMutex;
   std::unordered_set<int32_t> _repeatedAddresses;

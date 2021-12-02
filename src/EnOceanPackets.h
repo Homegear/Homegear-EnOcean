@@ -34,7 +34,7 @@ class Lock : public EnOceanPacket {
 
 class PingPacket : public EnOceanPacket {
  public:
-  PingPacket(uint32_t senderAddress, uint32_t destinationAddress);
+  PingPacket(uint32_t sender_address, uint32_t destination_address);
 };
 
 class QueryIdPacket : public EnOceanPacket {
@@ -64,7 +64,7 @@ class SetLinkTable : public EnOceanPacket {
 
 class SetRepeaterFilter : public EnOceanPacket {
  public:
-  SetRepeaterFilter(uint32_t senderAddress, uint32_t destinationAddress, uint8_t filterControl, uint8_t filterType, uint32_t filterValue);
+  SetRepeaterFilter(uint32_t sender_address, uint32_t destination_address, uint8_t filter_control, uint8_t filter_type, uint32_t filter_value);
 };
 
 class SetRepeaterFunctions : public EnOceanPacket {

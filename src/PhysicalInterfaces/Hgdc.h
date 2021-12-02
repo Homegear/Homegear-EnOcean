@@ -27,7 +27,7 @@ class Hgdc : public IEnOceanInterface {
   std::string getSerialNumber() override { return _settings->serialNumber; }
   std::string getFirmwareVersion() override { return _firmwareVersion; }
 
-  bool sendEnoceanPacket(const PEnOceanPacket &packet) override;
+  bool sendEnoceanPacket(const std::vector<PEnOceanPacket> &packets) override;
  protected:
   int32_t _packetReceivedEventHandlerId = -1;
   std::atomic_bool _initComplete{false};
