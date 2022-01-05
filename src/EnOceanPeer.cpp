@@ -76,10 +76,7 @@ void EnOceanPeer::worker() {
 
           setBestInterface();
           auto physicalInterface = getPhysicalInterface();
-          auto packets = encryptPacket(request.second->packet);
-          for (auto &packet2: packets) {
-            if (!physicalInterface->sendEnoceanPacket(packet2)) break;
-          }
+          if (!physicalInterface->sendEnoceanPacket(encryptPacket(request.second->packet))) break;
           request.second->lastResend = BaseLib::HelperFunctions::getTime();
           request.second->resends++;
         }
@@ -126,9 +123,17 @@ void EnOceanPeer::worker() {
 
 void EnOceanPeer::pingWorker() {
   try {
-    if (_remanFeatures && ((_remanFeatures->kPing && _pingInterval > 0 && BaseLib::HelperFunctions::getTimeSeconds() >= (_lastPing + _pingInterval)) || _remanFeatures->kMeshingEndpoint)) {
+    if (_remanFeatures && (_remanFeatures->kPing && _pingInterval > 0 && BaseLib::HelperFunctions::getTimeSeconds() >= (_lastPing + _pingInterval))) {
       _lastPing = BaseLib::HelperFunctions::getTimeSeconds();
       remanPing();
+
+      //Todo: Remove block after T5 update
+      if (!encryption_disabled_ && _forceEncryption && (getFirmwareVersion() == 1102 || getFirmwareVersion() == 1103)) {
+        Gd::out.printMessage("Info: Trying to disable encryption of peer " + std::to_string(_peerID) + "...");
+        encryption_disabled_ = true;
+        remanSetSecurityProfile(false, 0xFF, 0, 0, BaseLib::HelperFunctions::getUBinary("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), 0, 0);
+        remanSetSecurityProfile(true, 0xFF, 0, 0, BaseLib::HelperFunctions::getUBinary("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), 0, 0);
+      }
     }
   }
   catch (const std::exception &ex) {
@@ -290,13 +295,14 @@ uint32_t EnOceanPeer::getRemanDestinationAddress() {
 EnOceanPeer::RssiStatus EnOceanPeer::getRssiStatus() {
   auto pingRssi = getPingRssi();
   RssiStatus rssiStatus;
-  if ((pingRssi.first < 0 && pingRssi.first >= -80) || (pingRssi.second < 0 && pingRssi.second >= -80)) rssiStatus = RssiStatus::good;
+  if (_repeaterId != 0 && pingRssi.first < 0 && pingRssi.first >= -80) rssiStatus = RssiStatus::unneededRepeater;
+  else if ((pingRssi.first < 0 && pingRssi.first >= -80) || (pingRssi.second < 0 && pingRssi.second >= -80)) rssiStatus = RssiStatus::good;
   else rssiStatus = RssiStatus::bad;
   return rssiStatus;
 }
 
 bool EnOceanPeer::enforceMeshing() {
-  return _remanFeatures && _remanFeatures->kEnforceMeshing && _repeaterId == 0;
+  return _remanFeatures && _remanFeatures->kEnforceMeshing;
 }
 
 bool EnOceanPeer::hasFreeMeshingTableSlot() {
@@ -630,10 +636,6 @@ void EnOceanPeer::loadVariables(BaseLib::Systems::ICentral *central, std::shared
           _securityCode = (uint32_t)row.second.at(3)->intValue;
           break;
         }
-        case 31: {
-          _erp1SequenceCounter = (uint8_t)row.second.at(3)->intValue;
-          break;
-        }
         case 32: {
           _repeaterId = (uint64_t)row.second.at(3)->intValue;
           break;
@@ -698,7 +700,6 @@ void EnOceanPeer::saveVariables() {
     saveVariable(28, _aesKeyInbound);
     saveVariable(29, (int64_t)_rollingCodeInbound);
     saveVariable(30, (int64_t)_securityCode);
-    saveVariable(31, (int32_t)_erp1SequenceCounter);
     saveVariable(32, (int64_t)_repeaterId);
 
     { //Save repeated addresses
@@ -833,6 +834,7 @@ void EnOceanPeer::initializeCentralConfig() {
     _remanFeatures = RemanFeatureParser::parse(_rpcDevice);
 
     if ((_remanFeatures && _remanFeatures->kForceEncryption) || !_aesKeyInbound.empty() || !_aesKeyOutbound.empty()) _forceEncryption = true;
+    if (_remanFeatures && _remanFeatures->kMeshingEndpoint && _pingInterval == 0) _pingInterval = 480;
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2073,9 +2075,14 @@ std::pair<int32_t, int32_t> EnOceanPeer::getPingRssi() {
           auto rssi = repeaterPeer->remanGetPathInfoThroughPing(_address);
           _rssiRepeater = rssi;
           rssiPair.second = rssi;
+        } else {
+          _rssiRepeater = 0;
         }
+      } else {
+        _rssiRepeater = 0;
       }
-
+    } else {
+      _rssiRepeater = 0;
     }
 
     setBestInterface();
@@ -2106,6 +2113,32 @@ std::pair<int32_t, int32_t> EnOceanPeer::getPingRssi() {
   return {};
 }
 
+std::vector<uint8_t> EnOceanPeer::remanGetLinkTable(bool inbound, uint8_t start_index, uint8_t end_index) {
+  try {
+    if (!_remanFeatures || !_remanFeatures->kGetLinkTable) return {};
+
+    remoteManagementUnlock();
+
+    setBestInterface();
+    auto physicalInterface = getPhysicalInterface();
+    auto getLinkTable = std::make_shared<GetLinkTable>(0, getRemanDestinationAddress(), inbound, start_index, end_index);
+    auto response = physicalInterface->sendAndReceivePacket(getLinkTable,
+                                                            _address,
+                                                            2,
+                                                            IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                            {{(uint16_t)EnOceanPacket::RemoteManagementResponse::getLinkTableResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::getLinkTableResponse}});
+    if (!response) return {};
+
+    remoteManagementLock();
+
+    return response->getData();
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return {};
+}
+
 bool EnOceanPeer::remanPing() {
   try {
     if (!_remanFeatures || !_remanFeatures->kPing) return false;
@@ -2113,24 +2146,19 @@ bool EnOceanPeer::remanPing() {
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
 
-    uint8_t sequenceCounter = _erp1SequenceCounter;
-    setErp1SequenceCounter(sequenceCounter + 1);
-    auto ping = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1,
-                                                0xC5,
-                                                physicalInterface->getBaseAddress() | getRfChannel(0),
-                                                getRemanDestinationAddress(),
-                                                std::vector<uint8_t>{0xC5, (uint8_t)(sequenceCounter << 6), 0, 0x7F, 0xF0, 6, 0, 0, 0, 0});
+    std::shared_ptr<EnOceanPacket> ping = std::make_shared<PingPacket>(physicalInterface->getBaseAddress() | getRfChannel(0), getRemanDestinationAddress());
     auto response = (bool)sendAndReceivePacket(ping,
                                                2,
-                                               IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
-                                               {{(uint16_t)EnOceanPacket::RemoteManagementResponse::pingResponse >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::pingResponse}});
+                                               IEnOceanInterface::EnOceanRequestFilterType::senderAddress,
+                                               {});
+
     if (response) {
       _missedPings = 0;
     } else {
       _missedPings++;
     }
 
-    if (_missedPings >= 10 && _forceEncryption) {
+    if (_missedPings >= 3 && _forceEncryption) {
       Gd::out.printWarning("Warning: Peer " + std::to_string(_peerID) + " is not reachable. Trying rolling code recovery.");
 
       auto ping2 = std::make_shared<PingPacket>(0, _address);
@@ -2156,6 +2184,10 @@ bool EnOceanPeer::remanPing() {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return false;
+}
+
+bool EnOceanPeer::remanSecurityEnabled() {
+  return _forceEncryption;
 }
 
 bool EnOceanPeer::remanSetRepeaterFilter(uint8_t filterControl, uint8_t filterType, uint32_t filterValue) {
@@ -2218,7 +2250,21 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
 
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
-    auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0, getRemanDestinationAddress(), _remanFeatures->kRecomVersion == 0x11, outbound, index, slf, rlc, aesKey, destinationId, sourceId);
+
+    if (outbound && _rollingCodeOutbound == 0xFFFFFFFF) _rollingCodeOutbound = rlc;
+    if (!outbound && _rollingCodeInbound == 0xFFFFFFFF) _rollingCodeInbound = rlc;
+
+    auto setSecurityProfile = std::make_shared<SetSecurityProfile>(0,
+                                                                   getRemanDestinationAddress(),
+                                                                   _remanFeatures->kRecomVersion == 0x11,
+                                                                   _remanFeatures->kSetSecurityProfileHasAddresses,
+                                                                   outbound,
+                                                                   index,
+                                                                   slf,
+                                                                   outbound ? _rollingCodeOutbound : _rollingCodeInbound,
+                                                                   aesKey,
+                                                                   destinationId,
+                                                                   sourceId);
     auto response = physicalInterface->sendAndReceivePacket(setSecurityProfile,
                                                             _address,
                                                             2,
@@ -2229,14 +2275,34 @@ bool EnOceanPeer::remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t 
     std::vector<uint8_t> noKey;
     noKey.resize(16, 0xFF);
     if (outbound) {
-      if (aesKey == noKey) setAesKeyOutbound(std::vector<uint8_t>());
-      else setAesKeyOutbound(aesKey);
+      if (aesKey == noKey) {
+        setAesKeyOutbound(std::vector<uint8_t>());
+        if (_aesKeyInbound.empty()) _forceEncryption = false;
+      } else {
+        setAesKeyOutbound(aesKey);
+        _forceEncryption = true;
+      }
     } else {
-      if (aesKey == noKey) setAesKeyInbound(std::vector<uint8_t>());
-      else setAesKeyInbound(aesKey);
+      if (aesKey == noKey) {
+        setAesKeyInbound(std::vector<uint8_t>());
+        if (_aesKeyOutbound.empty()) _forceEncryption = false;
+      } else {
+        setAesKeyInbound(aesKey);
+        _forceEncryption = true;
+      }
     }
 
+    setEncryptionType(_remanFeatures->kSlf & 7);
+    setCmacSize((_remanFeatures->kSlf & 0x18) == 0x10 ? 4 : 3);
+    if ((_remanFeatures->kSlf & 0xE0) == 0x40 || (_remanFeatures->kSlf & 0xE0) == 0x60) setRollingCodeSize(2);
+    else if ((_remanFeatures->kSlf & 0xE0) == 0x80 || (_remanFeatures->kSlf & 0xE0) == 0xA0) setRollingCodeSize(3);
+    else if ((_remanFeatures->kSlf & 0xE0) == 0xC0 || (_remanFeatures->kSlf & 0xE0) == 0xE0) setRollingCodeSize(4);
+    if (outbound && _rollingCodeOutbound == 0xFFFFFFFF) setRollingCodeOutbound(rlc);
+    if (!outbound && _rollingCodeInbound == 0xFFFFFFFF) setRollingCodeInbound(rlc);
+    setExplicitRollingCode(_remanFeatures->kSlf & 0x20);
+
     remoteManagementLock();
+    return true;
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2272,6 +2338,76 @@ bool EnOceanPeer::remanSetCode(uint32_t securityCode, bool enforce) {
   return false;
 }
 
+bool EnOceanPeer::remanSetLinkTable(bool inbound, const std::vector<uint8_t> &table) {
+  try {
+    if (!_remanFeatures || !_remanFeatures->kSetSecurityProfile) return false;
+    if (inbound && _remanFeatures->kInboundLinkTableSize == 0) return false;
+    if (!inbound && _remanFeatures->kOutboundLinkTableSize == 0) return false;
+
+    remoteManagementUnlock();
+
+    setBestInterface();
+    auto physicalInterface = getPhysicalInterface();
+
+    static constexpr uint32_t entrySize = 9;
+
+    if (table.size() > _remanFeatures->kMaxDataLength) {
+      std::vector<uint8_t> chunk{};
+      chunk.reserve(_remanFeatures->kMaxDataLength);
+      for (uint32_t i = 0; i < table.size(); i += entrySize) {
+        chunk.insert(chunk.end(), table.begin() + i, table.begin() + i + entrySize);
+        if (chunk.size() + entrySize > _remanFeatures->kMaxDataLength) {
+          auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, getRemanDestinationAddress(), inbound, chunk);
+          auto response = physicalInterface->sendAndReceivePacket(setLinkTablePacket,
+                                                                  _address,
+                                                                  2,
+                                                                  IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                                  {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
+          if (!response) {
+            return false;
+          }
+
+          chunk.clear();
+        }
+      }
+
+      if (!chunk.empty()) {
+        auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, getRemanDestinationAddress(), inbound, chunk);
+        auto response = physicalInterface->sendAndReceivePacket(setLinkTablePacket,
+                                                                _address,
+                                                                2,
+                                                                IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                                {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
+        if (!response) {
+          return false;
+        }
+      }
+    } else {
+      auto setLinkTablePacket = std::make_shared<SetLinkTable>(0, getRemanDestinationAddress(), inbound, table);
+
+      auto response = physicalInterface->sendAndReceivePacket(setLinkTablePacket,
+                                                              _address,
+                                                              2,
+                                                              IEnOceanInterface::EnOceanRequestFilterType::remoteManagementFunction,
+                                                              {{(uint16_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck >> 8u, (uint8_t)EnOceanPacket::RemoteManagementResponse::remoteCommissioningAck}}, 3000);
+      if (!response) {
+        return false;
+      }
+    }
+
+    if (!remoteManagementApplyChanges(true, true)) {
+      return false;
+    }
+
+    remoteManagementLock();
+    return true;
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return false;
+}
+
 bool EnOceanPeer::remanUpdateSecurityProfile() {
   try {
     if (!_remanFeatures || !_remanFeatures->kSetSecurityProfile) return false;
@@ -2281,7 +2417,18 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
     auto setSecurityProfile =
-        std::make_shared<SetSecurityProfile>(0, _address, _remanFeatures->kRecomVersion == 0x11, false, _rollingCodeInbound, _remanFeatures->kSlf, 0, _aesKeyInbound, _address, physicalInterface->getBaseAddress() | getRfChannel(0));
+        //Todo: Remove firmware version check after T5 update
+        std::make_shared<SetSecurityProfile>(0,
+                                             getRemanDestinationAddress(),
+                                             _remanFeatures->kRecomVersion == 0x11 || getFirmwareVersion() < 1100,
+                                             _remanFeatures->kSetSecurityProfileHasAddresses,
+                                             false,
+                                             0,
+                                             _remanFeatures->kSlf,
+                                             _rollingCodeInbound,
+                                             _aesKeyInbound,
+                                             _address,
+                                             physicalInterface->getBaseAddress() | getRfChannel(0));
     auto response = physicalInterface->sendAndReceivePacket(setSecurityProfile,
                                                             _address,
                                                             2,
@@ -2293,7 +2440,18 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
       return false;
     } else {
       setSecurityProfile =
-          std::make_shared<SetSecurityProfile>(0, _address, _remanFeatures->kRecomVersion == 0x11, true, _rollingCodeOutbound, _remanFeatures->kSlf, 0, _aesKeyOutbound, physicalInterface->getBaseAddress() | getRfChannel(0), _address);
+          //Todo: Remove firmware version check after T5 update
+          std::make_shared<SetSecurityProfile>(0,
+                                               getRemanDestinationAddress(),
+                                               _remanFeatures->kRecomVersion == 0x11 || getFirmwareVersion() < 1100,
+                                               _remanFeatures->kSetSecurityProfileHasAddresses,
+                                               true,
+                                               0,
+                                               _remanFeatures->kSlf,
+                                               _rollingCodeOutbound,
+                                               _aesKeyOutbound,
+                                               physicalInterface->getBaseAddress() | getRfChannel(0),
+                                               _address);
       response = physicalInterface->sendAndReceivePacket(setSecurityProfile,
                                                          _address,
                                                          2,
@@ -2458,11 +2616,11 @@ PVariable EnOceanPeer::putParamset(BaseLib::PRpcClientInfo clientInfo, int32_t c
           Gd::out.printError("Error: Could not set repeater level on device.");
         }
 
-        remoteManagementLock();
-
         if (!remoteManagementApplyChanges(true, true)) {
           return Variable::createError(-8, "Could not apply changes.");
         }
+
+        remoteManagementLock();
       }
       //}}}
 
@@ -2526,7 +2684,8 @@ bool EnOceanPeer::decryptPacket(PEnOceanPacket &packet) {
         Gd::out.printError("Error: Decryption of packet failed.");
         return false;
       }
-      packet->setData(data, 1); //Replace RORG with encapsulated one
+      packet->setData(data, 1);
+      if (data.size() >= 2) packet->setRorg(data.at(1)); //Replace RORG with encapsulated one
 
       Gd::out.printInfo("Decrypted packet: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
 
@@ -2547,83 +2706,68 @@ bool EnOceanPeer::decryptPacket(PEnOceanPacket &packet) {
 
 std::vector<PEnOceanPacket> EnOceanPeer::encryptPacket(PEnOceanPacket &packet) {
   try {
-    if (!_forceEncryption) return std::vector<PEnOceanPacket>{packet};
+    if (!_forceEncryption) return packet->getChunks(1);
 
     // Create object here (and not earlier) to avoid unnecessary allocation of secure memory
     if (!_security) _security.reset(new Security(Gd::bl));
 
-    uint32_t rollingCode = _rollingCodeInbound;
-    setRollingCodeInbound(_rollingCodeInbound + 1);
+    auto packets = packet->getChunks(1);
+    std::vector<PEnOceanPacket> encrypted_packets;
+    encrypted_packets.reserve(packets.size() * 3);
 
-    Gd::out.printInfo("Decrypted packet: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
-    auto data = packet->getData();
-    if (!_security->encryptExplicitRlc(_aesKeyInbound, data, data.size() - 5, rollingCode, _rollingCodeSize, _cmacSize)) {
-      Gd::out.printError("Error: Encryption of packet failed.");
-      return std::vector<PEnOceanPacket>();
+    for (auto &encrypted_packet: packets) {
+      uint32_t rollingCode = _rollingCodeInbound;
+      setRollingCodeInbound(_rollingCodeInbound + 1);
+
+      Gd::out.printInfo("Decrypted packet: " + BaseLib::HelperFunctions::getHexString(encrypted_packet->getBinary()));
+      auto data = encrypted_packet->getData();
+      if (!_security->encryptExplicitRlc(_aesKeyInbound, data, data.size(), rollingCode, _rollingCodeSize, _cmacSize)) {
+        Gd::out.printError("Error: Encryption of packet failed.");
+        return {};
+      }
+      encrypted_packet->setRorg(0x31);
+      encrypted_packet->setData(data);
+
+      auto chunks = encrypted_packet->getChunks(1);
+      encrypted_packets.insert(encrypted_packets.end(), chunks.begin(), chunks.end());
     }
 
-    std::vector<PEnOceanPacket> packets;
-
-    if (((unsigned)packet->destinationAddress() != 0xFFFFFFFFu && data.size() <= 10) || ((unsigned)packet->destinationAddress() == 0xFFFFFFFFu && data.size() <= 14)) {
-      auto type = packet->getType();
-      auto senderAddress = packet->senderAddress();
-      auto destinationAddress = packet->destinationAddress();
-      auto encryptedPacket = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
-      encryptedPacket->setData(data);
-      packets.push_back(encryptedPacket);
-    } else {
-      //Split packet
-
-      uint8_t sequenceCounter = _erp1SequenceCounter;
-      setErp1SequenceCounter(sequenceCounter + 1);
-
-      packets.reserve((data.size() / 8) + 2);
-
-      auto type = packet->getType();
-      auto senderAddress = packet->senderAddress();
-      auto destinationAddress = packet->destinationAddress();
-
-      std::vector<uint8_t> chunk;
-      chunk.reserve(10);
-      chunk.push_back(0x40);
-      chunk.push_back((sequenceCounter << 6));
-      chunk.push_back((data.size() - 1) >> 8);
-      chunk.push_back(data.size() - 1);
-      chunk.insert(chunk.end(), data.begin(), data.begin() + 6);
-      auto encryptedPacket = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
-      encryptedPacket->setData(chunk);
-      packets.push_back(encryptedPacket);
-      chunk.clear();
-
-      uint8_t index = 2;
-      chunk.push_back(0x40);
-      chunk.push_back((sequenceCounter << 6) | 1);
-      for (uint32_t i = 6; i < data.size(); i++) {
-        chunk.push_back(data.at(i));
-        if (chunk.size() == 10) {
-          auto encryptedPacket2 = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
-          encryptedPacket2->setData(chunk);
-          packets.push_back(encryptedPacket2);
-          chunk.clear();
-          chunk.push_back(0x40);
-          chunk.push_back((sequenceCounter << 6) | index);
-          index++;
-        }
-      }
-
-      if (chunk.size() > 2) {
-        auto encryptedPacket2 = std::make_shared<EnOceanPacket>(type, 0, senderAddress, destinationAddress);
-        encryptedPacket2->setData(chunk);
-        packets.push_back(encryptedPacket2);
-      }
-    }
-
-    return packets;
+    return encrypted_packets;
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
-  return std::vector<PEnOceanPacket>();
+  return {};
+}
+
+int32_t EnOceanPeer::checkUpdateAddress() {
+  try {
+    auto interface = getPhysicalInterface();
+    auto baseAddress = interface->getBaseAddress();
+
+    auto updateAddressSettings = Gd::family->getFamilySetting("updateAddress");
+    uint32_t updateAddress = updateAddressSettings ? (uint32_t)updateAddressSettings->integerValue : (baseAddress | 1u);
+
+    uint8_t block_number = 0;
+    for (uint32_t retries = 0; retries < 3; retries++) {
+      auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, _address, std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
+      auto response = interface->sendAndReceivePacket(packet, _address, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
+      if (response) decryptPacket(response);
+      auto data = response ? response->getData() : std::vector<uint8_t>();
+      if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
+        continue;
+      } else {
+        block_number = data.at(4);
+        break;
+      }
+    }
+
+    return block_number;
+  }
+  catch (const std::exception &ex) {
+    Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return 0;
 }
 
 std::string EnOceanPeer::queryFirmwareVersion() {
@@ -2668,14 +2812,11 @@ PEnOceanPacket EnOceanPeer::sendAndReceivePacket(std::shared_ptr<EnOceanPacket> 
     //Protected by Mutex to not mess up rolling code order when using encryption
     std::lock_guard<std::mutex> sendPacketGuard(_sendPacketMutex);
 
+    std::vector<PEnOceanPacket> packets;
     for (uint32_t i = 0; i < retries + 1; i++) {
-      std::vector<PEnOceanPacket> packets;
-
-      if (packet->getType() == EnOceanPacket::Type::RADIO_ERP1) {
+      if (packet->getType() == EnOceanPacket::Type::RADIO_ERP1 && packets.empty()) {
         packets = encryptPacket(packet);
         if (packets.empty()) return {};
-      } else {
-        packets.push_back(packet);
       }
 
       setBestInterface();
@@ -2720,11 +2861,7 @@ bool EnOceanPeer::sendPacket(PEnOceanPacket &packet, const std::string &response
       setBestInterface();
       auto physicalInterface = getPhysicalInterface();
       if (resends == 0) {
-        auto packets = encryptPacket(packet);
-        if (packets.empty()) return false;
-        for (auto &packet2: packets) {
-          if (!physicalInterface->sendEnoceanPacket(packet2)) return false;
-        }
+        if (!physicalInterface->sendEnoceanPacket(encryptPacket(packet))) return false;
       } else {
         PRpcRequest rpcRequest = std::make_shared<RpcRequest>();
         rpcRequest->responseId = responseId;
@@ -2754,14 +2891,10 @@ bool EnOceanPeer::sendPacket(PEnOceanPacket &packet, const std::string &response
           bool error = false;
           std::unique_lock<std::mutex> conditionVariableGuard(rpcRequest->conditionVariableMutex);
           for (int32_t i = 0; i < resends + 1; i++) {
-            auto packetCopy = std::make_shared<EnOceanPacket>();
-            *packetCopy = *packet;
-            auto packets = encryptPacket(packetCopy);
+            auto packets = encryptPacket(packet);
             if (packets.empty()) return false;
             rpcRequest->lastResend = BaseLib::HelperFunctions::getTime();
-            for (auto &packet2: packets) {
-              if (!physicalInterface->sendEnoceanPacket(packet2)) return false;
-            }
+            if (!physicalInterface->sendEnoceanPacket(packets)) return false;
             if (rpcRequest->conditionVariable.wait_for(conditionVariableGuard, std::chrono::milliseconds(resendTimeout)) == std::cv_status::no_timeout || rpcRequest->abort) break;
             if (i == resends) {
               error = true;
@@ -2775,21 +2908,13 @@ bool EnOceanPeer::sendPacket(PEnOceanPacket &packet, const std::string &response
           }
           if (error) return false;
         } else {
-          auto packets = encryptPacket(packet);
-          if (packets.empty()) return false;
-          for (auto &packet2: packets) {
-            if (!physicalInterface->sendEnoceanPacket(packet2)) return false;
-          }
+          if (!physicalInterface->sendEnoceanPacket(encryptPacket(packet))) return false;
         }
       }
     } else {
       setBestInterface();
       auto physicalInterface = getPhysicalInterface();
-      auto packets = encryptPacket(packet);
-      if (packets.empty()) return false;
-      for (auto &packet2: packets) {
-        if (!physicalInterface->sendEnoceanPacket(packet2)) return false;
-      }
+      if (!physicalInterface->sendEnoceanPacket(encryptPacket(packet))) return false;
     }
     if (delay > 0) std::this_thread::sleep_for(std::chrono::milliseconds(delay));
     return true;

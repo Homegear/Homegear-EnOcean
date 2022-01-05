@@ -38,7 +38,7 @@ PRemanFeatures RemanFeatureParser::parse(const PHomegearDevice &rpcDevice) {
           if (featureIterator != featureStruct->structValue->end()) features->kInboundLinkTableSize = featureIterator->second->integerValue;
 
           featureIterator = featureStruct->structValue->find("outboundLinkTableSize");
-          if (featureIterator != featureStruct->structValue->end()) features->kSetOutboundLinkTableSize = featureIterator->second->integerValue;
+          if (featureIterator != featureStruct->structValue->end()) features->kOutboundLinkTableSize = featureIterator->second->integerValue;
 
           featureIterator = featureStruct->structValue->find("linkTableGatewayEep");
           if (featureIterator != featureStruct->structValue->end()) features->kLinkTableGatewayEep = BaseLib::Math::getUnsignedNumber(featureIterator->second->stringValue, true);
@@ -123,6 +123,9 @@ PRemanFeatures RemanFeatureParser::parse(const PHomegearDevice &rpcDevice) {
 
           featureIterator = featureStruct->structValue->find("setSecurityProfile");
           if (featureIterator != featureStruct->structValue->end()) features->kSetSecurityProfile = featureIterator->second->booleanValue;
+
+          featureIterator = featureStruct->structValue->find("setSecurityProfileHasAddresses");
+          if (featureIterator != featureStruct->structValue->end()) features->kSetSecurityProfileHasAddresses = featureIterator->second->booleanValue;
 
           featureIterator = featureStruct->structValue->find("remoteSetLearnMode");
           if (featureIterator != featureStruct->structValue->end()) features->kRemoteSetLearnMode = featureIterator->second->booleanValue;

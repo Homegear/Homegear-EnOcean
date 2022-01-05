@@ -159,6 +159,7 @@ bool Security::checkCmacExplicitRlc(const std::vector<uint8_t> &deviceAesKey, co
 
     std::vector<uint8_t> cmacInPacket(encryptedData.begin() + dataSize + rollingCodeSize, encryptedData.begin() + dataSize + rollingCodeSize + cmacSize);
     std::vector<uint8_t> calculatedCmac = getCmac(deviceAesKey, encryptedData, dataSize, rollingCode, rollingCodeSize, cmacSize);
+
     if (cmacInPacket.empty() || calculatedCmac.empty()) return false;
 
     return cmacInPacket.size() == calculatedCmac.size() && std::equal(cmacInPacket.begin(), cmacInPacket.end(), calculatedCmac.begin());
