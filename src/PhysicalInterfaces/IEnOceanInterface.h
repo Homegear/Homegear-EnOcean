@@ -40,19 +40,20 @@ class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface {
 
   void sendPacket(std::shared_ptr<BaseLib::Systems::Packet> packet) override { throw BaseLib::Exception("Not implemented."); }
 
-  virtual bool sendEnoceanPacket(const PEnOceanPacket &packet);
+  bool sendEnoceanPacket(const PEnOceanPacket &packet);
+  virtual bool sendEnoceanPacket(const std::vector<PEnOceanPacket> &packets) { throw BaseLib::Exception("Not implemented"); };
 
   PEnOceanPacket sendAndReceivePacket(const PEnOceanPacket &packet,
-                                      uint32_t deviceEnoceanId,
+                                      uint32_t device_enocean_id,
                                       uint32_t retries = 0,
-                                      EnOceanRequestFilterType filterType = EnOceanRequestFilterType::senderAddress,
-                                      const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>(), uint32_t timeout = 1000);
-
+                                      EnOceanRequestFilterType filter_type = EnOceanRequestFilterType::senderAddress,
+                                      const std::vector<std::vector<uint8_t>> &filter_data = std::vector<std::vector<uint8_t>>(), uint32_t timeout = 1000);
   PEnOceanPacket sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets,
-                                      uint32_t deviceEnoceanId,
+                                      uint32_t device_enocean_id,
                                       uint32_t retries = 0,
-                                      EnOceanRequestFilterType filterType = EnOceanRequestFilterType::senderAddress,
-                                      const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>(), uint32_t timeout = 1000);
+                                      EnOceanRequestFilterType filter_type = EnOceanRequestFilterType::senderAddress,
+                                      const std::vector<std::vector<uint8_t>> &filter_data = std::vector<std::vector<uint8_t>>(), uint32_t timeout = 1000);
+
  protected:
   struct SerialRequest {
     std::mutex mutex;
@@ -118,6 +119,8 @@ class IEnOceanInterface : public BaseLib::Systems::IPhysicalInterface {
   BaseLib::Output _out;
   std::atomic<uint32_t> _baseAddress{0};
   std::atomic<uint32_t> _chipId{0};
+
+  std::atomic<uint8_t> _sequence_counter{1};
 
   std::mutex _getResponseMutex;
 

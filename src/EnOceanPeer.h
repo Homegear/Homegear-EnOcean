@@ -20,7 +20,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   enum class RssiStatus {
     undefined = -1,
     good = 0,
-    bad = 1
+    bad = 1,
+    unneededRepeater = 2
   };
   //}}}
 
@@ -50,10 +51,12 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void setAesKeyInbound(const std::vector<uint8_t> &value) {
     _aesKeyInbound = value;
     saveVariable(28, _aesKeyInbound);
+    if (!_aesKeyOutbound.empty()) _forceEncryption = true;
   }
   void setAesKeyOutbound(const std::vector<uint8_t> &value) {
     _aesKeyOutbound = value;
     saveVariable(21, _aesKeyOutbound);
+    if (!_aesKeyInbound.empty()) _forceEncryption = true;
   }
   void setSecurityCode(uint32_t value) {
     _securityCode = value;
@@ -74,12 +77,6 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void setRollingCodeSize(int32_t value) {
     _rollingCodeSize = value;
     saveVariable(25, value);
-  }
-  void setErp1SequenceCounter(uint8_t value) {
-    _erp1SequenceCounter = value;
-    if (_erp1SequenceCounter > 3) _erp1SequenceCounter = 1;
-    else if (_erp1SequenceCounter == 0) _erp1SequenceCounter = 1;
-    saveVariable(31, (int32_t)value);
   }
   uint64_t getRepeaterId() { return _repeaterId; }
   void setRepeaterId(uint64_t value) {
@@ -151,7 +148,10 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
                                       IEnOceanInterface::EnOceanRequestFilterType filterType = IEnOceanInterface::EnOceanRequestFilterType::senderAddress,
                                       const std::vector<std::vector<uint8_t>> &filterData = std::vector<std::vector<uint8_t>>(), uint32_t timeout = 1000);
   bool sendPacket(PEnOceanPacket &packet, const std::string &responseId, int32_t delay, bool wait, int32_t channel, const std::string &parameterId, const std::vector<uint8_t> &parameterData);
+  bool decryptPacket(PEnOceanPacket &packet);
+  std::vector<PEnOceanPacket> encryptPacket(PEnOceanPacket &packet);
 
+  int32_t checkUpdateAddress();
   std::string queryFirmwareVersion();
   bool queueSetDeviceConfiguration(const std::map<uint32_t, std::vector<uint8_t>> &updatedParameters);
   void queueGetDeviceConfiguration();
@@ -162,7 +162,10 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   std::pair<int32_t, int32_t> getPingRssi();
   int32_t getRssiRepeater();
   int32_t getRssi();
+  std::vector<uint8_t> remanGetLinkTable(bool inbound, uint8_t start_index, uint8_t end_index);
   bool remanPing();
+  bool remanSecurityEnabled();
+  bool remanSetLinkTable(bool inbound, const std::vector<uint8_t> &table);
   bool remanSetRepeaterFilter(uint8_t filterControl, uint8_t filterType, uint32_t filterValue);
   bool remanSetRepeaterFunctions(uint8_t function, uint8_t level, uint8_t structure);
   bool remanSetSecurityProfile(bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId, uint32_t sourceId);
@@ -227,7 +230,6 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool _explicitRollingCode = false;
   int32_t _rollingCodeSize = -1;
   uint32_t _gatewayAddress = 0;
-  uint8_t _erp1SequenceCounter = 1;
   std::atomic<uint64_t> _repeaterId = 0;
   std::mutex _repeatedAddressesMutex;
   std::unordered_set<int32_t> _repeatedAddresses;
@@ -248,6 +250,8 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool _forceEncryption = false;
   PSecurity _security;
   std::vector<uint8_t> _aesKeyPart1;
+  //Todo: Remove block after T5 update
+  std::atomic_bool encryption_disabled_{false};
 
   // {{{ Variables for getting RPC responses to requests
   std::mutex _rpcRequestsMutex;
@@ -300,9 +304,6 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   void getValuesFromPacket(PEnOceanPacket packet, std::vector<FrameValues> &frameValue);
 
   PParameterGroup getParameterSet(int32_t channel, ParameterGroup::Type::Enum type) override;
-
-  bool decryptPacket(PEnOceanPacket &packet);
-  std::vector<PEnOceanPacket> encryptPacket(PEnOceanPacket &packet);
 
   void updateBlindSpeed();
 

@@ -345,30 +345,43 @@ void Usb300::processPacket(std::vector<uint8_t> &data) {
   }
 }
 
-bool Usb300::sendEnoceanPacket(const PEnOceanPacket &packet) {
+bool Usb300::sendEnoceanPacket(const std::vector<PEnOceanPacket> &packets) {
   try {
+    if (packets.empty() || !packets.at(0)) return false;
+
     if (!_initComplete) {
       _out.printInfo("Info: Waiting one second, because init is not complete.");
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       if (!_initComplete) {
-        _out.printWarning("Warning: !!!Not!!! sending packet " + BaseLib::HelperFunctions::getHexString(packet->getBinary()) + ", because init is not complete.");
+        _out.printWarning("Warning: !!!Not!!! sending packet " + BaseLib::HelperFunctions::getHexString(packets.at(0)->getBinary()) + ", because init is not complete.");
         return false;
       }
     }
 
-    IEnOceanInterface::sendEnoceanPacket(packet);
+    uint32_t i = 0;
+    for (auto &packet: packets) {
+      i++;
+      if (!packet) return false;
 
-    std::vector<uint8_t> data = std::move(packet->getBinary());
-    addCrc8(data);
-    std::vector<uint8_t> response;
-    getResponse(0x02, data, response);
-    if (response.size() != 8 || (response.size() >= 7 && response[6] != 0)) {
-      if (response.size() >= 7 && response[6] != 0) {
-        auto statusIterator = _responseStatusCodes.find(response[6]);
-        if (statusIterator != _responseStatusCodes.end()) _out.printError("Error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\": " + statusIterator->second);
-        else _out.printError("Unknown error (" + std::to_string(response[6]) + ") sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
-      } else _out.printError("Unknown error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
-      return false;
+      std::vector<uint8_t> data = std::move(packet->getBinary());
+      addCrc8(data);
+
+      if (packet->getRorg() == 0xC5) {
+        Gd::out.printInfo("Info: Sending packet " + std::to_string(i) + " of " + std::to_string(packets.size()) + " (REMAN function 0x" + BaseLib::HelperFunctions::getHexString(packet->getRemoteManagementFunction(), 3) + ") " + BaseLib::HelperFunctions::getHexString(data));
+      } else {
+        Gd::out.printInfo("Info: Sending packet " + std::to_string(i) + " of " + std::to_string(packets.size()) + ": " + BaseLib::HelperFunctions::getHexString(data));
+      }
+
+      std::vector<uint8_t> response;
+      getResponse(0x02, data, response);
+      if (response.size() != 8 || (response.size() >= 7 && response[6] != 0)) {
+        if (response.size() >= 7 && response[6] != 0) {
+          auto statusIterator = _responseStatusCodes.find(response[6]);
+          if (statusIterator != _responseStatusCodes.end()) _out.printError("Error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\": " + statusIterator->second);
+          else _out.printError("Unknown error (" + std::to_string(response[6]) + ") sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
+        } else _out.printError("Unknown error sending packet \"" + BaseLib::HelperFunctions::getHexString(data) + "\".");
+        return false;
+      }
     }
     _lastPacketSent = BaseLib::HelperFunctions::getTime();
     return true;

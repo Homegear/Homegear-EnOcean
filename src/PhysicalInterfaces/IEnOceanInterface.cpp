@@ -40,7 +40,6 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t> &re
 
     _serialRequests[packetType] = request;
     requestsGuard.unlock();
-    std::unique_lock<std::mutex> lock(request->mutex);
 
     try {
       rawSend(requestPacket);
@@ -53,6 +52,7 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t> &re
       return;
     }
 
+    std::unique_lock<std::mutex> lock(request->mutex);
     if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(1000), [&] { return request->mutexReady; })) {
       _out.printError("Error: No serial ACK received to packet: " + BaseLib::HelperFunctions::getHexString(requestPacket));
     }
@@ -97,7 +97,6 @@ bool IEnOceanInterface::checkForEnOceanRequest(PEnOceanPacket &packet) {
     if (requestIterator != _enoceanRequests.end()) {
       for (auto &element : requestIterator->second) {
         auto request = element.second;
-
         if (request->filterType == EnOceanRequestFilterType::remoteManagementFunction) {
           bool found = false;
           for (auto &filterData : request->filterData) {
@@ -237,61 +236,30 @@ void IEnOceanInterface::rawSend(std::vector<uint8_t> &packet) {
 
 bool IEnOceanInterface::sendEnoceanPacket(const PEnOceanPacket &packet) {
   try {
-    if (packet->getType() == EnOceanPacket::Type::REMOTE_MAN_COMMAND) {
-      Gd::out.printInfo("Info: Sending packet (REMAN function 0x" + BaseLib::HelperFunctions::getHexString(packet->getRemoteManagementFunction(), 3) + ") " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
-    } else {
-      Gd::out.printInfo("Info: Sending packet " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
-    }
+    if (_stopped || !packet) return {};
+
+    uint8_t sequence_counter = _sequence_counter;
+    sequence_counter++;
+    if (sequence_counter > 3 || sequence_counter < 1) sequence_counter = 1;
+    _sequence_counter = sequence_counter;
+
+    return sendEnoceanPacket(packet->getChunks(sequence_counter));
   } catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return false;
 }
 
-PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &packet, uint32_t deviceEnoceanId, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData, uint32_t timeout) {
+PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &packet, uint32_t device_enocean_id, uint32_t retries, EnOceanRequestFilterType filter_type, const std::vector<std::vector<uint8_t>> &filter_data, uint32_t timeout) {
   try {
-    if (_stopped) return {};
+    if (_stopped || !packet) return {};
 
-    std::shared_ptr<EnOceanRequest> request = std::make_shared<EnOceanRequest>();
-    request->filterType = filterType;
-    request->filterData = filterData;
+    uint8_t sequence_counter = _sequence_counter;
+    sequence_counter++;
+    if (sequence_counter > 3 || sequence_counter < 1) sequence_counter = 1;
+    _sequence_counter = sequence_counter;
 
-    std::unique_lock<std::mutex> requestsGuard(_enoceanRequestsMutex);
-    uint32_t packetId = _packetId++;
-    _enoceanRequests[deviceEnoceanId][packetId] = request;
-    requestsGuard.unlock();
-
-    std::unique_lock<std::mutex> lock(request->mutex);
-
-    for (uint32_t i = 0; i < retries + 1; i++) {
-      if (!sendEnoceanPacket(packet)) {
-        requestsGuard.lock();
-        auto requestsIterator = _enoceanRequests.find(deviceEnoceanId);
-        if (requestsIterator != _enoceanRequests.end()) {
-          requestsIterator->second.erase(packetId);
-          if (requestsIterator->second.empty()) _enoceanRequests.erase(deviceEnoceanId);
-        }
-        requestsGuard.unlock();
-        return {};
-      }
-
-      if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&] { return request->mutexReady; })) {
-        if (i < retries) _out.printInfo("Info: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()) + ". Retrying...");
-        else _out.printError("Error: No EnOcean response received to packet: " + BaseLib::HelperFunctions::getHexString(packet->getBinary()));
-      }
-
-      if (request->response) break;
-    }
-
-    requestsGuard.lock();
-    auto requestsIterator = _enoceanRequests.find(deviceEnoceanId);
-    if (requestsIterator != _enoceanRequests.end()) {
-      requestsIterator->second.erase(packetId);
-      if (requestsIterator->second.empty()) _enoceanRequests.erase(deviceEnoceanId);
-    }
-    requestsGuard.unlock();
-
-    return request->response;
+    return sendAndReceivePacket(packet->getChunks(sequence_counter), device_enocean_id, retries, filter_type, filter_data, timeout);
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -299,33 +267,31 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const PEnOceanPacket &pac
   return {};
 }
 
-PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets, uint32_t deviceEnoceanId, uint32_t retries, EnOceanRequestFilterType filterType, const std::vector<std::vector<uint8_t>> &filterData, uint32_t timeout) {
+PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOceanPacket> &packets, uint32_t device_enocean_id, uint32_t retries, EnOceanRequestFilterType filter_type, const std::vector<std::vector<uint8_t>> &filter_data, uint32_t timeout) {
   try {
-    if (_stopped || packets.empty()) return {};
+    if (_stopped || packets.empty() || !packets.at(0)) return {};
 
     std::shared_ptr<EnOceanRequest> request = std::make_shared<EnOceanRequest>();
-    request->filterType = filterType;
-    request->filterData = filterData;
+    request->filterType = filter_type;
+    request->filterData = filter_data;
 
     std::unique_lock<std::mutex> requestsGuard(_enoceanRequestsMutex);
     uint32_t packetId = _packetId++;
-    _enoceanRequests[deviceEnoceanId][packetId] = request;
+    _enoceanRequests[device_enocean_id][packetId] = request;
     requestsGuard.unlock();
 
     std::unique_lock<std::mutex> lock(request->mutex);
 
     for (uint32_t i = 0; i < retries + 1; i++) {
-      for (auto &packet : packets) {
-        if (!sendEnoceanPacket(packet)) {
-          requestsGuard.lock();
-          auto requestsIterator = _enoceanRequests.find(deviceEnoceanId);
-          if (requestsIterator != _enoceanRequests.end()) {
-            requestsIterator->second.erase(packetId);
-            if (requestsIterator->second.empty()) _enoceanRequests.erase(deviceEnoceanId);
-          }
-          requestsGuard.unlock();
-          return {};
+      if (!sendEnoceanPacket(packets)) {
+        requestsGuard.lock();
+        auto requestsIterator = _enoceanRequests.find(device_enocean_id);
+        if (requestsIterator != _enoceanRequests.end()) {
+          requestsIterator->second.erase(packetId);
+          if (requestsIterator->second.empty()) _enoceanRequests.erase(device_enocean_id);
         }
+        requestsGuard.unlock();
+        return {};
       }
 
       if (!request->conditionVariable.wait_for(lock, std::chrono::milliseconds(timeout), [&] { return request->mutexReady; })) {
@@ -337,10 +303,10 @@ PEnOceanPacket IEnOceanInterface::sendAndReceivePacket(const std::vector<PEnOcea
     }
 
     requestsGuard.lock();
-    auto requestsIterator = _enoceanRequests.find(deviceEnoceanId);
+    auto requestsIterator = _enoceanRequests.find(device_enocean_id);
     if (requestsIterator != _enoceanRequests.end()) {
       requestsIterator->second.erase(packetId);
-      if (requestsIterator->second.empty()) _enoceanRequests.erase(deviceEnoceanId);
+      if (requestsIterator->second.empty()) _enoceanRequests.erase(device_enocean_id);
     }
     requestsGuard.unlock();
 

@@ -17,6 +17,11 @@ class GetDeviceConfiguration : public EnOceanPacket {
   GetDeviceConfiguration(uint32_t senderAddress, uint32_t destinationAddress, uint16_t startIndex, uint16_t endIndex, uint8_t length);
 };
 
+class GetLinkTable : public EnOceanPacket {
+ public:
+  GetLinkTable(uint32_t sender_address, uint32_t destination_address, bool inbound, uint8_t start_index, uint8_t end_index);
+};
+
 class GetPathInfoThroughPing : public EnOceanPacket {
  public:
   GetPathInfoThroughPing(uint32_t senderAddress, uint32_t destinationAddress, uint32_t destinationPingDeviceId);
@@ -29,7 +34,7 @@ class Lock : public EnOceanPacket {
 
 class PingPacket : public EnOceanPacket {
  public:
-  PingPacket(uint32_t senderAddress, uint32_t destinationAddress);
+  PingPacket(uint32_t sender_address, uint32_t destination_address);
 };
 
 class QueryIdPacket : public EnOceanPacket {
@@ -59,7 +64,7 @@ class SetLinkTable : public EnOceanPacket {
 
 class SetRepeaterFilter : public EnOceanPacket {
  public:
-  SetRepeaterFilter(uint32_t senderAddress, uint32_t destinationAddress, uint8_t filterControl, uint8_t filterType, uint32_t filterValue);
+  SetRepeaterFilter(uint32_t sender_address, uint32_t destination_address, uint8_t filter_control, uint8_t filter_type, uint32_t filter_value);
 };
 
 class SetRepeaterFunctions : public EnOceanPacket {
@@ -69,7 +74,7 @@ class SetRepeaterFunctions : public EnOceanPacket {
 
 class SetSecurityProfile : public EnOceanPacket {
  public:
-  SetSecurityProfile(uint32_t senderAddress, uint32_t destinationAddress, bool recomVersion11, bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId, uint32_t sourceId);
+  SetSecurityProfile(uint32_t senderAddress, uint32_t destinationAddress, bool recomVersion11, bool hasAddresses, bool outbound, uint8_t index, uint8_t slf, uint32_t rlc, const std::vector<uint8_t> &aesKey, uint32_t destinationId = 0, uint32_t sourceId = 0);
 };
 
 class Unlock : public EnOceanPacket {

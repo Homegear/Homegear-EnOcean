@@ -102,7 +102,7 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   std::atomic_bool _updatingFirmware{false};
   std::mutex _updateFirmwareThreadMutex;
   std::thread _updateFirmwareThread;
-  std::atomic<int64_t> _lastFirmwareUpdate{0};
+  std::atomic<int64_t> _firmwareInstallationTime{0};
   std::atomic<int64_t> _lastForeignFirmwareUpdatePacket{0};
   //}}}
 
@@ -125,22 +125,28 @@ class EnOceanCentral : public BaseLib::Systems::ICentral {
   bool handlePairingRequest(const std::string &interfaceId, const PEnOceanPacket &packet, const PairingData &pairingData);
 
   void updateFirmwares(std::vector<uint64_t> ids, bool ignoreRssi);
-  void updateFirmware(const std::unordered_set<uint64_t> &ids, bool enforce);
+  bool updateFirmware(const std::unordered_set<uint64_t> &ids, bool enforce);
+  void sendFirmwareBlock(uint32_t block, const std::vector<uint8_t> &firmware_file, const std::shared_ptr<IEnOceanInterface> &interface, int32_t sender_address, int32_t destination_address);
 
   //{{{ Family RPC methods
   BaseLib::PVariable addMeshingEntry(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable checkUpdateAddress(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable getMeshingInfo(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable queryFirmwareVersion(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable resetMeshingTables(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanGetLinkTable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanGetPathInfoThroughPing(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanPing(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanPingAddress(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanSecurityEnabled(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable remanSetLinkTable(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetRepeaterFunctions(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetRepeaterFilter(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetSecurityProfile(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanSetCode(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable remanUpdateSecurityProfile(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   BaseLib::PVariable removeMeshingEntry(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
+  BaseLib::PVariable setFirmwareInstallationTime(const BaseLib::PRpcClientInfo &clientInfo, const BaseLib::PArray &parameters);
   //}}}
 };
 
