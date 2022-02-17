@@ -126,14 +126,6 @@ void EnOceanPeer::pingWorker() {
     if (_remanFeatures && (_remanFeatures->kPing && _pingInterval > 0 && BaseLib::HelperFunctions::getTimeSeconds() >= (_lastPing + _pingInterval))) {
       _lastPing = BaseLib::HelperFunctions::getTimeSeconds();
       remanPing();
-
-      //Todo: Remove block after T5 update
-      if (!encryption_disabled_ && _forceEncryption && (getFirmwareVersion() == 1102 || getFirmwareVersion() == 1103)) {
-        Gd::out.printMessage("Info: Trying to disable encryption of peer " + std::to_string(_peerID) + "...");
-        encryption_disabled_ = true;
-        remanSetSecurityProfile(false, 0xFF, 0, 0, BaseLib::HelperFunctions::getUBinary("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), 0, 0);
-        remanSetSecurityProfile(true, 0xFF, 0, 0, BaseLib::HelperFunctions::getUBinary("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), 0, 0);
-      }
     }
   }
   catch (const std::exception &ex) {
@@ -2417,10 +2409,9 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
     setBestInterface();
     auto physicalInterface = getPhysicalInterface();
     auto setSecurityProfile =
-        //Todo: Remove firmware version check after T5 update
         std::make_shared<SetSecurityProfile>(0,
                                              getRemanDestinationAddress(),
-                                             _remanFeatures->kRecomVersion == 0x11 || getFirmwareVersion() < 1100,
+                                             _remanFeatures->kRecomVersion == 0x11,
                                              _remanFeatures->kSetSecurityProfileHasAddresses,
                                              false,
                                              0,
@@ -2440,10 +2431,9 @@ bool EnOceanPeer::remanUpdateSecurityProfile() {
       return false;
     } else {
       setSecurityProfile =
-          //Todo: Remove firmware version check after T5 update
           std::make_shared<SetSecurityProfile>(0,
                                                getRemanDestinationAddress(),
-                                               _remanFeatures->kRecomVersion == 0x11 || getFirmwareVersion() < 1100,
+                                               _remanFeatures->kRecomVersion == 0x11,
                                                _remanFeatures->kSetSecurityProfileHasAddresses,
                                                true,
                                                0,
