@@ -457,11 +457,6 @@ void EnOceanCentral::pingWorker() {
                       }
                     }
 
-                    if (peer->enforceMeshing() && j == 0 && bestQualityIndicatorRoom == 100) {
-                      //Set repeater in same room for devices with firmware version < 449. Here remanGetPathInfoThroughPing returns 0.
-                      bestRepeaterRoom = repeaterPeer;
-                      bestQualityIndicatorRoom = 99;
-                    }
                     if (rssiHomegearToRepeater >= -70 && rssiRepeaterToPeer >= -70 && rssiRepeaterToPeer < 0) break; //Good reception
                   }
                 }

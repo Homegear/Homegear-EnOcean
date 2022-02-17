@@ -250,8 +250,6 @@ class EnOceanPeer : public BaseLib::Systems::Peer, public BaseLib::Rpc::IWebserv
   bool _forceEncryption = false;
   PSecurity _security;
   std::vector<uint8_t> _aesKeyPart1;
-  //Todo: Remove block after T5 update
-  std::atomic_bool encryption_disabled_{false};
 
   // {{{ Variables for getting RPC responses to requests
   std::mutex _rpcRequestsMutex;
