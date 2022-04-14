@@ -1490,11 +1490,15 @@ void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
 
           if (parameter.rpcParameter) {
             //Process service messages
-            if (parameter.rpcParameter->service && !i->second.value.empty()) {
-              if (parameter.rpcParameter->logical->type == ILogical::Type::Enum::tEnum) {
-                serviceMessages->set(i->first, i->second.value.at(0), *j);
-              } else if (parameter.rpcParameter->logical->type == ILogical::Type::Enum::tBoolean) {
-                serviceMessages->set(i->first, parameter.rpcParameter->convertFromPacket(i->second.value, parameter.mainRole(), true)->booleanValue);
+            if ((parameter.rpcParameter->service || parameter.rpcParameter->serviceInverted || parameter.hasServiceRole()) && !i->second.value.empty()) {
+              if (parameter.rpcParameter->logical->type == ILogical::Type::Enum::tBoolean && *j == 0) {
+                auto service_value = parameter.rpcParameter->convertFromPacket(i->second.value, parameter.mainRole(), true)->booleanValue;
+                if (parameter.rpcParameter->serviceInverted) service_value = !service_value;
+                serviceMessages->set(i->first, service_value);
+              } else {
+                auto service_value = parameter.rpcParameter->convertFromPacket(i->second.value, parameter.mainRole(), true)->integerValue;
+                if (parameter.rpcParameter->serviceInverted) service_value = !service_value;
+                serviceMessages->set(i->first, service_value, *j);
               }
             }
 
