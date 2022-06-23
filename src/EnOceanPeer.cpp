@@ -2150,6 +2150,7 @@ bool EnOceanPeer::remanPing() {
 
     if (response) {
       _missedPings = 0;
+      setLastPacketReceived();
     } else {
       _missedPings++;
     }
