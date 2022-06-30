@@ -55,6 +55,8 @@ void EnOceanPeer::dispose() {
 
 void EnOceanPeer::worker() {
   try {
+    if (!serviceMessages->getUnreach()) serviceMessages->checkUnreach(_rpcDevice->timeout, getLastPacketReceived());
+
     //{{{ Resends
     {
       std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
@@ -113,8 +115,6 @@ void EnOceanPeer::worker() {
 
       if (updatePosition) updateBlindPosition();
     }
-
-    if (!serviceMessages->getUnreach()) serviceMessages->checkUnreach(_rpcDevice->timeout, getLastPacketReceived());
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -2151,6 +2151,7 @@ bool EnOceanPeer::remanPing() {
     if (response) {
       _missedPings = 0;
       setLastPacketReceived();
+      serviceMessages->endUnreach();
     } else {
       _missedPings++;
     }
