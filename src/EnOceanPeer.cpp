@@ -2903,6 +2903,10 @@ bool EnOceanPeer::sendPacket(PEnOceanPacket &packet, const std::string &response
             _rpcRequests.erase(rpcRequest->responseId);
           }
           if (error) return false;
+          else {
+            setLastPacketReceived();
+            serviceMessages->endUnreach();
+          }
         } else {
           if (!physicalInterface->sendEnoceanPacket(encryptPacket(packet))) return false;
         }
