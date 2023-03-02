@@ -5,6 +5,8 @@
 
 #include "../EnOceanPacket.h"
 #include "IEnOceanInterface.h"
+
+#include <c1-net/TcpSocket.h>
 #include <homegear-base/BaseLib.h>
 
 namespace EnOcean {
@@ -24,7 +26,7 @@ class HomegearGateway : public IEnOceanInterface {
 
   bool sendEnoceanPacket(const std::vector<PEnOceanPacket> &packets) override;
  protected:
-  std::unique_ptr<BaseLib::TcpSocket> _tcpSocket;
+  std::unique_ptr<C1Net::TcpSocket> _tcpSocket;
   std::unique_ptr<BaseLib::Rpc::BinaryRpc> _binaryRpc;
   std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
   std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;

@@ -34,11 +34,24 @@ void HomegearGateway::startListening() {
       return;
     }
 
-    _tcpSocket.reset(new BaseLib::TcpSocket(_bl, _settings->host, _settings->port, true, _settings->caFile, true, _settings->certFile, _settings->keyFile));
-    _tcpSocket->setConnectionRetries(1);
-    _tcpSocket->setReadTimeout(5000000);
-    _tcpSocket->setWriteTimeout(5000000);
-    if (_settings->useIdForHostnameVerification) _tcpSocket->setVerificationHostname(_settings->id);
+    C1Net::TcpSocketInfo tcp_socket_info;
+    tcp_socket_info.read_timeout = 5000;
+    tcp_socket_info.write_timeout = 5000;
+
+    C1Net::TcpSocketHostInfo tcp_socket_host_info;
+    tcp_socket_host_info.host = _settings->host;
+    tcp_socket_host_info.port = BaseLib::Math::getUnsignedNumber(_settings->port);
+    tcp_socket_host_info.tls = true;
+    tcp_socket_host_info.verify_certificate = true;
+    tcp_socket_host_info.ca_file = _settings->caFile;
+    tcp_socket_host_info.client_cert_file = _settings->certFile;
+    tcp_socket_host_info.client_key_file = _settings->keyFile;
+    tcp_socket_host_info.connection_retries = 1;
+    tcp_socket_host_info.verify_custom_hostname = true;
+    tcp_socket_host_info.custom_hostname = _settings->id;
+
+    _tcpSocket = std::make_unique<C1Net::TcpSocket>(tcp_socket_info, tcp_socket_host_info);
+
     _stopCallbackThread = false;
     if (_settings->listenThreadPriority > -1) _bl->threadManager.start(_listenThread, true, _settings->listenThreadPriority, _settings->listenThreadPolicy, &HomegearGateway::listen, this);
     else _bl->threadManager.start(_listenThread, true, &HomegearGateway::listen, this);
@@ -52,7 +65,7 @@ void HomegearGateway::startListening() {
 void HomegearGateway::stopListening() {
   try {
     _stopCallbackThread = true;
-    if (_tcpSocket) _tcpSocket->close();
+    if (_tcpSocket) _tcpSocket->Shutdown();
     _bl->threadManager.join(_listenThread);
     _stopped = true;
     _tcpSocket.reset();
@@ -65,7 +78,7 @@ void HomegearGateway::stopListening() {
 
 int32_t HomegearGateway::setBaseAddress(uint32_t value) {
   try {
-    if (!_tcpSocket->connected()) {
+    if (!_tcpSocket->Connected()) {
       _out.printError("Error: Could not set base address. Not connected to gateway.");
       return -1;
     }
@@ -92,7 +105,7 @@ int32_t HomegearGateway::setBaseAddress(uint32_t value) {
 
 IEnOceanInterface::DutyCycleInfo HomegearGateway::getDutyCycleInfo() {
   try {
-    if (!_tcpSocket->connected()) {
+    if (!_tcpSocket->Connected()) {
       _out.printError("Error: Could not set base address. Not connected to gateway.");
       return DutyCycleInfo();
     }
@@ -136,8 +149,8 @@ void HomegearGateway::init() {
 void HomegearGateway::listen() {
   try {
     try {
-      _tcpSocket->open();
-      if (_tcpSocket->connected()) {
+      _tcpSocket->Open();
+      if (_tcpSocket->Connected()) {
         _out.printInfo("Info: Successfully connected.");
         _stopped = false;
         _bl->threadManager.start(_initThread, true, &HomegearGateway::init, this);
@@ -149,15 +162,16 @@ void HomegearGateway::listen() {
 
     std::vector<char> buffer(1024);
     int32_t processedBytes = 0;
+    bool more_data = false;
     while (!_stopCallbackThread) {
       try {
-        if (_stopped || !_tcpSocket->connected()) {
+        if (_stopped || !_tcpSocket->Connected()) {
           if (_stopCallbackThread) return;
           if (_stopped) _out.printWarning("Warning: Connection to device closed. Trying to reconnect...");
-          _tcpSocket->close();
+          _tcpSocket->Shutdown();
           std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-          _tcpSocket->open();
-          if (_tcpSocket->connected()) {
+          _tcpSocket->Open();
+          if (_tcpSocket->Connected()) {
             _out.printInfo("Info: Successfully connected.");
             _stopped = false;
             _bl->threadManager.start(_initThread, true, &HomegearGateway::init, this);
@@ -167,7 +181,7 @@ void HomegearGateway::listen() {
 
         int32_t bytesRead = 0;
         try {
-          bytesRead = _tcpSocket->proofread(buffer.data(), buffer.size());
+          bytesRead = _tcpSocket->Read((uint8_t *)buffer.data(), buffer.size(), more_data);
         }
         catch (BaseLib::SocketTimeOutException &ex) {
           continue;
@@ -191,9 +205,9 @@ void HomegearGateway::listen() {
                 }
 
                 BaseLib::PVariable response = std::make_shared<BaseLib::Variable>();
-                std::vector<char> data;
+                std::vector<uint8_t> data;
                 _rpcEncoder->encodeResponse(response, data);
-                _tcpSocket->proofwrite(data);
+                _tcpSocket->Send(data);
               } else if (_binaryRpc->getType() == BaseLib::Rpc::BinaryRpc::Type::response && _waitForResponse) {
                 std::unique_lock<std::mutex> requestLock(_requestMutex);
                 _rpcResponse = _rpcDecoder->decodeResponse(_binaryRpc->getData());
@@ -224,10 +238,10 @@ bool HomegearGateway::sendEnoceanPacket(const std::vector<PEnOceanPacket> &packe
   try {
     if (!_tcpSocket || packets.empty() || !packets.at(0)) return false;
 
-    if (_stopped || !_tcpSocket->connected()) {
+    if (_stopped || !_tcpSocket->Connected()) {
       _out.printInfo("Info: Waiting two seconds, because wre are not connected.");
       std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-      if (_stopped || !_tcpSocket->connected()) {
+      if (_stopped || !_tcpSocket->Connected()) {
         _out.printWarning("Warning: !!!Not!!! sending packet " + BaseLib::HelperFunctions::getHexString(packets.at(0)->getBinary()) + ", because init is not complete.");
         return false;
       }
@@ -270,7 +284,7 @@ bool HomegearGateway::sendEnoceanPacket(const std::vector<PEnOceanPacket> &packe
 void HomegearGateway::rawSend(std::vector<uint8_t> &packet) {
   try {
     IEnOceanInterface::rawSend(packet);
-    if (!_tcpSocket || !_tcpSocket->connected()) return;
+    if (!_tcpSocket || !_tcpSocket->Connected()) return;
 
     BaseLib::PArray parameters = std::make_shared<BaseLib::Array>();
     parameters->reserve(2);
@@ -295,19 +309,19 @@ PVariable HomegearGateway::invoke(std::string methodName, PArray &parameters) {
     _rpcResponse.reset();
     _waitForResponse = true;
 
-    std::vector<char> encodedPacket;
+    std::vector<uint8_t> encodedPacket;
     _rpcEncoder->encodeRequest(methodName, parameters, encodedPacket);
 
     int32_t i = 0;
     for (i = 0; i < 5; i++) {
       try {
-        _tcpSocket->proofwrite(encodedPacket);
+        _tcpSocket->Send(encodedPacket);
         break;
       }
       catch (BaseLib::SocketOperationException &ex) {
         _out.printError("Error: " + std::string(ex.what()));
         if (i == 5) return BaseLib::Variable::createError(-32500, ex.what());
-        _tcpSocket->open();
+        _tcpSocket->Open();
       }
     }
 
