@@ -183,7 +183,7 @@ void HomegearGateway::listen() {
         try {
           bytesRead = _tcpSocket->Read((uint8_t *)buffer.data(), buffer.size(), more_data);
         }
-        catch (BaseLib::SocketTimeOutException &ex) {
+        catch (const C1Net::TimeoutException &ex) {
           continue;
         }
         if (bytesRead <= 0) continue;
@@ -256,7 +256,8 @@ bool HomegearGateway::sendEnoceanPacket(const std::vector<PEnOceanPacket> &packe
       addCrc8(data);
 
       if (packet->getRorg() == 0xC5) {
-        Gd::out.printInfo("Info: Sending packet " + std::to_string(i) + " of " + std::to_string(packets.size()) + " (REMAN function 0x" + BaseLib::HelperFunctions::getHexString(packet->getRemoteManagementFunction(), 3) + ") " + BaseLib::HelperFunctions::getHexString(data));
+        Gd::out.printInfo("Info: Sending packet " + std::to_string(i) + " of " + std::to_string(packets.size()) + " (REMAN function 0x" + BaseLib::HelperFunctions::getHexString(packet->getRemoteManagementFunction(), 3) + ") "
+                              + BaseLib::HelperFunctions::getHexString(data));
       } else {
         Gd::out.printInfo("Info: Sending packet " + std::to_string(i) + " of " + std::to_string(packets.size()) + ": " + BaseLib::HelperFunctions::getHexString(data));
       }
@@ -318,7 +319,7 @@ PVariable HomegearGateway::invoke(std::string methodName, PArray &parameters) {
         _tcpSocket->Send(encodedPacket);
         break;
       }
-      catch (BaseLib::SocketOperationException &ex) {
+      catch (const C1Net::Exception &ex) {
         _out.printError("Error: " + std::string(ex.what()));
         if (i == 5) return BaseLib::Variable::createError(-32500, ex.what());
         _tcpSocket->Open();

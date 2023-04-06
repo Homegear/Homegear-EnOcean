@@ -44,7 +44,7 @@ void IEnOceanInterface::getResponse(uint8_t packetType, std::vector<uint8_t> &re
     try {
       rawSend(requestPacket);
     }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const std::exception &ex) {
       _out.printError("Error sending packet: " + std::string(ex.what()));
       requestsGuard.lock();
       _serialRequests.erase(packetType);
