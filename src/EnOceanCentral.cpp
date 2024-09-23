@@ -65,135 +65,135 @@ void EnOceanCentral::init() {
     _stopWorkerThread = false;
     _timeLeftInPairingMode = 0;
 
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("addMeshingEntry",
-        std::bind(&EnOceanCentral::addMeshingEntry,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("checkUpdateAddress",
-        std::bind(&EnOceanCentral::checkUpdateAddress,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("getMeshingInfo",
-        std::bind(&EnOceanCentral::getMeshingInfo,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("queryFirmwareVersion",
-        std::bind(&EnOceanCentral::queryFirmwareVersion,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("resetMeshingTables",
-        std::bind(&EnOceanCentral::resetMeshingTables,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanGetLinkTable",
-        std::bind(&EnOceanCentral::remanGetLinkTable,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanGetPathInfoThroughPing",
-        std::bind(&EnOceanCentral::remanGetPathInfoThroughPing,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanPing",
-        std::bind(&EnOceanCentral::remanPing,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanPingAddress",
-        std::bind(&EnOceanCentral::remanPingAddress,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanSetCode",
-        std::bind(&EnOceanCentral::remanSetCode,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanSecurityEnabled",
-        std::bind(&EnOceanCentral::remanSecurityEnabled,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanSetLinkTable",
-        std::bind(&EnOceanCentral::remanSetLinkTable,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanSetRepeaterFunctions",
-        std::bind(&EnOceanCentral::remanSetRepeaterFunctions,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanSetRepeaterFilter",
-        std::bind(&EnOceanCentral::remanSetRepeaterFilter,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanSetSecurityProfile",
-        std::bind(&EnOceanCentral::remanSetSecurityProfile,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("remanUpdateSecurityProfile",
-        std::bind(&EnOceanCentral::remanUpdateSecurityProfile,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("removeMeshingEntry",
-        std::bind(&EnOceanCentral::removeMeshingEntry,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
-    _localRpcMethods.insert(std::pair < std::string, std::function < BaseLib::PVariable(
-    const BaseLib::PRpcClientInfo &clientInfo,
-    const BaseLib::PArray &parameters)>>("setFirmwareInstallationTime",
-        std::bind(&EnOceanCentral::setFirmwareInstallationTime,
-                  this,
-                  std::placeholders::_1,
-                  std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("addMeshingEntry",
+                                             std::bind(&EnOceanCentral::addMeshingEntry,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("checkUpdateAddress",
+                                             std::bind(&EnOceanCentral::checkUpdateAddress,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("getMeshingInfo",
+                                             std::bind(&EnOceanCentral::getMeshingInfo,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("queryFirmwareVersion",
+                                             std::bind(&EnOceanCentral::queryFirmwareVersion,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("resetMeshingTables",
+                                             std::bind(&EnOceanCentral::resetMeshingTables,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanGetLinkTable",
+                                             std::bind(&EnOceanCentral::remanGetLinkTable,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanGetPathInfoThroughPing",
+                                             std::bind(&EnOceanCentral::remanGetPathInfoThroughPing,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanPing",
+                                             std::bind(&EnOceanCentral::remanPing,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanPingAddress",
+                                             std::bind(&EnOceanCentral::remanPingAddress,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanSetCode",
+                                             std::bind(&EnOceanCentral::remanSetCode,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanSecurityEnabled",
+                                             std::bind(&EnOceanCentral::remanSecurityEnabled,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanSetLinkTable",
+                                             std::bind(&EnOceanCentral::remanSetLinkTable,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanSetRepeaterFunctions",
+                                             std::bind(&EnOceanCentral::remanSetRepeaterFunctions,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanSetRepeaterFilter",
+                                             std::bind(&EnOceanCentral::remanSetRepeaterFilter,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanSetSecurityProfile",
+                                             std::bind(&EnOceanCentral::remanSetSecurityProfile,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("remanUpdateSecurityProfile",
+                                             std::bind(&EnOceanCentral::remanUpdateSecurityProfile,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("removeMeshingEntry",
+                                             std::bind(&EnOceanCentral::removeMeshingEntry,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
+    _localRpcMethods.insert(std::pair<std::string, std::function<BaseLib::PVariable(
+        const BaseLib::PRpcClientInfo &clientInfo,
+        const BaseLib::PArray &parameters)>>("setFirmwareInstallationTime",
+                                             std::bind(&EnOceanCentral::setFirmwareInstallationTime,
+                                                       this,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2)));
 
-    Gd::interfaces->addEventHandlers((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink * )
-    this);
+    Gd::interfaces->addEventHandlers((BaseLib::Systems::IPhysicalInterface::IPhysicalInterfaceEventSink *)
+                                         this);
 
     Gd::bl->threadManager.start(_workerThread, true, _bl->settings.workerThreadPriority(), _bl->settings.workerThreadPolicy(), &EnOceanCentral::worker, this);
   }
@@ -630,8 +630,8 @@ int32_t EnOceanCentral::getFreeRfChannel(const std::string &interfaceId) {
   try {
     std::vector<std::shared_ptr<BaseLib::Systems::Peer>> peers = getPeers();
     std::set<int32_t> usedChannels;
-    for (std::vector < std::shared_ptr < BaseLib::Systems::Peer >> ::iterator i = peers.begin(); i != peers.end();
-    ++i) {
+    for (std::vector<std::shared_ptr<BaseLib::Systems::Peer >>::iterator i = peers.begin(); i != peers.end();
+         ++i) {
       PMyPeer peer(std::dynamic_pointer_cast<EnOceanPeer>(*i));
       if (!peer) continue;
       if (peer->getPhysicalInterfaceId() != interfaceId) continue;
@@ -822,11 +822,11 @@ bool EnOceanCentral::handlePairingRequest(const std::string &interfaceId, const 
 
       uint64_t
           eep = ((uint64_t)(uint8_t)
-      payload.at(7) << 16u) | (((uint64_t)(uint8_t)
-      payload.at(6)) << 8u) | ((uint8_t)payload.at(5));
+          payload.at(7) << 16u) | (((uint64_t)(uint8_t)
+          payload.at(6)) << 8u) | ((uint8_t)payload.at(5));
       uint64_t
           manufacturer = (((uint64_t)(uint8_t)
-      payload.at(4) & 0x07u) << 8u) | (uint8_t)payload.at(3);
+          payload.at(4) & 0x07u) << 8u) | (uint8_t)payload.at(3);
       uint64_t manufacturerEep = (manufacturer << 24u) | eep;
 
       uint8_t byte1 = payload.at(1);
@@ -844,22 +844,25 @@ bool EnOceanCentral::handlePairingRequest(const std::string &interfaceId, const 
       }
 
       int32_t rfChannel = 0;
-      if (!peerExists(packet->senderAddress(), eep) && !peerExists(packet->senderAddress(), manufacturerEep)) {
-        buildPeer(manufacturerEep, packet->senderAddress(), interfaceId, false, -1);
-      } else {
-        //This is for backward compatibility only. Newly paired peers don't have RF_CHANNEL set anymore.
-        std::list<PMyPeer> peers = getPeer(packet->senderAddress());
-        if (peers.empty()) return false;
-        for (auto &peer: peers) {
-          if (peer->getDeviceType() == eep || peer->getDeviceType() == manufacturerEep) {
-            rfChannel = peer->getRfChannel(0);
-            break;
+
+      { //This is for backward compatibility only. Newly paired peers don't have RF_CHANNEL set anymore.
+        if (peerExists(packet->senderAddress(), eep) || peerExists(packet->senderAddress(), manufacturerEep)) {
+          std::list<PMyPeer> peers = getPeer(packet->senderAddress());
+          if (!peers.empty()) {
+            for (auto &peer: peers) {
+              if (peer->getDeviceType() == eep || peer->getDeviceType() == manufacturerEep) {
+                rfChannel = peer->getRfChannel(0);
+                break;
+              }
+            }
           }
         }
       }
 
+      //Send response first because of timing
       if (responseExpected) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        int64_t sleeping_time = 100 - (BaseLib::HelperFunctions::getTime() - packet->getTimeReceived());
+        if (sleeping_time > 0 && sleeping_time <= 100) std::this_thread::sleep_for(std::chrono::milliseconds(sleeping_time));
         PEnOceanPacket response(new EnOceanPacket((EnOceanPacket::Type)1, packet->getRorg(), physicalInterface->getBaseAddress() | rfChannel, packet->senderAddress()));
         std::vector<uint8_t> responsePayload;
         responsePayload.insert(responsePayload.end(), payload.begin(), payload.begin() + 8);
@@ -867,13 +870,18 @@ bool EnOceanCentral::handlePairingRequest(const std::string &interfaceId, const 
         response->setData(responsePayload);
         physicalInterface->sendEnoceanPacket(response);
       }
+
+      if (!peerExists(packet->senderAddress(), eep) && !peerExists(packet->senderAddress(), manufacturerEep)) {
+        buildPeer(manufacturerEep, packet->senderAddress(), interfaceId, false, -1);
+      }
+
       return true;
     } else if (!pairingData.remoteCommissioning && payload.size() >= 5 && packet->getRorg() == 0xA5 && (payload.at(4) & 0x88u) == 0x80) {
       //4BS teach-in, variant 3; LRN type bit needs to be set and LRN bit unset (= LRN telegram)
       uint64_t
           eep = ((uint32_t)(uint8_t)
-      payload.at(0) << 16u) | (((uint32_t)(uint8_t)
-      payload.at(1) >> 2u) << 8u) | (((uint8_t)payload.at(1) & 3u) << 5u) | (uint8_t)((uint8_t)payload.at(2) >> 3u);
+          payload.at(0) << 16u) | (((uint32_t)(uint8_t)
+          payload.at(1) >> 2u) << 8u) | (((uint8_t)payload.at(1) & 3u) << 5u) | (uint8_t)((uint8_t)payload.at(2) >> 3u);
       uint64_t manufacturer = (((uint32_t)(uint8_t)(payload.at(2) & 7u)) << 8u) | (uint8_t)payload.at(3);
       uint64_t manufacturerEep = (manufacturer << 24u) | eep;
       //In EEP version 3 we need the full bytes for the eep, so the following is deprecated
@@ -895,7 +903,7 @@ bool EnOceanCentral::handlePairingRequest(const std::string &interfaceId, const 
           peer = createPeer(manufacturerEepOld, packet->senderAddress(), serial, false);
           if (!peer || !peer->getRpcDevice()) {
             std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
-            _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedEep", std::list < std::string > {BaseLib::HelperFunctions::getHexString(eep)}));
+            _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedEep", std::list<std::string>{BaseLib::HelperFunctions::getHexString(eep)}));
             Gd::out.printWarning("Warning: The EEP " + BaseLib::HelperFunctions::getHexString(manufacturerEepOld) + " is currently not supported.");
             return false;
           }
@@ -986,8 +994,8 @@ bool EnOceanCentral::handlePairingRequest(const std::string &interfaceId, const 
 void EnOceanCentral::savePeers(bool full) {
   try {
     std::lock_guard<std::mutex> peersGuard(_peersMutex);
-    for (std::map < uint64_t, std::shared_ptr < BaseLib::Systems::Peer >> ::iterator i = _peersById.begin(); i != _peersById.end();
-    ++i) {
+    for (std::map<uint64_t, std::shared_ptr<BaseLib::Systems::Peer >>::iterator i = _peersById.begin(); i != _peersById.end();
+         ++i) {
       Gd::out.printInfo("Info: Saving EnOcean peer " + std::to_string(i->second->getID()));
       i->second->save(full, full, full);
     }
@@ -1473,7 +1481,7 @@ std::shared_ptr<EnOceanPeer> EnOceanCentral::buildPeer(uint64_t eep, int32_t add
     std::shared_ptr<EnOceanPeer> peer = createPeer(eep, address, serial, false);
     if (!peer || !peer->getRpcDevice()) {
       std::lock_guard<std::mutex> newPeersGuard(_newPeersMutex);
-      _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedEep", std::list < std::string > {BaseLib::HelperFunctions::getHexString(eep)}));
+      _pairingMessages.emplace_back(std::make_shared<PairingMessage>("l10n.enocean.pairing.unsupportedEep", std::list<std::string>{BaseLib::HelperFunctions::getHexString(eep)}));
       Gd::out.printWarning("Warning: The EEP " + BaseLib::HelperFunctions::getHexString(eep) + " is currently not supported.");
       return std::shared_ptr<EnOceanPeer>();
     }
@@ -2189,12 +2197,12 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
       peer->getPingRssi(); //Updates RSSI and repeater RSSI
       int32_t rssi = peer->getRepeaterId() > 0 ? peer->getRssiRepeater() : peer->getRssi();
       for (uint32_t retries = 0; retries < 3; retries++) {
-        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector < uint8_t > {0xD1, 0x03, 0x31, 0x10});
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
         auto data = response ? response->getData() : std::vector<uint8_t>();
         if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
           //Retry unencrypted
-          packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector < uint8_t > {0xD1, 0x03, 0x31, 0x10});
+          packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
           response = interface->sendAndReceivePacket(packet, peer->getAddress(), 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
           data = response ? response->getData() : std::vector<uint8_t>();
           if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
@@ -2225,7 +2233,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
 
       //{{{ Get block number using update sender address
       for (uint32_t retries = 0; retries < 3; retries++) {
-        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peer->getAddress(), std::vector < uint8_t > {0xD1, 0x03, 0x31, 0x10});
+        auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, updateAddress, peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
         auto response = interface->sendAndReceivePacket(packet, peer->getAddress(), 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
         if (response) peer->decryptPacket(response);
         auto data = response ? response->getData() : std::vector<uint8_t>();
@@ -2258,7 +2266,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
           block_number = 0;
           bool continueLoop = false;
           for (uint32_t i = 2; i < 10; i++) {
-            auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector < uint8_t > {0xD1, 0x03, 0x32, 0x10, (uint8_t)i});
+            auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x32, 0x10, (uint8_t)i});
             if (!peer->sendPacket(packet, "", 900, false, -1, "", std::vector<uint8_t>())) {
               continueLoop = true;
               break;
@@ -2271,7 +2279,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
           //Old 2-channel actuators have a bug that requires to wait up to at least 30 seconds. When they return the current block, they are ready.
           for (uint32_t retries2 = 0; retries2 < 20; retries2++) {
             //Get first block number
-            auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector < uint8_t > {0xD1, 0x03, 0x31, 0x10});
+            auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
             auto response = peer->sendAndReceivePacket(packet, 2, IEnOceanInterface::EnOceanRequestFilterType::senderAddress, {}, 3000);
             auto data = response ? response->getData() : std::vector<uint8_t>();
             if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
@@ -2364,7 +2372,7 @@ bool EnOceanCentral::updateFirmware(const std::unordered_set<uint64_t> &ids, boo
         if (!peer) continue;
         //Get block number
         for (uint32_t retries = 0; retries < 3; retries++) {
-          auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector < uint8_t > {0xD1, 0x03, 0x31, 0x10});
+          auto packet = std::make_shared<EnOceanPacket>(EnOceanPacket::Type::RADIO_ERP1, 0xD1, baseAddress | peer->getRfChannel(0), peer->getAddress(), std::vector<uint8_t>{0xD1, 0x03, 0x31, 0x10});
           auto response = peer->sendAndReceivePacket(packet, 10, IEnOceanInterface::EnOceanRequestFilterType::senderAddress);
           auto data = response ? response->getData() : std::vector<uint8_t>();
           if (!response || response->getRorg() != 0xD1 || (data.at(2) & 0x0F) != 4 || data.at(3) != 0) {
@@ -2619,7 +2627,7 @@ uint64_t EnOceanCentral::remoteCommissionPeer(const std::shared_ptr<IEnOceanInte
     //{{{ Set outbound link table
     if (features->kOutboundLinkTableSize != 0) {
       static constexpr uint32_t
-      entrySize = 9;
+          entrySize = 9;
 
       std::vector<uint8_t> linkTable{};
       linkTable.reserve(entrySize * features->kOutboundLinkTableSize);

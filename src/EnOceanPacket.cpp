@@ -130,7 +130,7 @@ std::vector<std::shared_ptr<EnOceanPacket>> EnOceanPacket::getChunks(uint8_t seq
   try {
     std::vector<PEnOceanPacket> packets;
 
-    if ((((unsigned)_destinationAddress != 0xFFFFFFFFu && _data.size() <= 5) || ((unsigned)_destinationAddress == 0xFFFFFFFFu && _data.size() <= 9) || _type == Type::REMOTE_MAN_COMMAND) && (_rorg != 0xC5 || _type == Type::REMOTE_MAN_COMMAND)) {
+    if ((((unsigned)_destinationAddress != 0xFFFFFFFFu && _data.size() <= 8) || ((unsigned)_destinationAddress == 0xFFFFFFFFu && _data.size() <= 12) || _type == Type::REMOTE_MAN_COMMAND) && (_rorg != 0xC5 || _type == Type::REMOTE_MAN_COMMAND)) {
       auto result_packet = std::make_shared<EnOceanPacket>();
       *result_packet = *this;
       result_packet->setData(_data);
