@@ -55,6 +55,8 @@ void EnOceanPeer::dispose() {
 
 void EnOceanPeer::worker() {
   try {
+    if (!serviceMessages->getUnreach()) serviceMessages->checkUnreach(_rpcDevice->timeout, getLastPacketReceived());
+
     //{{{ Resends
     {
       std::lock_guard<std::mutex> requestsGuard(_rpcRequestsMutex);
@@ -113,8 +115,6 @@ void EnOceanPeer::worker() {
 
       if (updatePosition) updateBlindPosition();
     }
-
-    if (!serviceMessages->getUnreach()) serviceMessages->checkUnreach(_rpcDevice->timeout, getLastPacketReceived());
   }
   catch (const std::exception &ex) {
     Gd::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1490,11 +1490,15 @@ void EnOceanPeer::packetReceived(PEnOceanPacket &packet) {
 
           if (parameter.rpcParameter) {
             //Process service messages
-            if (parameter.rpcParameter->service && !i->second.value.empty()) {
-              if (parameter.rpcParameter->logical->type == ILogical::Type::Enum::tEnum) {
-                serviceMessages->set(i->first, i->second.value.at(0), *j);
-              } else if (parameter.rpcParameter->logical->type == ILogical::Type::Enum::tBoolean) {
-                serviceMessages->set(i->first, parameter.rpcParameter->convertFromPacket(i->second.value, parameter.mainRole(), true)->booleanValue);
+            if ((parameter.rpcParameter->service || parameter.rpcParameter->serviceInverted || parameter.hasServiceRole()) && !i->second.value.empty()) {
+              if (parameter.rpcParameter->logical->type == ILogical::Type::Enum::tBoolean && *j == 0) {
+                auto service_value = parameter.rpcParameter->convertFromPacket(i->second.value, parameter.mainRole(), true)->booleanValue;
+                if (parameter.rpcParameter->serviceInverted) service_value = !service_value;
+                serviceMessages->set(i->first, service_value);
+              } else {
+                auto service_value = parameter.rpcParameter->convertFromPacket(i->second.value, parameter.mainRole(), true)->integerValue;
+                if (parameter.rpcParameter->serviceInverted) service_value = !service_value;
+                serviceMessages->set(i->first, service_value, *j);
               }
             }
 
@@ -2146,6 +2150,8 @@ bool EnOceanPeer::remanPing() {
 
     if (response) {
       _missedPings = 0;
+      setLastPacketReceived();
+      serviceMessages->endUnreach();
     } else {
       _missedPings++;
     }
@@ -2897,6 +2903,10 @@ bool EnOceanPeer::sendPacket(PEnOceanPacket &packet, const std::string &response
             _rpcRequests.erase(rpcRequest->responseId);
           }
           if (error) return false;
+          else {
+            setLastPacketReceived();
+            serviceMessages->endUnreach();
+          }
         } else {
           if (!physicalInterface->sendEnoceanPacket(encryptPacket(packet))) return false;
         }
