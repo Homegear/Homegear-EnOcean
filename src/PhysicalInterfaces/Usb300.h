@@ -3,6 +3,8 @@
 #ifndef USB300_H_
 #define USB300_H_
 
+#include <cstdint>
+
 #include "../EnOceanPacket.h"
 #include "IEnOceanInterface.h"
 #include <homegear-base/BaseLib.h>

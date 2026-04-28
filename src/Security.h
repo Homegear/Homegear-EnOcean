@@ -3,6 +3,8 @@
 #ifndef SECURITY_H_
 #define SECURITY_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace EnOcean {
