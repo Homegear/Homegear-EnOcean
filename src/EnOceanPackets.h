@@ -3,6 +3,8 @@
 #ifndef HOMEGEAR_ENOCEAN_ENOCEANPACKETS_H
 #define HOMEGEAR_ENOCEAN_ENOCEANPACKETS_H
 
+#include <cstdint>
+
 #include "EnOceanPacket.h"
 
 namespace EnOcean {

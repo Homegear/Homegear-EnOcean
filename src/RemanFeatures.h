@@ -3,6 +3,8 @@
 #ifndef HOMEGEAR_ENOCEAN_SRC_REMANFEATURES_H_
 #define HOMEGEAR_ENOCEAN_SRC_REMANFEATURES_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace EnOcean {

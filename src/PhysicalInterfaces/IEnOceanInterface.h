@@ -3,6 +3,8 @@
 #ifndef IENOCEANINTERFACE_H_
 #define IENOCEANINTERFACE_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 #include <queue>
 #include "../EnOceanPacket.h"

@@ -3,6 +3,8 @@
 #ifndef MYCENTRAL_H_
 #define MYCENTRAL_H_
 
+#include <cstdint>
+
 #include "EnOceanPeer.h"
 #include "EnOceanPacket.h"
 #include <homegear-base/BaseLib.h>

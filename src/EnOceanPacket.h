@@ -3,6 +3,8 @@
 #ifndef ENOCEANPACKET_H_
 #define ENOCEANPACKET_H_
 
+#include <cstdint>
+
 #include "Security.h"
 
 #include <homegear-base/BaseLib.h>
