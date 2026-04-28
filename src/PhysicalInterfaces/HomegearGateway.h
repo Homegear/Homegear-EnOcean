@@ -3,6 +3,8 @@
 #ifndef HOMEGEAR_ENOCEAN_HOMEGEARGATEWAY_H
 #define HOMEGEAR_ENOCEAN_HOMEGEARGATEWAY_H
 
+#include <cstdint>
+
 #include "../EnOceanPacket.h"
 #include "IEnOceanInterface.h"
 

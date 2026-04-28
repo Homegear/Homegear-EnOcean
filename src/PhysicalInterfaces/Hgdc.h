@@ -3,6 +3,8 @@
 #ifndef HOMEGEAR_ENOCEAN_HGDC_H
 #define HOMEGEAR_ENOCEAN_HGDC_H
 
+#include <cstdint>
+
 #include "../EnOceanPacket.h"
 #include "IEnOceanInterface.h"
 #include <homegear-base/BaseLib.h>
